@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="StockManager.Api/StockManager.Api.csproj" />
+  <Project Path="StockManager.Application/StockManager.Application.csproj" />
+  <Project Path="StockManager.Domain/StockManager.Domain.csproj" />
+  <Project Path="StockManager.Infrastructure/StockManager.Infrastructure.csproj" />
+</Solution>
