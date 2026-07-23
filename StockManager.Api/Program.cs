@@ -71,6 +71,17 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 
+// Configurar CORS para React frontends (web + PWA)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendDev", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -88,6 +99,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Agregar CORS antes de autenticación y autorización
+app.UseCors("FrontendDev");
 
 // Agregar middleware de autenticación y autorización
 app.UseAuthentication();
