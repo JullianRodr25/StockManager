@@ -12,6 +12,9 @@ using StockManager.Domain.Exceptions;
 /// - StockActual no se modifica directamente; solo vía métodos Vender/Reponer
 /// - Precio debe ser > 0
 /// - RowVersion se usa para concurrencia optimista (crítico en operaciones simultáneas de venta)
+/// - CodigoBarras (opcional): EAN de fábrica o código generado internamente
+/// - EsCodigoGenerado: indica si el código fue generado por el sistema (true) o vino externo (false)
+/// - FechaImpresionEtiqueta (opcional): cuándo se confirmó que la etiqueta física se imprimió
 /// </summary>
 public class Producto
 {
@@ -22,6 +25,9 @@ public class Producto
     public int StockActual { get; private set; }
     public int StockMinimo { get; private set; }
     public bool Activo { get; private set; }
+    public string? CodigoBarras { get; private set; }
+    public bool EsCodigoGenerado { get; private set; }
+    public DateTime? FechaImpresionEtiqueta { get; private set; }
 
     // Concurrencia optimista — EF Core maneja automáticamente este campo
     public byte[]? RowVersion { get; set; }
@@ -37,7 +43,8 @@ public class Producto
         int categoriaId,
         decimal precio,
         int stockActual,
-        int stockMinimo)
+        int stockMinimo,
+        string? codigoBarras = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del producto no puede estar vacío.", nameof(nombre));
@@ -57,6 +64,9 @@ public class Producto
         if (stockMinimo < 0)
             throw new ArgumentException("El stock mínimo no puede ser negativo.", nameof(stockMinimo));
 
+        if (!string.IsNullOrWhiteSpace(codigoBarras) && codigoBarras.Length > 50)
+            throw new ArgumentException("El código de barras no puede exceder 50 caracteres.", nameof(codigoBarras));
+
         return new Producto
         {
             Nombre = nombre.Trim(),
@@ -64,7 +74,10 @@ public class Producto
             Precio = precio,
             StockActual = stockActual,
             StockMinimo = stockMinimo,
-            Activo = true
+            Activo = true,
+            CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras.Trim(),
+            EsCodigoGenerado = false,
+            FechaImpresionEtiqueta = null
         };
     }
 
@@ -142,5 +155,31 @@ public class Producto
             throw new ArgumentException("El stock mínimo no puede ser negativo.", nameof(nuevoStockMinimo));
 
         StockMinimo = nuevoStockMinimo;
+    }
+
+    /// <summary>
+    /// Genera un código de barras interno basado en el Id del producto.
+    /// Formato: "INT-{Id:D8}" (8 dígitos con ceros a la izquierda).
+    /// Solo se ejecuta si CodigoBarras es actualmente null.
+    /// Marca EsCodigoGenerado = true.
+    /// </summary>
+    public void GenerarCodigoBarrasInterno()
+    {
+        if (Id <= 0)
+            throw new InvalidOperationException("No se puede generar un código de barras sin un Id válido. El producto debe estar guardado en la base de datos.");
+
+        if (CodigoBarras != null)
+            return; // Ya tiene un código, no se sobrescribe
+
+        CodigoBarras = $"INT-{Id:D8}";
+        EsCodigoGenerado = true;
+    }
+
+    /// <summary>
+    /// Marca que la etiqueta física con el código de barras ha sido impresa.
+    /// </summary>
+    public void MarcarEtiquetaImpresa()
+    {
+        FechaImpresionEtiqueta = DateTime.UtcNow;
     }
 }

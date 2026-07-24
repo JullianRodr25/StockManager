@@ -40,6 +40,18 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(p => p.CodigoBarras)
+            .HasMaxLength(50)
+            .IsRequired(false);
+
+        builder.Property(p => p.EsCodigoGenerado)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(p => p.FechaImpresionEtiqueta)
+            .HasColumnType("datetime2")
+            .IsRequired(false);
+
         // RowVersion para concurrencia optimista — CRÍTICO
         builder.Property(p => p.RowVersion)
             .IsRowVersion();
@@ -54,6 +66,12 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         // Índice en Nombre para búsquedas rápidas
         builder.HasIndex(p => p.Nombre)
             .IsUnique(false);
+
+        // Índice ÚNICO en CodigoBarras but allowing multiple NULLs
+        // SQL Server allows multiple NULL values in unique indexes
+        builder.HasIndex(p => p.CodigoBarras)
+            .IsUnique(true)
+            .HasFilter("[CodigoBarras] IS NOT NULL");
 
         // Índice compuesto en CategoriaId y Activo para filtros comunes
         builder.HasIndex(p => new { p.CategoriaId, p.Activo });

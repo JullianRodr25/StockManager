@@ -74,3 +74,17 @@ public class UsuarioDuplicadoPorEmailException : DomainException
         Email = email;
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando se intenta crear una categoría con un nombre que ya existe.
+/// </summary>
+public class CategoriaDuplicadaException : DomainException
+{
+    public string NombreCategoria { get; }
+
+    public CategoriaDuplicadaException(string nombreCategoria)
+        : base($"Ya existe una categoría con el nombre: '{nombreCategoria}'")
+    {
+        NombreCategoria = nombreCategoria;
+    }
+}
