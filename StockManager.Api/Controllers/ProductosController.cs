@@ -99,7 +99,8 @@ public class ProductosController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error al crear el producto", detalle = ex.Message });
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al crear el producto" });
         }
     }
 
@@ -133,7 +134,8 @@ public class ProductosController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error al importar productos", detalle = ex.Message });
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al importar productos" });
         }
     }
 
@@ -177,7 +179,17 @@ public class ProductosController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error al generar etiquetas", detalle = ex.Message });
+            // TEMPORAL: Loguear excepción completa a consola para debugging
+            Console.WriteLine($"ERROR en GenerarEtiquetas: {ex.GetType().FullName}");
+            Console.WriteLine($"Mensaje: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"\nINNER EXCEPTION: {ex.InnerException.GetType().FullName}");
+                Console.WriteLine($"Mensaje: {ex.InnerException.Message}");
+                Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
+            }
+            return StatusCode(500, new { message = "Error al generar etiquetas" });
         }
     }
 }

@@ -15,11 +15,13 @@ public class ProductoService : IProductoService
 {
     private readonly AppDbContext _dbContext;
     private readonly IBarcodeService _barcodeService;
+    private readonly ICategoriaService _categoriaService;
 
-    public ProductoService(AppDbContext dbContext, IBarcodeService barcodeService)
+    public ProductoService(AppDbContext dbContext, IBarcodeService barcodeService, ICategoriaService categoriaService)
     {
         _dbContext = dbContext;
         _barcodeService = barcodeService;
+        _categoriaService = categoriaService;
     }
 
     public async Task<ProductoResponse?> ObtenerProductoPorIdAsync(int id)
@@ -123,18 +125,17 @@ public class ProductoService : IProductoService
 
                 foreach (var fila in filas)
                 {
+                    var numeroFila = fila.RowNumber();
+                    var nombre = fila.Cell(1).GetString()?.Trim();
+                    var categoriaNombre = fila.Cell(2).GetString()?.Trim();
+                    var precioStr = fila.Cell(3).GetString()?.Trim();
+                    var stockInicialStr = fila.Cell(4).GetString()?.Trim();
+                    var stockMinimoStr = fila.Cell(5).GetString()?.Trim();
+                    var codigoBarras = fila.Cell(6).GetString()?.Trim();
+
                     try
                     {
-                        var numeroFila = fila.RowNumber();
                         respuesta.TotalFilas++;
-
-                        // Leer columnas: Nombre, Categoria, Precio, StockInicial, StockMinimo, CodigoBarras
-                        var nombre = fila.Cell(1).GetString()?.Trim();
-                        var categoriaNombre = fila.Cell(2).GetString()?.Trim();
-                        var precioStr = fila.Cell(3).GetString()?.Trim();
-                        var stockInicialStr = fila.Cell(4).GetString()?.Trim();
-                        var stockMinimoStr = fila.Cell(5).GetString()?.Trim();
-                        var codigoBarras = fila.Cell(6).GetString()?.Trim();
 
                         // Validar datos obligatorios
                         if (string.IsNullOrEmpty(nombre))
@@ -148,16 +149,8 @@ public class ProductoService : IProductoService
                         if (!int.TryParse(stockMinimoStr, out var stockMinimo))
                             throw new InvalidOperationException("El stock mínimo debe ser un número entero válido.");
 
-                        // Buscar o crear categoría
-                        var categoria = await _dbContext.Categorias
-                            .FirstOrDefaultAsync(c => c.Nombre == categoriaNombre);
-
-                        if (categoria == null)
-                        {
-                            categoria = Categoria.Crear(categoriaNombre);
-                            _dbContext.Categorias.Add(categoria);
-                            await _dbContext.SaveChangesAsync();
-                        }
+                        // Buscar o crear categoría usando el servicio de categorías (case-insensitive)
+                        var categoria = await _categoriaService.ObtenerOCrearPorNombreAsync(categoriaNombre);
 
                         // Crear producto
                         var producto = Producto.Crear(
@@ -180,13 +173,47 @@ public class ProductoService : IProductoService
 
                         respuesta.Creados++;
                     }
-                    catch (Exception ex)
+                    catch (DbUpdateException ex)
+                    {
+                        string mensaje;
+                        if (ex.InnerException?.Message.Contains("IX_Productos_CodigoBarras") == true)
+                        {
+                            mensaje = $"Ya existe un producto con el código de barras '{codigoBarras}'.";
+                        }
+                        else if (ex.InnerException?.Message.Contains("UNIQUE") == true)
+                        {
+                            mensaje = "Ya existe un producto con ese dato único (posible duplicado).";
+                        }
+                        else
+                        {
+                            mensaje = "Error al guardar el producto en la base de datos.";
+                        }
+
+                        respuesta.Errores.Add(new ErrorImportacion
+                        {
+                            Fila = fila.RowNumber(),
+                            Mensaje = mensaje
+                        });
+
+                        _dbContext.ChangeTracker.Clear();
+                    }
+                    catch (InvalidOperationException ex)
                     {
                         respuesta.Errores.Add(new ErrorImportacion
                         {
                             Fila = fila.RowNumber(),
                             Mensaje = ex.Message
                         });
+                        _dbContext.ChangeTracker.Clear();
+                    }
+                    catch (Exception ex)
+                    {
+                        respuesta.Errores.Add(new ErrorImportacion
+                        {
+                            Fila = fila.RowNumber(),
+                            Mensaje = "Error inesperado al procesar esta fila."
+                        });
+                        _dbContext.ChangeTracker.Clear();
                     }
                 }
             }

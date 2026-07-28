@@ -1,4 +1,5 @@
 using StockManager.Application.DTOs;
+using StockManager.Domain.Entities;
 
 namespace StockManager.Application.Services;
 
@@ -21,4 +22,12 @@ public interface ICategoriaService
     /// Se lanza si ya existe una categoría con el mismo nombre (case-insensitive)
     /// </exception>
     Task<CategoriaResponse> CrearAsync(CrearCategoriaRequest request);
+
+    /// <summary>
+    /// Obtiene una categoría por nombre, o la crea si no existe.
+    /// Búsqueda case-insensitive.
+    /// </summary>
+    /// <param name="nombre">Nombre de la categoría a buscar o crear</param>
+    /// <returns>La entidad Categoria (no DTO) existente o recién creada</returns>
+    Task<Categoria> ObtenerOCrearPorNombreAsync(string nombre);
 }

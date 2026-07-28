@@ -48,7 +48,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IBarcodeService, BarcodeService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService>(sp => 
-    new ProductoService(sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<IBarcodeService>()));
+    new ProductoService(sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<IBarcodeService>(), sp.GetRequiredService<ICategoriaService>()));
 
 // Registrar el HostedService para bootstrap del Admin inicial
 builder.Services.AddHostedService<AdminBootstrapHostedService>();

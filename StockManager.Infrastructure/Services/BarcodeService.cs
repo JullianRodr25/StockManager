@@ -2,6 +2,7 @@ using ZXing;
 using ZXing.Common;
 using ZXing.SkiaSharp;
 using SkiaSharp;
+using ZXing.SkiaSharp.Rendering;
 
 namespace StockManager.Infrastructure.Services;
 
@@ -34,7 +35,8 @@ public class BarcodeService : IBarcodeService
                     Width = 300,
                     Height = 100,
                     Margin = 10
-                }
+                },
+                Renderer = new SKBitmapRenderer()
             };
 
             // Generar el bitmap del código de barras usando SkiaSharp
