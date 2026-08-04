@@ -5,8 +5,8 @@ using StockManager.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,24 +53,8 @@ builder.Services.AddScoped<IProductoService>(sp =>
 // Registrar el HostedService para bootstrap del Admin inicial
 builder.Services.AddHostedService<AdminBootstrapHostedService>();
 
-// Add API Explorer and Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new()
-    {
-        Title = "StockManager API",
-        Version = "v1",
-        Description = "API REST para el sistema de gestión de inventario de ferretería",
-        Contact = new()
-        {
-            Name = "StockManager Team"
-        }
-    });
-
-    // Agregar filtro de Swashbuckle.AspNetCore.Filters para mostrar Authorize button
-    c.OperationFilter<SecurityRequirementsOperationFilter>();
-});
+// Add OpenAPI/Swagger services
+builder.Services.AddOpenApi();
 
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
@@ -91,14 +75,14 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Swagger UI
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    // Usar Scalar para documentación de API (reemplazo de Swagger)
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "StockManager API v1");
-        options.RoutePrefix = string.Empty; // Swagger estará en la raíz (https://localhost:7xxx/)
-        options.DefaultModelsExpandDepth(2);
-        options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+        options
+            .WithTitle("StockManager API")
+            .WithTheme(ScalarTheme.Purple)
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
 

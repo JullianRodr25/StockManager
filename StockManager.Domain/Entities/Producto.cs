@@ -158,6 +158,26 @@ public class Producto
     }
 
     /// <summary>
+    /// Actualiza la información general del producto (nombre, categoría, precio, stock mínimo y código de barras).
+    /// NO modifica StockActual; el stock solo cambia vía Vender()/Reponer().
+    /// </summary>
+    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, string? codigoBarras)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            throw new ArgumentException("El nombre no puede estar vacío.");
+        if (precio < 0)
+            throw new ArgumentException("El precio no puede ser negativo.");
+        if (stockMinimo < 0)
+            throw new ArgumentException("El stock mínimo no puede ser negativo.");
+
+        Nombre = nombre.Trim();
+        CategoriaId = categoriaId;
+        Precio = precio;
+        StockMinimo = stockMinimo;
+        CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
+    }
+
+    /// <summary>
     /// Genera un código de barras interno basado en el Id del producto.
     /// Formato: "INT-{Id:D8}" (8 dígitos con ceros a la izquierda).
     /// Solo se ejecuta si CodigoBarras es actualmente null.

@@ -31,6 +31,19 @@ public class CrearProductoRequest
 }
 
 /// <summary>
+/// DTO para actualizar un producto existente.
+/// CodigoBarras es opcional; si viene vacío, se mantiene el actual.
+/// </summary>
+public class ActualizarProductoRequest
+{
+    public string Nombre { get; set; } = null!;
+    public int CategoriaId { get; set; }
+    public decimal Precio { get; set; }
+    public int StockMinimo { get; set; }
+    public string? CodigoBarras { get; set; }
+}
+
+/// <summary>
 /// DTO para la respuesta de importación masiva desde Excel/CSV.
 /// Incluye un resumen de la operación y lista de errores (si los hay).
 /// </summary>

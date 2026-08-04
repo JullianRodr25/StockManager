@@ -83,6 +83,13 @@ public class ProductoService : IProductoService
         if (!categoriaExiste)
             throw new ArgumentException($"La categoría con ID {request.CategoriaId} no existe.", nameof(request.CategoriaId));
 
+        // Validar nombre duplicado (case-insensitive)
+        var nombreNormalizado = request.Nombre.Trim();
+        var existeProducto = await _dbContext.Productos
+            .AnyAsync(p => p.Nombre.ToUpper() == nombreNormalizado.ToUpper());
+        if (existeProducto)
+            throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
+
         // Crear el producto usando el factory method
         var producto = Producto.Crear(
             request.Nombre,
@@ -102,6 +109,49 @@ public class ProductoService : IProductoService
             producto.GenerarCodigoBarrasInterno();
             await _dbContext.SaveChangesAsync();
         }
+
+        return MapearAResponse(producto);
+    }
+
+    public async Task<ProductoResponse> ActualizarProductoAsync(int id, ActualizarProductoRequest request)
+    {
+        // Buscar el producto
+        var producto = await _dbContext.Productos.FindAsync(id);
+        if (producto == null)
+            throw new Domain.Exceptions.ProductoNoEncontradoException(id);
+
+        // Validar que la categoría existe
+        var categoriaExiste = await _dbContext.Categorias
+            .AnyAsync(c => c.Id == request.CategoriaId);
+        if (!categoriaExiste)
+            throw new ArgumentException($"La categoría con ID {request.CategoriaId} no existe.", nameof(request.CategoriaId));
+
+        // Validar nombre duplicado EXCLUYENDO el propio producto (case-insensitive)
+        var nombreNormalizado = request.Nombre.Trim();
+        var existeProducto = await _dbContext.Productos
+            .AnyAsync(p => p.Id != id && p.Nombre.ToUpper() == nombreNormalizado.ToUpper());
+        if (existeProducto)
+            throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
+
+        // Si viene código de barras y es distinto al actual, validar que no esté en uso por OTRO producto
+        var codigoBarrasNormalizado = string.IsNullOrWhiteSpace(request.CodigoBarras) ? null : request.CodigoBarras.Trim();
+        if (!string.IsNullOrWhiteSpace(codigoBarrasNormalizado) && codigoBarrasNormalizado != producto.CodigoBarras)
+        {
+            var existeCodigoBarras = await _dbContext.Productos
+                .AnyAsync(p => p.Id != id && p.CodigoBarras == codigoBarrasNormalizado);
+            if (existeCodigoBarras)
+                throw new InvalidOperationException($"Ya existe un producto con el código de barras '{codigoBarrasNormalizado}'.");
+        }
+
+        // Actualizar información del producto
+        producto.ActualizarInformacion(
+            request.Nombre,
+            request.CategoriaId,
+            request.Precio,
+            request.StockMinimo,
+            codigoBarrasNormalizado);
+
+        await _dbContext.SaveChangesAsync();
 
         return MapearAResponse(producto);
     }
@@ -152,6 +202,13 @@ public class ProductoService : IProductoService
                         // Buscar o crear categoría usando el servicio de categorías (case-insensitive)
                         var categoria = await _categoriaService.ObtenerOCrearPorNombreAsync(categoriaNombre);
 
+                        // Validar nombre duplicado (case-insensitive)
+                        var nombreNormalizado = nombre.Trim();
+                        var existeProducto = await _dbContext.Productos
+                            .AnyAsync(p => p.Nombre.ToUpper() == nombreNormalizado.ToUpper());
+                        if (existeProducto)
+                            throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
+
                         // Crear producto
                         var producto = Producto.Crear(
                             nombre,
@@ -172,6 +229,15 @@ public class ProductoService : IProductoService
                         }
 
                         respuesta.Creados++;
+                    }
+                    catch (Domain.Exceptions.ProductoDuplicadoException ex)
+                    {
+                        respuesta.Errores.Add(new ErrorImportacion
+                        {
+                            Fila = fila.RowNumber(),
+                            Mensaje = ex.Message
+                        });
+                        _dbContext.ChangeTracker.Clear();
                     }
                     catch (DbUpdateException ex)
                     {
@@ -277,6 +343,26 @@ public class ProductoService : IProductoService
             await _dbContext.SaveChangesAsync();
 
         return respuesta;
+    }
+
+    public async Task DesactivarProductoAsync(int id)
+    {
+        var producto = await _dbContext.Productos.FindAsync(id);
+        if (producto == null)
+            throw new Domain.Exceptions.ProductoNoEncontradoException(id);
+
+        producto.Desactivar();
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task ReactivarProductoAsync(int id)
+    {
+        var producto = await _dbContext.Productos.FindAsync(id);
+        if (producto == null)
+            throw new Domain.Exceptions.ProductoNoEncontradoException(id);
+
+        producto.Activar();
+        await _dbContext.SaveChangesAsync();
     }
 
     private static ProductoResponse MapearAResponse(Producto producto)

@@ -93,6 +93,10 @@ public class ProductosController : ControllerBase
             var productoResponse = await _productoService.CrearProductoAsync(request);
             return CreatedAtAction(nameof(ObtenerProductoPorId), new { id = productoResponse.Id }, productoResponse);
         }
+        catch (StockManager.Domain.Exceptions.ProductoDuplicadoException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -190,6 +194,95 @@ public class ProductosController : ControllerBase
                 Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
             }
             return StatusCode(500, new { message = "Error al generar etiquetas" });
+        }
+    }
+
+    /// <summary>
+    /// Actualiza un producto existente.
+    /// No modifica StockActual, solo información general (nombre, categoría, precio, stock mínimo, código de barras).
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ActualizarProducto(int id, [FromBody] ActualizarProductoRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var productoResponse = await _productoService.ActualizarProductoAsync(id, request);
+            return Ok(productoResponse);
+        }
+        catch (StockManager.Domain.Exceptions.ProductoNoEncontradoException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (StockManager.Domain.Exceptions.ProductoDuplicadoException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al actualizar el producto" });
+        }
+    }
+
+    /// <summary>
+    /// Desactiva un producto (eliminación lógica, no borrado físico).
+    /// El producto se marca como inactivo pero permanece en la base de datos.
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DesactivarProducto(int id)
+    {
+        try
+        {
+            await _productoService.DesactivarProductoAsync(id);
+            return Ok(new { message = "Producto desactivado exitosamente" });
+        }
+        catch (StockManager.Domain.Exceptions.ProductoNoEncontradoException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al desactivar el producto" });
+        }
+    }
+
+    /// <summary>
+    /// Reactiva un producto previamente desactivado.
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpPatch("{id}/reactivar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ReactivarProducto(int id)
+    {
+        try
+        {
+            await _productoService.ReactivarProductoAsync(id);
+            return Ok(new { message = "Producto reactivado exitosamente" });
+        }
+        catch (StockManager.Domain.Exceptions.ProductoNoEncontradoException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al reactivar el producto" });
         }
     }
 }

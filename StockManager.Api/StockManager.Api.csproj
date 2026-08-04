@@ -13,18 +13,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
+    <PackageReference Include="Scalar.AspNetCore" Version="1.2.61" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.20.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\StockManager.Application\StockManager.Application.csproj" />
     <ProjectReference Include="..\StockManager.Infrastructure\StockManager.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="SwaggerFilters\" />
   </ItemGroup>
 
 </Project>

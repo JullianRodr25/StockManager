@@ -88,3 +88,31 @@ public class CategoriaDuplicadaException : DomainException
         NombreCategoria = nombreCategoria;
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando se intenta crear un producto con un nombre que ya existe.
+/// </summary>
+public class ProductoDuplicadoException : DomainException
+{
+    public string Nombre { get; }
+
+    public ProductoDuplicadoException(string nombre)
+        : base($"Ya existe un producto con el nombre '{nombre}'.")
+    {
+        Nombre = nombre;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra un producto con el ID especificado.
+/// </summary>
+public class ProductoNoEncontradoException : DomainException
+{
+    public int ProductoId { get; }
+
+    public ProductoNoEncontradoException(int productoId)
+        : base($"No se encontró el producto con ID {productoId}.")
+    {
+        ProductoId = productoId;
+    }
+}

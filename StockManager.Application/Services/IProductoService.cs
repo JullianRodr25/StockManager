@@ -33,6 +33,22 @@ public interface IProductoService
     Task<ProductoResponse> CrearProductoAsync(CrearProductoRequest request);
 
     /// <summary>
+    /// Actualiza un producto existente.
+    /// No modifica StockActual, solo información general (nombre, categoría, precio, stock mínimo, código de barras).
+    /// </summary>
+    Task<ProductoResponse> ActualizarProductoAsync(int id, ActualizarProductoRequest request);
+
+    /// <summary>
+    /// Desactiva un producto (eliminación lógica).
+    /// </summary>
+    Task DesactivarProductoAsync(int id);
+
+    /// <summary>
+    /// Reactiva un producto previamente desactivado.
+    /// </summary>
+    Task ReactivarProductoAsync(int id);
+
+    /// <summary>
     /// Importa productos masivamente desde un archivo Excel.
     /// Continúa con las siguientes filas incluso si algunas fallan.
     /// </summary>
