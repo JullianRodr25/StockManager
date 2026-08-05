@@ -24,6 +24,7 @@ public class Producto
     public decimal Precio { get; private set; }
     public int StockActual { get; private set; }
     public int StockMinimo { get; private set; }
+    public decimal TarifaIva { get; private set; }
     public bool Activo { get; private set; }
     public string? CodigoBarras { get; private set; }
     public bool EsCodigoGenerado { get; private set; }
@@ -44,6 +45,7 @@ public class Producto
         decimal precio,
         int stockActual,
         int stockMinimo,
+        decimal tarifaIva,
         string? codigoBarras = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
@@ -64,6 +66,9 @@ public class Producto
         if (stockMinimo < 0)
             throw new ArgumentException("El stock mínimo no puede ser negativo.", nameof(stockMinimo));
 
+        if (tarifaIva < 0 || tarifaIva > 100)
+            throw new ArgumentException("La tarifa de IVA debe estar entre 0 y 100.", nameof(tarifaIva));
+
         if (!string.IsNullOrWhiteSpace(codigoBarras) && codigoBarras.Length > 50)
             throw new ArgumentException("El código de barras no puede exceder 50 caracteres.", nameof(codigoBarras));
 
@@ -74,6 +79,7 @@ public class Producto
             Precio = precio,
             StockActual = stockActual,
             StockMinimo = stockMinimo,
+            TarifaIva = tarifaIva,
             Activo = true,
             CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras.Trim(),
             EsCodigoGenerado = false,
@@ -161,7 +167,7 @@ public class Producto
     /// Actualiza la información general del producto (nombre, categoría, precio, stock mínimo y código de barras).
     /// NO modifica StockActual; el stock solo cambia vía Vender()/Reponer().
     /// </summary>
-    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, string? codigoBarras)
+    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, decimal tarifaIva, string? codigoBarras)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre no puede estar vacío.");
@@ -169,11 +175,14 @@ public class Producto
             throw new ArgumentException("El precio no puede ser negativo.");
         if (stockMinimo < 0)
             throw new ArgumentException("El stock mínimo no puede ser negativo.");
+        if (tarifaIva < 0 || tarifaIva > 100)
+            throw new ArgumentException("La tarifa de IVA debe estar entre 0 y 100.");
 
         Nombre = nombre.Trim();
         CategoriaId = categoriaId;
         Precio = precio;
         StockMinimo = stockMinimo;
+        TarifaIva = tarifaIva;
         CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
     }
 

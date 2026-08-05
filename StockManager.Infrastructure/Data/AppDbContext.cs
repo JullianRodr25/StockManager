@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     // DbSets para todas las entidades
     public DbSet<Categoria> Categorias { get; set; } = null!;
     public DbSet<Producto> Productos { get; set; } = null!;
+    public DbSet<Configuracion> Configuraciones { get; set; } = null!;
     public DbSet<Empleado> Empleados { get; set; } = null!;
     public DbSet<Cliente> Clientes { get; set; } = null!;
     public DbSet<Venta> Ventas { get; set; } = null!;
@@ -36,6 +37,7 @@ public class AppDbContext : DbContext
         // Aplicar todas las configuraciones
         modelBuilder.ApplyConfiguration(new CategoriaConfiguration());
         modelBuilder.ApplyConfiguration(new ProductoConfiguration());
+        modelBuilder.ApplyConfiguration(new ConfiguracionConfiguration());
         modelBuilder.ApplyConfiguration(new EmpleadoConfiguration());
         modelBuilder.ApplyConfiguration(new ClienteConfiguration());
         modelBuilder.ApplyConfiguration(new VentaConfiguration());

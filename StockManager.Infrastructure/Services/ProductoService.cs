@@ -16,12 +16,18 @@ public class ProductoService : IProductoService
     private readonly AppDbContext _dbContext;
     private readonly IBarcodeService _barcodeService;
     private readonly ICategoriaService _categoriaService;
+    private readonly IConfiguracionService _configuracionService;
 
-    public ProductoService(AppDbContext dbContext, IBarcodeService barcodeService, ICategoriaService categoriaService)
+    public ProductoService(
+        AppDbContext dbContext,
+        IBarcodeService barcodeService,
+        ICategoriaService categoriaService,
+        IConfiguracionService configuracionService)
     {
         _dbContext = dbContext;
         _barcodeService = barcodeService;
         _categoriaService = categoriaService;
+        _configuracionService = configuracionService;
     }
 
     public async Task<ProductoResponse?> ObtenerProductoPorIdAsync(int id)
@@ -90,6 +96,9 @@ public class ProductoService : IProductoService
         if (existeProducto)
             throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
 
+        var tarifaIva = request.TarifaIva
+            ?? (await _configuracionService.ObtenerAsync()).TarifaIvaPorDefecto;
+
         // Crear el producto usando el factory method
         var producto = Producto.Crear(
             request.Nombre,
@@ -97,6 +106,7 @@ public class ProductoService : IProductoService
             request.Precio,
             request.StockInicial,
             request.StockMinimo,
+            tarifaIva,
             request.CodigoBarras);
 
         // Agregar a la base de datos
@@ -149,6 +159,7 @@ public class ProductoService : IProductoService
             request.CategoriaId,
             request.Precio,
             request.StockMinimo,
+            request.TarifaIva ?? producto.TarifaIva,
             codigoBarrasNormalizado);
 
         await _dbContext.SaveChangesAsync();
@@ -182,6 +193,7 @@ public class ProductoService : IProductoService
                     var stockInicialStr = fila.Cell(4).GetString()?.Trim();
                     var stockMinimoStr = fila.Cell(5).GetString()?.Trim();
                     var codigoBarras = fila.Cell(6).GetString()?.Trim();
+                    var tarifaIvaStr = fila.Cell(7).GetString()?.Trim();
 
                     try
                     {
@@ -199,6 +211,15 @@ public class ProductoService : IProductoService
                         if (!int.TryParse(stockMinimoStr, out var stockMinimo))
                             throw new InvalidOperationException("El stock mínimo debe ser un número entero válido.");
 
+                        decimal? tarifaIva = null;
+                        if (!string.IsNullOrWhiteSpace(tarifaIvaStr))
+                        {
+                            if (!decimal.TryParse(tarifaIvaStr, out var tarifaIvaImportada))
+                                throw new InvalidOperationException("La tarifa de IVA debe ser un número válido.");
+
+                            tarifaIva = tarifaIvaImportada;
+                        }
+
                         // Buscar o crear categoría usando el servicio de categorías (case-insensitive)
                         var categoria = await _categoriaService.ObtenerOCrearPorNombreAsync(categoriaNombre);
 
@@ -209,6 +230,8 @@ public class ProductoService : IProductoService
                         if (existeProducto)
                             throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
 
+                        tarifaIva ??= (await _configuracionService.ObtenerAsync()).TarifaIvaPorDefecto;
+
                         // Crear producto
                         var producto = Producto.Crear(
                             nombre,
@@ -216,6 +239,7 @@ public class ProductoService : IProductoService
                             precio,
                             stockInicial,
                             stockMinimo,
+                            tarifaIva.Value,
                             string.IsNullOrEmpty(codigoBarras) ? null : codigoBarras);
 
                         _dbContext.Productos.Add(producto);
@@ -375,6 +399,7 @@ public class ProductoService : IProductoService
             Precio = producto.Precio,
             StockActual = producto.StockActual,
             StockMinimo = producto.StockMinimo,
+            TarifaIva = producto.TarifaIva,
             CodigoBarras = producto.CodigoBarras,
             Activo = producto.Activo
         };

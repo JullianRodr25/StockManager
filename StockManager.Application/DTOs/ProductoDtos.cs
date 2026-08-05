@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace StockManager.Application.DTOs;
 
 /// <summary>
@@ -12,6 +14,7 @@ public class ProductoResponse
     public decimal Precio { get; set; }
     public int StockActual { get; set; }
     public int StockMinimo { get; set; }
+    public decimal TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
 }
@@ -27,6 +30,8 @@ public class CrearProductoRequest
     public decimal Precio { get; set; }
     public int StockInicial { get; set; }
     public int StockMinimo { get; set; }
+    [Range(0, 100)]
+    public decimal? TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
 }
 
@@ -40,6 +45,8 @@ public class ActualizarProductoRequest
     public int CategoriaId { get; set; }
     public decimal Precio { get; set; }
     public int StockMinimo { get; set; }
+    [Range(0, 100)]
+    public decimal? TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
 }
 
