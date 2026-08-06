@@ -19,6 +19,14 @@ public class ProductoResponse
     public bool Activo { get; set; }
 }
 
+public record ProductoCatalogoResponse(
+    int Id,
+    string Nombre,
+    string CategoriaNombre,
+    decimal Precio,
+    bool Disponible
+);
+
 /// <summary>
 /// DTO para crear un nuevo producto.
 /// CodigoBarras es opcional; si viene vacío, el sistema generará uno internamente.

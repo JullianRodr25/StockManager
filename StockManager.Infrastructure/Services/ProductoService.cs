@@ -80,6 +80,53 @@ public class ProductoService : IProductoService
         return (items, total);
     }
 
+    public async Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(
+        int pagina,
+        int tamanoPagina,
+        int? categoriaId)
+    {
+        if (pagina < 1)
+            pagina = 1;
+        if (tamanoPagina < 1)
+            tamanoPagina = 50;
+
+        var query = _dbContext.Productos.AsNoTracking()
+            .Where(p => p.Activo)
+            .Join(
+                _dbContext.Categorias.AsNoTracking(),
+                producto => producto.CategoriaId,
+                categoria => categoria.Id,
+                (producto, categoria) => new
+                {
+                    producto.Id,
+                    producto.Nombre,
+                    CategoriaNombre = categoria.Nombre,
+                    producto.Precio,
+                    producto.StockActual,
+                    producto.CategoriaId
+                });
+
+        if (categoriaId.HasValue)
+            query = query.Where(p => p.CategoriaId == categoriaId.Value);
+
+        var total = await query.CountAsync();
+        var skip = (pagina - 1) * tamanoPagina;
+
+        var items = await query
+            .OrderBy(p => p.Id)
+            .Skip(skip)
+            .Take(tamanoPagina)
+            .Select(p => new ProductoCatalogoResponse(
+                p.Id,
+                p.Nombre,
+                p.CategoriaNombre,
+                p.Precio,
+                p.StockActual > 0))
+            .ToListAsync();
+
+        return (items, total);
+    }
+
     public async Task<ProductoResponse> CrearProductoAsync(CrearProductoRequest request)
     {
         // Validar que la categoría existe

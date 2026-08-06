@@ -52,7 +52,8 @@ public class TokenService : ITokenService
             new(JwtRegisteredClaimNames.Sub, clienteId.ToString()),
             new(JwtRegisteredClaimNames.UniqueName, numeroIdentificacion),
             new(JwtRegisteredClaimNames.GivenName, nombre),
-            new("TipoUsuario", "Cliente")
+            new("TipoUsuario", "Cliente"),
+            new(ClaimTypes.Role, "Cliente")
         };
 
         return GenerarToken(claims);

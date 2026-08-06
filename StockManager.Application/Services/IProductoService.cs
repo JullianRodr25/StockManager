@@ -27,6 +27,11 @@ public interface IProductoService
     Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId = null);
 
     /// <summary>
+    /// Obtiene el catálogo público paginado de productos activos para clientes.
+    /// </summary>
+    Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId);
+
+    /// <summary>
     /// Crea un nuevo producto.
     /// Si CodigoBarras viene vacío, lo genera automáticamente.
     /// </summary>
