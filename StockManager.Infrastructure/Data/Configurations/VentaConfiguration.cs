@@ -23,6 +23,23 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
 
         builder.Property(v => v.ClienteId);
 
+        builder.Property(v => v.NombreComprador)
+            .HasMaxLength(150)
+            .IsRequired(false);
+
+        builder.Property(v => v.TelefonoComprador)
+            .HasMaxLength(20)
+            .IsRequired(false);
+
+        builder.Property(v => v.EmailComprador)
+            .HasMaxLength(200)
+            .IsRequired(false);
+
+        builder.Property(v => v.MetodoPago)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("Efectivo");
+
         builder.Property(v => v.Fecha)
             .IsRequired();
 
@@ -33,6 +50,11 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
         builder.Property(v => v.EsCotizacion)
             .IsRequired()
             .HasDefaultValue(false);
+
+        builder.Property(v => v.Estado)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("Pagada");
 
         // Relación con Empleado
         builder.HasOne<Empleado>()
