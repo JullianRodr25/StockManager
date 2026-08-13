@@ -52,4 +52,42 @@ public class VentasController : ControllerBase
             return StatusCode(500, new { message = "Error al registrar la venta" });
         }
     }
+
+    /// <summary>
+    /// Obtiene una lista paginada de ventas, con filtros opcionales de rango de fecha y estado.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerVentas(
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamanoPagina = 20,
+        [FromQuery] DateTime? desde = null,
+        [FromQuery] DateTime? hasta = null,
+        [FromQuery] string? estado = null)
+    {
+        var (items, total) = await _ventaService.ObtenerVentasPaginadoAsync(pagina, tamanoPagina, desde, hasta, estado);
+
+        return Ok(new
+        {
+            data = items,
+            pagina,
+            tamanoPagina,
+            total,
+            totalPaginas = (int)Math.Ceiling((double)total / tamanoPagina)
+        });
+    }
+
+    /// <summary>
+    /// Obtiene una venta por su ID, incluyendo sus detalles y número de factura.
+    /// </summary>
+    [HttpGet("{id}")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerVentaPorId(int id)
+    {
+        var venta = await _ventaService.ObtenerVentaPorIdAsync(id);
+        if (venta == null)
+            return NotFound(new { message = "Venta no encontrada" });
+
+        return Ok(venta);
+    }
 }

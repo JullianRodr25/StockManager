@@ -32,5 +32,17 @@ public record VentaResponse(
     DateTime Fecha,
     string Estado,
     decimal Total,
+    string NumeroFactura,
     List<DetalleVentaResponse> Detalles
+);
+
+public record VentaResumenResponse(
+    int Id,
+    string? NombreComprador,
+    int? ClienteId,
+    DateTime Fecha,
+    string Estado,
+    decimal Total,
+    string MetodoPago,
+    string NumeroFactura
 );

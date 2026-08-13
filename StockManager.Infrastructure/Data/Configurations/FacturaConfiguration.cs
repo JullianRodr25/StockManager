@@ -24,8 +24,8 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         builder.Property(f => f.PedidoId);
 
         builder.Property(f => f.Numero)
-            .IsRequired()
-            .HasMaxLength(50);
+            .HasMaxLength(50)
+            .IsRequired(false);
 
         builder.Property(f => f.Fecha)
             .IsRequired();
@@ -59,8 +59,10 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         // Índices
         builder.HasIndex(f => f.VentaId);
         builder.HasIndex(f => f.PedidoId);
+        // Índice ÚNICO en Numero permitiendo múltiples NULL (SQL Server: filtro excluye NULLs)
         builder.HasIndex(f => f.Numero)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Numero] IS NOT NULL");
         builder.HasIndex(f => f.Fecha);
     }
 }

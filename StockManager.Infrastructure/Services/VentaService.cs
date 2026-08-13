@@ -110,11 +110,110 @@ public class VentaService : IVentaService
                 "El stock de uno de los productos cambió mientras se " +
                 "procesaba la venta. Intenta de nuevo.");
         }
+
+        // Generación de Factura: se guarda primero sin Numero para obtener el Id real
+        // asignado por SQL Server, y recién con ese Id se genera el correlativo definitivo.
+        var factura = Factura.Crear(venta.Id, null, venta.Total);
+        _dbContext.Facturas.Add(factura);
+        await _dbContext.SaveChangesAsync();
+
+        factura.GenerarNumero();
+        await _dbContext.SaveChangesAsync();
+
         await transaction.CommitAsync();
 
-        var detalles = await _dbContext.DetallesVenta
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            factura.Numero!,
+            detalles);
+    }
+
+    public async Task<(List<VentaResumenResponse> Items, int Total)> ObtenerVentasPaginadoAsync(
+        int pagina, int tamanoPagina, DateTime? desde, DateTime? hasta, string? estado)
+    {
+        var query = _dbContext.Ventas.AsNoTracking().AsQueryable();
+
+        if (desde.HasValue)
+            query = query.Where(v => v.Fecha >= desde.Value);
+
+        if (hasta.HasValue)
+            query = query.Where(v => v.Fecha <= hasta.Value);
+
+        if (!string.IsNullOrWhiteSpace(estado))
+            query = query.Where(v => v.Estado == estado);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(v => v.Fecha)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .GroupJoin(
+                _dbContext.Facturas.AsNoTracking(),
+                venta => venta.Id,
+                factura => factura.VentaId,
+                (venta, facturas) => new { venta, facturas })
+            .SelectMany(
+                x => x.facturas.DefaultIfEmpty(),
+                (x, factura) => new VentaResumenResponse(
+                    x.venta.Id,
+                    x.venta.NombreComprador,
+                    x.venta.ClienteId,
+                    x.venta.Fecha,
+                    x.venta.Estado,
+                    x.venta.Total,
+                    x.venta.MetodoPago,
+                    factura != null ? (factura.Numero ?? string.Empty) : string.Empty))
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<VentaResponse?> ObtenerVentaPorIdAsync(int id)
+    {
+        var venta = await _dbContext.Ventas.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id);
+        if (venta == null)
+            return null;
+
+        var numeroFactura = await _dbContext.Facturas
             .AsNoTracking()
-            .Where(d => d.VentaId == venta.Id)
+            .Where(f => f.VentaId == id)
+            .Select(f => f.Numero)
+            .FirstOrDefaultAsync() ?? string.Empty;
+
+        var detalles = await ObtenerDetallesVentaAsync(id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            numeroFactura,
+            detalles);
+    }
+
+    private async Task<List<DetalleVentaResponse>> ObtenerDetallesVentaAsync(int ventaId)
+    {
+        return await _dbContext.DetallesVenta
+            .AsNoTracking()
+            .Where(d => d.VentaId == ventaId)
             .Join(
                 _dbContext.Productos.AsNoTracking(),
                 detalle => detalle.ProductoId,
@@ -128,19 +227,6 @@ public class VentaService : IVentaService
                     detalle.PrecioUnitario * detalle.Cantidad * (producto.TarifaIva / 100m),
                     detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m)))
             .ToListAsync();
-
-        return new VentaResponse(
-            venta.Id,
-            venta.ClienteId,
-            venta.NombreComprador,
-            venta.TelefonoComprador,
-            venta.EmailComprador,
-            venta.MetodoPago,
-            venta.EmpleadoId,
-            venta.Fecha,
-            venta.Estado,
-            venta.Total,
-            detalles);
     }
 
     private sealed record CalculoLinea(
