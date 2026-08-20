@@ -50,3 +50,16 @@ public record VentaResumenResponse(
 public record AbrirFiadoRequest(int ClienteId);
 
 public record CerrarFiadoRequest(string MetodoPago);
+
+public record RegistrarAbonoRequest(decimal Monto, string MetodoPago);
+
+public record AbonoResponse(
+    int Id,
+    int VentaId,
+    decimal Monto,
+    string MetodoPago,
+    DateTime Fecha,
+    int EmpleadoId
+);
+
+public record EditarCantidadLineaRequest(int Cantidad);

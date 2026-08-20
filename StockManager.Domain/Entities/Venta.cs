@@ -8,7 +8,7 @@ using StockManager.Domain.Exceptions;
 /// </summary>
 public class Venta
 {
-    private static readonly string[] MetodosPagoValidos = { "Efectivo", "Tarjeta", "Transferencia" };
+    private static readonly string[] MetodosPagoValidos = { "Efectivo", "Tarjeta", "Transferencia", "Mixto" };
 
     public int Id { get; private set; }
     public int EmpleadoId { get; private set; }
@@ -99,6 +99,20 @@ public class Venta
             throw new ArgumentException("El monto a agregar debe ser mayor a 0.", nameof(monto));
 
         Total += monto;
+    }
+
+    /// <summary>
+    /// Resta un monto del Total de la cuenta fiada (edición o eliminación de una línea).
+    /// </summary>
+    public void RestarMonto(decimal monto)
+    {
+        if (monto <= 0)
+            throw new ArgumentException("El monto a restar debe ser mayor a 0.", nameof(monto));
+
+        if (monto > Total)
+            throw new ArgumentException("El monto a restar no puede ser mayor al Total actual.", nameof(monto));
+
+        Total -= monto;
     }
 
     /// <summary>

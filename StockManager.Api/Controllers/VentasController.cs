@@ -189,4 +189,123 @@ public class VentasController : ControllerBase
             return StatusCode(500, new { message = "Error al cerrar la cuenta fiada" });
         }
     }
+
+    /// <summary>
+    /// Registra un abono a una cuenta fiada abierta. Si el abono cubre el saldo pendiente,
+    /// la cuenta se cierra automáticamente y se genera la Factura.
+    /// </summary>
+    [HttpPost("{id}/abonos")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> RegistrarAbono(int id, [FromBody] RegistrarAbonoRequest request)
+    {
+        try
+        {
+            var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var venta = await _ventaService.RegistrarAbonoAsync(id, request.Monto, request.MetodoPago, empleadoId);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al registrar el abono" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el historial de abonos de una cuenta fiada.
+    /// </summary>
+    [HttpGet("{id}/abonos")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerAbonos(int id)
+    {
+        var abonos = await _ventaService.ObtenerAbonosAsync(id);
+        return Ok(abonos);
+    }
+
+    /// <summary>
+    /// Edita la cantidad de una línea de una cuenta fiada abierta, ajustando stock y Total.
+    /// </summary>
+    [HttpPut("{id}/lineas/{detalleId}")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> EditarCantidadLinea(int id, int detalleId, [FromBody] EditarCantidadLineaRequest request)
+    {
+        try
+        {
+            var venta = await _ventaService.EditarCantidadLineaAsync(id, detalleId, request.Cantidad);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (StockInsuficienteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ProductoInactivoException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al editar la línea" });
+        }
+    }
+
+    /// <summary>
+    /// Quita una línea de una cuenta fiada abierta, repone el stock y ajusta el Total.
+    /// </summary>
+    [HttpDelete("{id}/lineas/{detalleId}")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> QuitarLinea(int id, int detalleId)
+    {
+        try
+        {
+            var venta = await _ventaService.QuitarLineaAsync(id, detalleId);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al quitar la línea" });
+        }
+    }
 }

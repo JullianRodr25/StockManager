@@ -330,6 +330,216 @@ public class VentaService : IVentaService
             detalles);
     }
 
+    public async Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId)
+    {
+        if (monto <= 0)
+            throw new ArgumentException("El monto debe ser mayor a 0.");
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(venta.Id, venta.Estado, "Pendiente");
+
+        var totalAbonado = await _dbContext.AbonosCuenta
+            .Where(a => a.VentaId == ventaId)
+            .SumAsync(a => (decimal?)a.Monto) ?? 0m;
+
+        var saldoPendiente = venta.Total - totalAbonado;
+
+        if (monto > saldoPendiente)
+            throw new ArgumentException(
+                $"El monto ({monto:F2}) no puede ser mayor al saldo pendiente ({saldoPendiente:F2}).");
+
+        var abono = AbonoCuenta.Crear(ventaId, monto, metodoPago, empleadoId);
+        _dbContext.AbonosCuenta.Add(abono);
+        await _dbContext.SaveChangesAsync();
+
+        var numeroFactura = string.Empty;
+        var nuevoSaldo = saldoPendiente - monto;
+
+        if (nuevoSaldo == 0)
+        {
+            var metodosPagoUsados = await _dbContext.AbonosCuenta
+                .Where(a => a.VentaId == ventaId)
+                .Select(a => a.MetodoPago)
+                .Distinct()
+                .ToListAsync();
+
+            var metodoPagoFinal = metodosPagoUsados.Count == 1 ? metodosPagoUsados[0] : "Mixto";
+
+            venta.CerrarFiado(metodoPagoFinal);
+            await _dbContext.SaveChangesAsync();
+
+            var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
+            numeroFactura = factura.Numero!;
+        }
+
+        await transaction.CommitAsync();
+
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            numeroFactura,
+            detalles);
+    }
+
+    public async Task<List<AbonoResponse>> ObtenerAbonosAsync(int ventaId)
+    {
+        return await _dbContext.AbonosCuenta
+            .AsNoTracking()
+            .Where(a => a.VentaId == ventaId)
+            .OrderBy(a => a.Fecha)
+            .Select(a => new AbonoResponse(a.Id, a.VentaId, a.Monto, a.MetodoPago, a.Fecha, a.EmpleadoId))
+            .ToListAsync();
+    }
+
+    public async Task<VentaResponse> EditarCantidadLineaAsync(int ventaId, int detalleId, int nuevaCantidad)
+    {
+        if (nuevaCantidad <= 0)
+            throw new ArgumentException("La cantidad debe ser mayor a 0.");
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(venta.Id, venta.Estado, "Pendiente");
+
+        var detalle = await _dbContext.DetallesVenta
+            .FirstOrDefaultAsync(d => d.Id == detalleId && d.VentaId == ventaId);
+        if (detalle == null)
+            throw new ArgumentException($"El detalle con ID {detalleId} no existe en la venta {ventaId}.");
+
+        var producto = await _dbContext.Productos.FirstOrDefaultAsync(p => p.Id == detalle.ProductoId);
+        if (producto == null)
+            throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
+
+        var diferencia = nuevaCantidad - detalle.Cantidad;
+        if (diferencia == 0)
+            throw new ArgumentException("La nueva cantidad es igual a la actual.");
+
+        if (diferencia > 0)
+            producto.Vender(diferencia);
+        else
+            producto.Reponer(-diferencia);
+
+        var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", Math.Abs(diferencia), "Venta", venta.Id);
+        _dbContext.MovimientosStock.Add(movimiento);
+
+        var deltaMonetario = diferencia * detalle.PrecioUnitario * (1m + producto.TarifaIva / 100m);
+        if (deltaMonetario > 0)
+            venta.AgregarMonto(deltaMonetario);
+        else
+            venta.RestarMonto(-deltaMonetario);
+
+        detalle.ActualizarCantidad(nuevaCantidad);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(
+                "El stock de uno de los productos cambió mientras se " +
+                "procesaba el ajuste. Intenta de nuevo.");
+        }
+
+        await transaction.CommitAsync();
+
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            string.Empty,
+            detalles);
+    }
+
+    public async Task<VentaResponse> QuitarLineaAsync(int ventaId, int detalleId)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(venta.Id, venta.Estado, "Pendiente");
+
+        var detalle = await _dbContext.DetallesVenta
+            .FirstOrDefaultAsync(d => d.Id == detalleId && d.VentaId == ventaId);
+        if (detalle == null)
+            throw new ArgumentException($"El detalle con ID {detalleId} no existe en la venta {ventaId}.");
+
+        var producto = await _dbContext.Productos.FirstOrDefaultAsync(p => p.Id == detalle.ProductoId);
+        if (producto == null)
+            throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
+
+        producto.Reponer(detalle.Cantidad);
+
+        var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", detalle.Cantidad, "Venta", venta.Id);
+        _dbContext.MovimientosStock.Add(movimiento);
+
+        var subtotalConIva = detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m);
+        venta.RestarMonto(subtotalConIva);
+
+        _dbContext.DetallesVenta.Remove(detalle);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(
+                "El stock de uno de los productos cambió mientras se " +
+                "procesaba la eliminación de la línea. Intenta de nuevo.");
+        }
+
+        await transaction.CommitAsync();
+
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            string.Empty,
+            detalles);
+    }
+
     /// <summary>
     /// Genera y persiste la Factura de una venta: se guarda primero sin Numero para obtener
     /// el Id real asignado por SQL Server, y recién con ese Id se genera el correlativo definitivo.

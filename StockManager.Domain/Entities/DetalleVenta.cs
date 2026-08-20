@@ -36,4 +36,15 @@ public class DetalleVenta
             PrecioUnitario = precioUnitario
         };
     }
+
+    /// <summary>
+    /// Actualiza la cantidad de la línea. El precio unitario no cambia.
+    /// </summary>
+    public void ActualizarCantidad(int nuevaCantidad)
+    {
+        if (nuevaCantidad <= 0)
+            throw new ArgumentException("La cantidad debe ser mayor a 0.", nameof(nuevaCantidad));
+
+        Cantidad = nuevaCantidad;
+    }
 }
