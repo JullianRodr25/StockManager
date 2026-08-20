@@ -116,3 +116,49 @@ public class ProductoNoEncontradoException : DomainException
         ProductoId = productoId;
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra una venta con el ID especificado.
+/// </summary>
+public class VentaNoEncontradaException : DomainException
+{
+    public int VentaId { get; }
+
+    public VentaNoEncontradaException(int ventaId)
+        : base($"No se encontró la venta con ID {ventaId}.")
+    {
+        VentaId = ventaId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando se intenta una operación sobre una venta que no está en el estado requerido.
+/// </summary>
+public class VentaEstadoInvalidoException : DomainException
+{
+    public int VentaId { get; }
+    public string EstadoActual { get; }
+    public string EstadoEsperado { get; }
+
+    public VentaEstadoInvalidoException(int ventaId, string estadoActual, string estadoEsperado)
+        : base($"La venta {ventaId} está en estado '{estadoActual}', se esperaba '{estadoEsperado}'.")
+    {
+        VentaId = ventaId;
+        EstadoActual = estadoActual;
+        EstadoEsperado = estadoEsperado;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando un cliente ya tiene una cuenta fiada (venta Pendiente) abierta.
+/// </summary>
+public class CuentaFiadoAbiertaException : DomainException
+{
+    public int ClienteId { get; }
+
+    public CuentaFiadoAbiertaException(int clienteId)
+        : base($"El cliente con ID {clienteId} ya tiene una cuenta fiada abierta.")
+    {
+        ClienteId = clienteId;
+    }
+}

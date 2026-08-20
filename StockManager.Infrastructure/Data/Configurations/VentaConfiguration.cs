@@ -36,9 +36,8 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
             .IsRequired(false);
 
         builder.Property(v => v.MetodoPago)
-            .IsRequired()
             .HasMaxLength(20)
-            .HasDefaultValue("Efectivo");
+            .IsRequired(false);
 
         builder.Property(v => v.Fecha)
             .IsRequired();
@@ -73,5 +72,12 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
         builder.HasIndex(v => v.Fecha);
         builder.HasIndex(v => v.EmpleadoId);
         builder.HasIndex(v => v.ClienteId);
+
+        // Un cliente no puede tener dos cuentas fiadas (Estado = 'Pendiente') abiertas a la vez.
+        // Se usa el overload por nombres de propiedad + nombre explícito: HasIndex(Expression) con la
+        // misma lista de propiedades reutiliza/pisa el índice anterior en vez de crear uno nuevo.
+        builder.HasIndex(new[] { nameof(Venta.ClienteId) }, "IX_Ventas_ClienteId_CuentaFiadoAbierta")
+            .IsUnique()
+            .HasFilter("[Estado] = 'Pendiente'");
     }
 }

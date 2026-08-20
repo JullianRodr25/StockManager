@@ -90,4 +90,103 @@ public class VentasController : ControllerBase
 
         return Ok(venta);
     }
+
+    /// <summary>
+    /// Abre una cuenta fiada (venta en estado Pendiente) para un cliente registrado.
+    /// </summary>
+    [HttpPost("fiado")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> AbrirFiado([FromBody] AbrirFiadoRequest request)
+    {
+        try
+        {
+            var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var venta = await _ventaService.AbrirFiadoAsync(request.ClienteId, empleadoId);
+            return Ok(venta);
+        }
+        catch (CuentaFiadoAbiertaException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al abrir la cuenta fiada" });
+        }
+    }
+
+    /// <summary>
+    /// Agrega una línea de producto a una cuenta fiada abierta y descuenta el stock de inmediato.
+    /// </summary>
+    [HttpPost("{id}/lineas")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> AgregarLineaFiado(int id, [FromBody] LineaVentaRequest request)
+    {
+        try
+        {
+            var venta = await _ventaService.AgregarLineaFiadoAsync(id, request);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (StockInsuficienteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ProductoInactivoException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al agregar la línea a la cuenta fiada" });
+        }
+    }
+
+    /// <summary>
+    /// Cierra una cuenta fiada: fija el método de pago, pasa la venta a Pagada y genera la Factura.
+    /// </summary>
+    [HttpPost("{id}/cerrar")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> CerrarFiado(int id, [FromBody] CerrarFiadoRequest request)
+    {
+        try
+        {
+            var venta = await _ventaService.CerrarFiadoAsync(id, request.MetodoPago);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al cerrar la cuenta fiada" });
+        }
+    }
 }

@@ -111,14 +111,7 @@ public class VentaService : IVentaService
                 "procesaba la venta. Intenta de nuevo.");
         }
 
-        // Generación de Factura: se guarda primero sin Numero para obtener el Id real
-        // asignado por SQL Server, y recién con ese Id se genera el correlativo definitivo.
-        var factura = Factura.Crear(venta.Id, null, venta.Total);
-        _dbContext.Facturas.Add(factura);
-        await _dbContext.SaveChangesAsync();
-
-        factura.GenerarNumero();
-        await _dbContext.SaveChangesAsync();
+        var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
 
         await transaction.CommitAsync();
 
@@ -207,6 +200,150 @@ public class VentaService : IVentaService
             venta.Total,
             numeroFactura,
             detalles);
+    }
+
+    public async Task<VentaResponse> AbrirFiadoAsync(int clienteId, int empleadoId)
+    {
+        var clienteExiste = await _dbContext.Clientes.AnyAsync(c => c.Id == clienteId);
+        if (!clienteExiste)
+            throw new ArgumentException($"El cliente con ID {clienteId} no existe.");
+
+        var tieneCuentaAbierta = await _dbContext.Ventas
+            .AnyAsync(v => v.ClienteId == clienteId && v.Estado == "Pendiente");
+        if (tieneCuentaAbierta)
+            throw new CuentaFiadoAbiertaException(clienteId);
+
+        var venta = Venta.AbrirFiado(empleadoId, clienteId);
+        _dbContext.Ventas.Add(venta);
+        await _dbContext.SaveChangesAsync();
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            string.Empty,
+            new List<DetalleVentaResponse>());
+    }
+
+    public async Task<VentaResponse> AgregarLineaFiadoAsync(int ventaId, LineaVentaRequest linea)
+    {
+        if (linea.Cantidad <= 0)
+            throw new ArgumentException("La cantidad debe ser mayor a 0.");
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(venta.Id, venta.Estado, "Pendiente");
+
+        var producto = await _dbContext.Productos.FirstOrDefaultAsync(p => p.Id == linea.ProductoId);
+        if (producto == null)
+            throw new ArgumentException($"El producto con ID {linea.ProductoId} no existe.");
+
+        var subtotalSinIva = producto.Precio * linea.Cantidad;
+        var iva = subtotalSinIva * (producto.TarifaIva / 100m);
+        var subtotalConIva = subtotalSinIva + iva;
+
+        producto.Vender(linea.Cantidad);
+
+        var detalle = DetalleVenta.Crear(venta.Id, producto.Id, linea.Cantidad, producto.Precio);
+        _dbContext.DetallesVenta.Add(detalle);
+
+        var movimiento = MovimientoStock.Crear(producto.Id, "SalidaVenta", linea.Cantidad, "Venta", venta.Id);
+        _dbContext.MovimientosStock.Add(movimiento);
+
+        venta.AgregarMonto(subtotalConIva);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(
+                "El stock de uno de los productos cambió mientras se " +
+                "procesaba la línea. Intenta de nuevo.");
+        }
+
+        await transaction.CommitAsync();
+
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            string.Empty,
+            detalles);
+    }
+
+    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Total <= 0)
+            throw new ArgumentException(
+                "No se puede cerrar una cuenta fiada sin productos agregados.");
+
+        venta.CerrarFiado(metodoPago);
+        await _dbContext.SaveChangesAsync();
+
+        var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
+
+        await transaction.CommitAsync();
+
+        var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            factura.Numero!,
+            detalles);
+    }
+
+    /// <summary>
+    /// Genera y persiste la Factura de una venta: se guarda primero sin Numero para obtener
+    /// el Id real asignado por SQL Server, y recién con ese Id se genera el correlativo definitivo.
+    /// </summary>
+    private async Task<Factura> GenerarFacturaAsync(int ventaId, decimal total)
+    {
+        var factura = Factura.Crear(ventaId, null, total);
+        _dbContext.Facturas.Add(factura);
+        await _dbContext.SaveChangesAsync();
+
+        factura.GenerarNumero();
+        await _dbContext.SaveChangesAsync();
+
+        return factura;
     }
 
     private async Task<List<DetalleVentaResponse>> ObtenerDetallesVentaAsync(int ventaId)

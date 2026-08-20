@@ -27,7 +27,7 @@ public record VentaResponse(
     string? NombreComprador,
     string? TelefonoComprador,
     string? EmailComprador,
-    string MetodoPago,
+    string? MetodoPago,
     int EmpleadoId,
     DateTime Fecha,
     string Estado,
@@ -43,6 +43,10 @@ public record VentaResumenResponse(
     DateTime Fecha,
     string Estado,
     decimal Total,
-    string MetodoPago,
+    string? MetodoPago,
     string NumeroFactura
 );
+
+public record AbrirFiadoRequest(int ClienteId);
+
+public record CerrarFiadoRequest(string MetodoPago);
