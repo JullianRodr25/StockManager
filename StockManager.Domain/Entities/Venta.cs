@@ -70,7 +70,7 @@ public class Venta
     /// Abre una cuenta fiada para un cliente registrado.
     /// Estado queda en "Pendiente" y MetodoPago en null, ya que aún no se sabe cómo se va a pagar.
     /// </summary>
-    public static Venta AbrirFiado(int empleadoId, int clienteId)
+    public static Venta AbrirFiado(int empleadoId, int clienteId, string nombreCliente)
     {
         if (empleadoId <= 0)
             throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
@@ -78,10 +78,14 @@ public class Venta
         if (clienteId <= 0)
             throw new ArgumentException("ClienteId debe ser mayor a 0.", nameof(clienteId));
 
+        if (string.IsNullOrWhiteSpace(nombreCliente))
+            throw new ArgumentException("El nombre del cliente es obligatorio.", nameof(nombreCliente));
+
         return new Venta
         {
             EmpleadoId = empleadoId,
             ClienteId = clienteId,
+            NombreComprador = nombreCliente,
             MetodoPago = null,
             Fecha = DateTime.UtcNow,
             Total = 0m,

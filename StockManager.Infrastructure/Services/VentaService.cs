@@ -204,8 +204,8 @@ public class VentaService : IVentaService
 
     public async Task<VentaResponse> AbrirFiadoAsync(int clienteId, int empleadoId)
     {
-        var clienteExiste = await _dbContext.Clientes.AnyAsync(c => c.Id == clienteId);
-        if (!clienteExiste)
+        var cliente = await _dbContext.Clientes.FirstOrDefaultAsync(c => c.Id == clienteId);
+        if (cliente is null)
             throw new ArgumentException($"El cliente con ID {clienteId} no existe.");
 
         var tieneCuentaAbierta = await _dbContext.Ventas
@@ -213,7 +213,7 @@ public class VentaService : IVentaService
         if (tieneCuentaAbierta)
             throw new CuentaFiadoAbiertaException(clienteId);
 
-        var venta = Venta.AbrirFiado(empleadoId, clienteId);
+        var venta = Venta.AbrirFiado(empleadoId, clienteId, cliente.Nombre);
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
 
