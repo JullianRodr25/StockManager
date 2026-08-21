@@ -12,6 +12,7 @@ public record RegistrarVentaRequest(
 );
 
 public record DetalleVentaResponse(
+    int Id,
     int ProductoId,
     string ProductoNombre,
     int Cantidad,

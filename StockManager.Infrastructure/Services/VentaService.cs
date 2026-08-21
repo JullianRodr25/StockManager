@@ -566,6 +566,7 @@ public class VentaService : IVentaService
                 detalle => detalle.ProductoId,
                 producto => producto.Id,
                 (detalle, producto) => new DetalleVentaResponse(
+                    detalle.Id,
                     detalle.ProductoId,
                     producto.Nombre,
                     detalle.Cantidad,
