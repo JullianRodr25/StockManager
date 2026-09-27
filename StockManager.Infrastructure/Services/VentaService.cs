@@ -434,6 +434,21 @@ public class VentaService : IVentaService
         if (diferencia == 0)
             throw new ArgumentException("La nueva cantidad es igual a la actual.");
 
+        var deltaMonetario = diferencia * detalle.PrecioUnitario * (1m + producto.TarifaIva / 100m);
+
+        if (deltaMonetario < 0)
+        {
+            var totalAbonado = await _dbContext.AbonosCuenta
+                .Where(a => a.VentaId == ventaId)
+                .SumAsync(a => (decimal?)a.Monto) ?? 0m;
+
+            var nuevoTotal = venta.Total + deltaMonetario;
+            if (nuevoTotal < totalAbonado)
+                throw new OperacionInvalidaCuentaFiadaException(
+                    $"No se puede reducir la cantidad: el nuevo total ({nuevoTotal:F2}) quedaría por " +
+                    $"debajo de lo ya abonado ({totalAbonado:F2}).");
+        }
+
         if (diferencia > 0)
             producto.Vender(diferencia);
         else
@@ -442,7 +457,6 @@ public class VentaService : IVentaService
         var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", Math.Abs(diferencia), "Venta", venta.Id);
         _dbContext.MovimientosStock.Add(movimiento);
 
-        var deltaMonetario = diferencia * detalle.PrecioUnitario * (1m + producto.TarifaIva / 100m);
         if (deltaMonetario > 0)
             venta.AgregarMonto(deltaMonetario);
         else
@@ -496,16 +510,33 @@ public class VentaService : IVentaService
         if (detalle == null)
             throw new ArgumentException($"El detalle con ID {detalleId} no existe en la venta {ventaId}.");
 
+        var cantidadLineas = await _dbContext.DetallesVenta.CountAsync(d => d.VentaId == ventaId);
+        if (cantidadLineas <= 1)
+            throw new OperacionInvalidaCuentaFiadaException(
+                "No se puede quitar el último producto de la cuenta. Si quieres deshacer la cuenta " +
+                "por completo, usa la opción de cancelar la cuenta.");
+
         var producto = await _dbContext.Productos.FirstOrDefaultAsync(p => p.Id == detalle.ProductoId);
         if (producto == null)
             throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
+
+        var subtotalConIva = detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m);
+
+        var totalAbonado = await _dbContext.AbonosCuenta
+            .Where(a => a.VentaId == ventaId)
+            .SumAsync(a => (decimal?)a.Monto) ?? 0m;
+
+        var nuevoTotal = venta.Total - subtotalConIva;
+        if (nuevoTotal < totalAbonado)
+            throw new OperacionInvalidaCuentaFiadaException(
+                $"No se puede quitar este producto: el nuevo total ({nuevoTotal:F2}) quedaría por " +
+                $"debajo de lo ya abonado ({totalAbonado:F2}).");
 
         producto.Reponer(detalle.Cantidad);
 
         var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", detalle.Cantidad, "Venta", venta.Id);
         _dbContext.MovimientosStock.Add(movimiento);
 
-        var subtotalConIva = detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m);
         venta.RestarMonto(subtotalConIva);
 
         _dbContext.DetallesVenta.Remove(detalle);
@@ -538,6 +569,71 @@ public class VentaService : IVentaService
             venta.Total,
             string.Empty,
             detalles);
+    }
+
+    /// <summary>
+    /// Cancela por completo una cuenta fiada: exige que esté "Pendiente" y que no tenga abonos
+    /// registrados, repone el stock de todas sus líneas y pasa la venta a "Cancelada".
+    /// </summary>
+    public async Task<VentaResponse> CancelarCuentaAsync(int ventaId)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        if (venta.Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(venta.Id, venta.Estado, "Pendiente");
+
+        var tieneAbonos = await _dbContext.AbonosCuenta.AnyAsync(a => a.VentaId == ventaId);
+        if (tieneAbonos)
+            throw new CuentaConAbonosException(ventaId);
+
+        var detalles = await _dbContext.DetallesVenta.Where(d => d.VentaId == ventaId).ToListAsync();
+
+        foreach (var detalle in detalles)
+        {
+            var producto = await _dbContext.Productos.FirstOrDefaultAsync(p => p.Id == detalle.ProductoId);
+            if (producto == null)
+                throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
+
+            producto.Reponer(detalle.Cantidad);
+
+            var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", detalle.Cantidad, "Venta", venta.Id);
+            _dbContext.MovimientosStock.Add(movimiento);
+
+            _dbContext.DetallesVenta.Remove(detalle);
+        }
+
+        venta.CancelarCuenta();
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(
+                "El stock de uno de los productos cambió mientras se " +
+                "procesaba la cancelación de la cuenta. Intenta de nuevo.");
+        }
+
+        await transaction.CommitAsync();
+
+        return new VentaResponse(
+            venta.Id,
+            venta.ClienteId,
+            venta.NombreComprador,
+            venta.TelefonoComprador,
+            venta.EmailComprador,
+            venta.MetodoPago,
+            venta.EmpleadoId,
+            venta.Fecha,
+            venta.Estado,
+            venta.Total,
+            string.Empty,
+            new List<DetalleVentaResponse>());
     }
 
     /// <summary>

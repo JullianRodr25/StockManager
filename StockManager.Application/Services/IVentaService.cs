@@ -24,4 +24,6 @@ public interface IVentaService
     Task<VentaResponse> EditarCantidadLineaAsync(int ventaId, int detalleId, int nuevaCantidad);
 
     Task<VentaResponse> QuitarLineaAsync(int ventaId, int detalleId);
+
+    Task<VentaResponse> CancelarCuentaAsync(int ventaId);
 }

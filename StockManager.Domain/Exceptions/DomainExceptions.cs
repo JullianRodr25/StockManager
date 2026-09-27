@@ -162,3 +162,26 @@ public class CuentaFiadoAbiertaException : DomainException
         ClienteId = clienteId;
     }
 }
+
+/// <summary>
+/// Excepción lanzada al intentar cancelar una cuenta fiada que ya tiene abonos registrados.
+/// </summary>
+public class CuentaConAbonosException : DomainException
+{
+    public int VentaId { get; }
+
+    public CuentaConAbonosException(int ventaId)
+        : base($"La cuenta {ventaId} no se puede cancelar porque ya tiene abonos registrados.")
+    {
+        VentaId = ventaId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar dejar una cuenta fiada sin productos (última línea) o al
+/// intentar reducir su Total por debajo de lo ya abonado.
+/// </summary>
+public class OperacionInvalidaCuentaFiadaException : DomainException
+{
+    public OperacionInvalidaCuentaFiadaException(string message) : base(message) { }
+}

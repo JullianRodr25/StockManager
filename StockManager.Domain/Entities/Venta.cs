@@ -133,4 +133,17 @@ public class Venta
         MetodoPago = metodoPago;
         Estado = "Pagada";
     }
+
+    /// <summary>
+    /// Cancela por completo una cuenta fiada: exige que esté "Pendiente" y pasa a "Cancelada".
+    /// La validación de que no tenga abonos registrados es responsabilidad del servicio de aplicación,
+    /// ya que requiere consultar la tabla AbonosCuenta.
+    /// </summary>
+    public void CancelarCuenta()
+    {
+        if (Estado != "Pendiente")
+            throw new VentaEstadoInvalidoException(Id, Estado, "Pendiente");
+
+        Estado = "Cancelada";
+    }
 }

@@ -261,6 +261,10 @@ public class VentasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (OperacionInvalidaCuentaFiadaException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -295,6 +299,10 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
+        catch (OperacionInvalidaCuentaFiadaException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -306,6 +314,45 @@ public class VentasController : ControllerBase
         catch (Exception)
         {
             return StatusCode(500, new { message = "Error al quitar la línea" });
+        }
+    }
+
+    /// <summary>
+    /// Cancela por completo una cuenta fiada abierta: repone el stock de todas sus líneas y
+    /// pasa la venta a Cancelada. Se rechaza si ya tiene abonos registrados.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> CancelarCuenta(int id)
+    {
+        try
+        {
+            var venta = await _ventaService.CancelarCuentaAsync(id);
+            return Ok(venta);
+        }
+        catch (VentaNoEncontradaException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (VentaEstadoInvalidoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (CuentaConAbonosException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al cancelar la cuenta" });
         }
     }
 }
