@@ -11,10 +11,16 @@ public class Pedido
     public DateTime Fecha { get; private set; }
     public string Estado { get; private set; } = null!;  // Pendiente | Confirmado | EnPreparacion | EnCamino | Entregado | Cancelado
     public string Direccion { get; private set; } = null!;
+    public decimal Total { get; private set; }
 
     private Pedido() { }
 
-    public static Pedido Crear(int clienteId, string direccion)
+    /// <summary>
+    /// Crea un pedido. El Total se recibe ya calculado (suma de Cantidad * PrecioUnitario
+    /// de sus líneas), igual que en Venta, para que quede congelado al precio del momento
+    /// del pedido y no cambie si el producto sube o baja de precio después.
+    /// </summary>
+    public static Pedido Crear(int clienteId, string direccion, decimal total)
     {
         if (clienteId <= 0)
             throw new ArgumentException("ClienteId debe ser mayor a 0.", nameof(clienteId));
@@ -22,12 +28,16 @@ public class Pedido
         if (string.IsNullOrWhiteSpace(direccion))
             throw new ArgumentException("La dirección no puede estar vacía.", nameof(direccion));
 
+        if (total < 0)
+            throw new ArgumentException("El total no puede ser negativo.", nameof(total));
+
         return new Pedido
         {
             ClienteId = clienteId,
             Fecha = DateTime.UtcNow,
             Estado = "Pendiente",
-            Direccion = direccion.Trim()
+            Direccion = direccion.Trim(),
+            Total = total
         };
     }
 

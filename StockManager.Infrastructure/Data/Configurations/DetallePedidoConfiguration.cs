@@ -28,6 +28,10 @@ public class DetallePedidoConfiguration : IEntityTypeConfiguration<DetallePedido
         builder.Property(dp => dp.Cantidad)
             .IsRequired();
 
+        builder.Property(dp => dp.PrecioUnitario)
+            .IsRequired()
+            .HasColumnType("decimal(12, 2)");
+
         builder.Property(dp => dp.EstadoLinea)
             .IsRequired()
             .HasMaxLength(50);

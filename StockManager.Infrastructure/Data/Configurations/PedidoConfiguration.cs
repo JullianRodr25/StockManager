@@ -32,6 +32,10 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
             .IsRequired()
             .HasMaxLength(300);
 
+        builder.Property(p => p.Total)
+            .IsRequired()
+            .HasColumnType("decimal(12, 2)");
+
         // Relación con Cliente
         builder.HasOne<Cliente>()
             .WithMany()

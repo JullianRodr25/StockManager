@@ -11,11 +11,12 @@ public class DetallePedido
     public int PedidoId { get; private set; }
     public int ProductoId { get; private set; }
     public int Cantidad { get; private set; }
+    public decimal PrecioUnitario { get; private set; }
     public string EstadoLinea { get; private set; } = null!;  // 'Disponible' | 'PorEncargo'
 
     private DetallePedido() { }
 
-    public static DetallePedido Crear(int pedidoId, int productoId, int cantidad, string estadoLinea = "Disponible")
+    public static DetallePedido Crear(int pedidoId, int productoId, int cantidad, decimal precioUnitario, string estadoLinea = "Disponible")
     {
         if (pedidoId <= 0)
             throw new ArgumentException("PedidoId debe ser mayor a 0.", nameof(pedidoId));
@@ -26,6 +27,9 @@ public class DetallePedido
         if (cantidad <= 0)
             throw new ArgumentException("La cantidad debe ser mayor a 0.", nameof(cantidad));
 
+        if (precioUnitario <= 0)
+            throw new ArgumentException("El precio unitario debe ser mayor a 0.", nameof(precioUnitario));
+
         if (estadoLinea != "Disponible" && estadoLinea != "PorEncargo")
             throw new ArgumentException("El estado de la línea debe ser 'Disponible' o 'PorEncargo'.", nameof(estadoLinea));
 
@@ -34,6 +38,7 @@ public class DetallePedido
             PedidoId = pedidoId,
             ProductoId = productoId,
             Cantidad = cantidad,
+            PrecioUnitario = precioUnitario,
             EstadoLinea = estadoLinea
         };
     }
