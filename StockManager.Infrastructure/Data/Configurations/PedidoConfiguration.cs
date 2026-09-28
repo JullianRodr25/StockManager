@@ -36,6 +36,8 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
             .IsRequired()
             .HasColumnType("decimal(12, 2)");
 
+        builder.Property(p => p.VentaId);
+
         // Relación con Cliente
         builder.HasOne<Cliente>()
             .WithMany()
@@ -43,9 +45,16 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
 
+        // Relación con Venta (nullable) — la venta generada al marcar el pedido como Entregado
+        builder.HasOne<Venta>()
+            .WithMany()
+            .HasForeignKey(p => p.VentaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Índices
         builder.HasIndex(p => p.ClienteId);
         builder.HasIndex(p => p.Fecha);
         builder.HasIndex(p => p.Estado);
+        builder.HasIndex(p => p.VentaId);
     }
 }

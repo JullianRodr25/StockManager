@@ -37,6 +37,8 @@ public class BackorderRequestConfiguration : IEntityTypeConfiguration<BackorderR
 
         builder.Property(br => br.FechaNotificacion);
 
+        builder.Property(br => br.DetallePedidoId);
+
         // Relación con Cliente
         builder.HasOne<Cliente>()
             .WithMany()
@@ -51,6 +53,12 @@ public class BackorderRequestConfiguration : IEntityTypeConfiguration<BackorderR
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
 
+        // Relación con DetallePedido (nullable) — de dónde vino el "por encargo", si aplica
+        builder.HasOne<DetallePedido>()
+            .WithMany()
+            .HasForeignKey(br => br.DetallePedidoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Índice filtrado: solo solicitudes pendientes (para búsqueda rápida de items a notificar)
         builder.HasIndex(br => new { br.ProductoId, br.Estado })
             .HasFilter("Estado = 'Pendiente'");
@@ -59,5 +67,6 @@ public class BackorderRequestConfiguration : IEntityTypeConfiguration<BackorderR
         builder.HasIndex(br => br.ClienteId);
         builder.HasIndex(br => br.Estado);
         builder.HasIndex(br => br.FechaSolicitud);
+        builder.HasIndex(br => br.DetallePedidoId);
     }
 }

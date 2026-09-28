@@ -14,9 +14,16 @@ public class BackorderRequest
     public string Estado { get; private set; } = null!;  // 'Pendiente' | 'Notificado' | 'Cancelado'
     public DateTime? FechaNotificacion { get; private set; }
 
+    /// <summary>
+    /// Línea del pedido que generó esta solicitud, cuando viene de un pedido con producto
+    /// agotado (flujo "por encargo"). Null si se creó de otra forma (por ejemplo, a futuro,
+    /// un cliente pidiendo aviso de disponibilidad sin haber hecho un pedido).
+    /// </summary>
+    public int? DetallePedidoId { get; private set; }
+
     private BackorderRequest() { }
 
-    public static BackorderRequest Crear(int clienteId, int productoId, int cantidadDeseada)
+    public static BackorderRequest Crear(int clienteId, int productoId, int cantidadDeseada, int? detallePedidoId = null)
     {
         if (clienteId <= 0)
             throw new ArgumentException("ClienteId debe ser mayor a 0.", nameof(clienteId));
@@ -33,7 +40,8 @@ public class BackorderRequest
             ProductoId = productoId,
             CantidadDeseada = cantidadDeseada,
             FechaSolicitud = DateTime.UtcNow,
-            Estado = "Pendiente"
+            Estado = "Pendiente",
+            DetallePedidoId = detallePedidoId
         };
     }
 

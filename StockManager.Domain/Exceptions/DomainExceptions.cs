@@ -185,3 +185,47 @@ public class OperacionInvalidaCuentaFiadaException : DomainException
 {
     public OperacionInvalidaCuentaFiadaException(string message) : base(message) { }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra un pedido con el ID especificado.
+/// </summary>
+public class PedidoNoEncontradoException : DomainException
+{
+    public int PedidoId { get; }
+
+    public PedidoNoEncontradoException(int pedidoId)
+        : base($"No se encontró el pedido con ID {pedidoId}.")
+    {
+        PedidoId = pedidoId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando se intenta una operación sobre un pedido que no está en el
+/// estado requerido (por ejemplo, saltarse un paso del flujo Pendiente → Confirmado →
+/// EnPreparacion → EnCamino → Entregado).
+/// </summary>
+public class PedidoEstadoInvalidoException : DomainException
+{
+    public int PedidoId { get; }
+    public string EstadoActual { get; }
+    public string EstadoEsperado { get; }
+
+    public PedidoEstadoInvalidoException(int pedidoId, string estadoActual, string estadoEsperado)
+        : base($"El pedido {pedidoId} está en estado '{estadoActual}', se esperaba '{estadoEsperado}'.")
+    {
+        PedidoId = pedidoId;
+        EstadoActual = estadoActual;
+        EstadoEsperado = estadoEsperado;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar una operación sobre un pedido que su estado actual no
+/// permite por reglas de negocio propias del flujo (por ejemplo, entregarlo mientras aún
+/// tiene líneas "Por encargo" sin resolver).
+/// </summary>
+public class OperacionInvalidaPedidoException : DomainException
+{
+    public OperacionInvalidaPedidoException(string message) : base(message) { }
+}

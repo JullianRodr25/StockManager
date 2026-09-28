@@ -1,8 +1,16 @@
 namespace StockManager.Domain.Entities;
 
+using StockManager.Domain.Exceptions;
+
 /// <summary>
 /// Entidad Pedido del dominio.
 /// Representa un pedido realizado vía PWA para entrega a domicilio.
+///
+/// El estado avanza en una sola dirección — Pendiente → Confirmado → EnPreparacion →
+/// EnCamino → Entregado — y solo mediante los métodos de esta clase, nunca fijando
+/// Estado directamente, para que una transición inválida (saltarse un paso, o mover un
+/// pedido ya Entregado) sea imposible de expresar. Cancelar() es la única salida desde
+/// cualquier estado que no sea Entregado o el propio Cancelado.
 /// </summary>
 public class Pedido
 {
@@ -12,6 +20,12 @@ public class Pedido
     public string Estado { get; private set; } = null!;  // Pendiente | Confirmado | EnPreparacion | EnCamino | Entregado | Cancelado
     public string Direccion { get; private set; } = null!;
     public decimal Total { get; private set; }
+
+    /// <summary>
+    /// Venta generada al marcar el pedido como Entregado (ver MarcarEntregado). Null hasta entonces.
+    /// A partir de ahí el pedido queda enlazado a esa venta para efectos de historial y reportes.
+    /// </summary>
+    public int? VentaId { get; private set; }
 
     private Pedido() { }
 
@@ -41,12 +55,65 @@ public class Pedido
         };
     }
 
-    public void CambiarEstado(string nuevoEstado)
+    /// <summary>
+    /// El admin confirma que el pedido se va a atender.
+    /// </summary>
+    public void Confirmar()
     {
-        var estadosValidos = new[] { "Pendiente", "Confirmado", "EnPreparacion", "EnCamino", "Entregado", "Cancelado" };
-        if (!estadosValidos.Contains(nuevoEstado))
-            throw new ArgumentException($"El estado '{nuevoEstado}' no es válido.", nameof(nuevoEstado));
+        ExigirEstado("Pendiente");
+        Estado = "Confirmado";
+    }
 
-        Estado = nuevoEstado;
+    /// <summary>
+    /// El pedido pasa a alistarse en bodega.
+    /// </summary>
+    public void IniciarPreparacion()
+    {
+        ExigirEstado("Confirmado");
+        Estado = "EnPreparacion";
+    }
+
+    /// <summary>
+    /// El pedido sale a domicilio.
+    /// </summary>
+    public void EnviarACamino()
+    {
+        ExigirEstado("EnPreparacion");
+        Estado = "EnCamino";
+    }
+
+    /// <summary>
+    /// Se entrega el pedido al cliente. Queda enlazado a la Venta que lo registra
+    /// contablemente (generada por el servicio de aplicación junto con esta llamada).
+    /// </summary>
+    public void MarcarEntregado(int ventaId)
+    {
+        ExigirEstado("EnCamino");
+
+        if (ventaId <= 0)
+            throw new ArgumentException("VentaId debe ser mayor a 0.", nameof(ventaId));
+
+        Estado = "Entregado";
+        VentaId = ventaId;
+    }
+
+    /// <summary>
+    /// Cancela el pedido. Permitido desde cualquier estado salvo Entregado o el propio Cancelado
+    /// — una vez entregado, no hay pedido que cancelar; es una devolución, un flujo aparte.
+    /// La reposición de stock de las líneas Disponible es responsabilidad del servicio de
+    /// aplicación, igual que en Venta.CancelarCuenta.
+    /// </summary>
+    public void Cancelar()
+    {
+        if (Estado == "Entregado" || Estado == "Cancelado")
+            throw new PedidoEstadoInvalidoException(Id, Estado, "Pendiente, Confirmado, EnPreparacion o EnCamino");
+
+        Estado = "Cancelado";
+    }
+
+    private void ExigirEstado(string estadoEsperado)
+    {
+        if (Estado != estadoEsperado)
+            throw new PedidoEstadoInvalidoException(Id, Estado, estadoEsperado);
     }
 }
