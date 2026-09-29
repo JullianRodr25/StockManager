@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
 using StockManager.Domain.Entities;
+using StockManager.Domain.Events;
 using StockManager.Domain.Exceptions;
 using StockManager.Infrastructure.Data;
 
@@ -10,10 +11,12 @@ namespace StockManager.Infrastructure.Services;
 public class VentaService : IVentaService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IEventoNotificacionPublisher _eventoPublisher;
 
-    public VentaService(AppDbContext dbContext)
+    public VentaService(AppDbContext dbContext, IEventoNotificacionPublisher eventoPublisher)
     {
         _dbContext = dbContext;
+        _eventoPublisher = eventoPublisher;
     }
 
     public async Task<VentaResponse> RegistrarVentaAsync(RegistrarVentaRequest request, int empleadoId)
@@ -648,6 +651,11 @@ public class VentaService : IVentaService
 
         factura.GenerarNumero();
         await _dbContext.SaveChangesAsync();
+
+        // Único punto donde se sabe que el pago quedó completo (venta de mostrador
+        // pagada al instante, o cuenta fiada recién saldada): dispara el envío de la
+        // factura por WhatsApp (ver WhatsAppNotificationBackgroundService).
+        _eventoPublisher.Publicar(new FacturaGeneradaEvent(factura.Id));
 
         return factura;
     }

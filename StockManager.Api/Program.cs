@@ -1,12 +1,16 @@
 using StockManager.Infrastructure.Data;
 using StockManager.Infrastructure.Services;
 using StockManager.Infrastructure.Hosting;
+using StockManager.Infrastructure.Notificaciones;
 using StockManager.Application.Services;
+using StockManager.Domain.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.Channels;
 using Scalar.AspNetCore;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +64,29 @@ builder.Services.AddScoped<IProductoService>(sp =>
 
 // Registrar el HostedService para bootstrap del Admin inicial
 builder.Services.AddHostedService<AdminBootstrapHostedService>();
+
+// --- Notificaciones por WhatsApp + factura en PDF ---
+// QuestPDF requiere aceptar explícitamente la licencia Community antes de generar cualquier documento.
+QuestPDF.Settings.License = LicenseType.Community;
+
+builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
+builder.Services.Configure<TwilioOptions>(builder.Configuration.GetSection("WhatsApp:Twilio"));
+
+// Channel<DomainEvent> en memoria: el puente entre "algo pasó" (publicado desde el hilo de la
+// petición HTTP) y "hay que avisar por WhatsApp" (consumido por el BackgroundService). Unbounded
+// para que Publicar() nunca bloquee la transacción de negocio que lo dispara.
+builder.Services.AddSingleton(Channel.CreateUnbounded<DomainEvent>());
+builder.Services.AddSingleton<IEventoNotificacionPublisher, ChannelEventoNotificacionPublisher>();
+
+builder.Services.AddScoped<IFacturaPdfService, QuestPdfFacturaService>();
+builder.Services.AddScoped<IFacturaLinkTokenService, HmacFacturaLinkTokenService>();
+
+builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>
+{
+    client.BaseAddress = new Uri("https://api.twilio.com/");
+});
+
+builder.Services.AddHostedService<WhatsAppNotificationBackgroundService>();
 
 // Add OpenAPI/Swagger services
 builder.Services.AddOpenApi();

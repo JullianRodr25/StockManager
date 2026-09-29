@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
 using StockManager.Domain.Entities;
+using StockManager.Domain.Events;
 using StockManager.Domain.Exceptions;
 using StockManager.Infrastructure.Data;
 
@@ -10,10 +11,12 @@ namespace StockManager.Infrastructure.Services;
 public class PedidoService : IPedidoService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IEventoNotificacionPublisher _eventoPublisher;
 
-    public PedidoService(AppDbContext dbContext)
+    public PedidoService(AppDbContext dbContext, IEventoNotificacionPublisher eventoPublisher)
     {
         _dbContext = dbContext;
+        _eventoPublisher = eventoPublisher;
     }
 
     /// <summary>
@@ -100,6 +103,11 @@ public class PedidoService : IPedidoService
         }
 
         await transaction.CommitAsync();
+
+        // "Pendiente" es el estado inicial de todo pedido nuevo: este mismo evento le
+        // confirma la recepción al cliente y avisa a la tienda de un pedido por atender
+        // (ver WhatsAppNotificationBackgroundService).
+        _eventoPublisher.Publicar(new PedidoEstadoCambiadoEvent(pedido.Id, pedido.Estado));
 
         return (await ObtenerPedidoPorIdAsync(pedido.Id))!;
     }
@@ -237,6 +245,10 @@ public class PedidoService : IPedidoService
 
         await transaction.CommitAsync();
 
+        // GenerarFacturaAsync ya publicó FacturaGeneradaEvent (envía la factura); este
+        // evento aparte es el que avisa al cliente que su pedido llegó.
+        _eventoPublisher.Publicar(new PedidoEstadoCambiadoEvent(pedido.Id, pedido.Estado));
+
         return (await ObtenerPedidoPorIdAsync(pedidoId))!;
     }
 
@@ -289,9 +301,17 @@ public class PedidoService : IPedidoService
 
         await transaction.CommitAsync();
 
+        _eventoPublisher.Publicar(new PedidoEstadoCambiadoEvent(pedido.Id, pedido.Estado));
+
         return (await ObtenerPedidoPorIdAsync(pedidoId))!;
     }
 
+    /// <summary>
+    /// Ejecuta una transición de estado simple (confirmar/iniciar preparación/enviar a
+    /// camino) y publica el evento correspondiente para que el cliente reciba el aviso
+    /// por WhatsApp. Compartido por las tres, ya que todas dejan el nuevo estado en
+    /// <c>pedido.Estado</c> tras aplicar la transición.
+    /// </summary>
     private async Task<PedidoResponse> EjecutarTransicionAsync(int pedidoId, Action<Pedido> transicion)
     {
         var pedido = await _dbContext.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId);
@@ -300,6 +320,8 @@ public class PedidoService : IPedidoService
 
         transicion(pedido);
         await _dbContext.SaveChangesAsync();
+
+        _eventoPublisher.Publicar(new PedidoEstadoCambiadoEvent(pedido.Id, pedido.Estado));
 
         return (await ObtenerPedidoPorIdAsync(pedidoId))!;
     }
@@ -317,6 +339,10 @@ public class PedidoService : IPedidoService
 
         factura.GenerarNumero();
         await _dbContext.SaveChangesAsync();
+
+        // Único punto donde se sabe que el pago quedó completo: dispara el envío de la
+        // factura por WhatsApp (ver WhatsAppNotificationBackgroundService).
+        _eventoPublisher.Publicar(new FacturaGeneradaEvent(factura.Id));
 
         return factura;
     }
