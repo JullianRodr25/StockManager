@@ -136,6 +136,14 @@ public class ProductoService : IProductoService
         if (!categoriaExiste)
             throw new ArgumentException($"La categoría con ID {request.CategoriaId} no existe.", nameof(request.CategoriaId));
 
+        // Validar que el proveedor (si viene) existe
+        if (request.ProveedorId.HasValue)
+        {
+            var proveedorExiste = await _dbContext.Proveedores.AnyAsync(p => p.Id == request.ProveedorId.Value);
+            if (!proveedorExiste)
+                throw new ArgumentException($"El proveedor con ID {request.ProveedorId.Value} no existe.", nameof(request.ProveedorId));
+        }
+
         // Validar nombre duplicado (case-insensitive)
         var nombreNormalizado = request.Nombre.Trim();
         var existeProducto = await _dbContext.Productos
@@ -154,7 +162,8 @@ public class ProductoService : IProductoService
             request.StockInicial,
             request.StockMinimo,
             tarifaIva,
-            request.CodigoBarras);
+            request.CodigoBarras,
+            request.ProveedorId);
 
         // Agregar a la base de datos
         _dbContext.Productos.Add(producto);
@@ -183,6 +192,14 @@ public class ProductoService : IProductoService
         if (!categoriaExiste)
             throw new ArgumentException($"La categoría con ID {request.CategoriaId} no existe.", nameof(request.CategoriaId));
 
+        // Validar que el proveedor (si viene) existe
+        if (request.ProveedorId.HasValue)
+        {
+            var proveedorExiste = await _dbContext.Proveedores.AnyAsync(p => p.Id == request.ProveedorId.Value);
+            if (!proveedorExiste)
+                throw new ArgumentException($"El proveedor con ID {request.ProveedorId.Value} no existe.", nameof(request.ProveedorId));
+        }
+
         // Validar nombre duplicado EXCLUYENDO el propio producto (case-insensitive)
         var nombreNormalizado = request.Nombre.Trim();
         var existeProducto = await _dbContext.Productos
@@ -207,7 +224,8 @@ public class ProductoService : IProductoService
             request.Precio,
             request.StockMinimo,
             request.TarifaIva ?? producto.TarifaIva,
-            codigoBarrasNormalizado);
+            codigoBarrasNormalizado,
+            request.ProveedorId);
 
         await _dbContext.SaveChangesAsync();
 
@@ -448,7 +466,8 @@ public class ProductoService : IProductoService
             StockMinimo = producto.StockMinimo,
             TarifaIva = producto.TarifaIva,
             CodigoBarras = producto.CodigoBarras,
-            Activo = producto.Activo
+            Activo = producto.Activo,
+            ProveedorId = producto.ProveedorId
         };
     }
 }

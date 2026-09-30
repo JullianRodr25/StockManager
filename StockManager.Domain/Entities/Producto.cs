@@ -30,6 +30,13 @@ public class Producto
     public bool EsCodigoGenerado { get; private set; }
     public DateTime? FechaImpresionEtiqueta { get; private set; }
 
+    /// <summary>
+    /// Proveedor opcional al que se le compra este producto. Un proveedor puede tener
+    /// asignados muchos productos (relación uno-a-muchos); se usa para saber a quién
+    /// avisarle por WhatsApp cuando el producto entra en stock bajo.
+    /// </summary>
+    public int? ProveedorId { get; private set; }
+
     // Concurrencia optimista — EF Core maneja automáticamente este campo
     public byte[]? RowVersion { get; set; }
 
@@ -46,7 +53,8 @@ public class Producto
         int stockActual,
         int stockMinimo,
         decimal tarifaIva,
-        string? codigoBarras = null)
+        string? codigoBarras = null,
+        int? proveedorId = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del producto no puede estar vacío.", nameof(nombre));
@@ -72,6 +80,9 @@ public class Producto
         if (!string.IsNullOrWhiteSpace(codigoBarras) && codigoBarras.Length > 50)
             throw new ArgumentException("El código de barras no puede exceder 50 caracteres.", nameof(codigoBarras));
 
+        if (proveedorId.HasValue && proveedorId.Value <= 0)
+            throw new ArgumentException("ProveedorId debe ser mayor a 0.", nameof(proveedorId));
+
         return new Producto
         {
             Nombre = nombre.Trim(),
@@ -83,7 +94,8 @@ public class Producto
             Activo = true,
             CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras.Trim(),
             EsCodigoGenerado = false,
-            FechaImpresionEtiqueta = null
+            FechaImpresionEtiqueta = null,
+            ProveedorId = proveedorId
         };
     }
 
@@ -167,7 +179,7 @@ public class Producto
     /// Actualiza la información general del producto (nombre, categoría, precio, stock mínimo y código de barras).
     /// NO modifica StockActual; el stock solo cambia vía Vender()/Reponer().
     /// </summary>
-    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, decimal tarifaIva, string? codigoBarras)
+    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, decimal tarifaIva, string? codigoBarras, int? proveedorId = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre no puede estar vacío.");
@@ -177,6 +189,8 @@ public class Producto
             throw new ArgumentException("El stock mínimo no puede ser negativo.");
         if (tarifaIva < 0 || tarifaIva > 100)
             throw new ArgumentException("La tarifa de IVA debe estar entre 0 y 100.");
+        if (proveedorId.HasValue && proveedorId.Value <= 0)
+            throw new ArgumentException("ProveedorId debe ser mayor a 0.", nameof(proveedorId));
 
         Nombre = nombre.Trim();
         CategoriaId = categoriaId;
@@ -184,6 +198,7 @@ public class Producto
         StockMinimo = stockMinimo;
         TarifaIva = tarifaIva;
         CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
+        ProveedorId = proveedorId;
     }
 
     /// <summary>

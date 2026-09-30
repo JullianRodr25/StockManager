@@ -79,6 +79,10 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
                 await ProcesarCuentaPorPagarProximaAVencerAsync(cuentaEvento, scope.ServiceProvider, ct);
                 break;
 
+            case StockBajoProveedorEvent stockBajoEvento:
+                await ProcesarStockBajoProveedorAsync(stockBajoEvento, scope.ServiceProvider, ct);
+                break;
+
             // Otros eventos de dominio (ProductoVendidoEvent, ProductoRepuestoEvent) no
             // generan notificación por WhatsApp; se ignoran silenciosamente acá.
         }
@@ -111,6 +115,37 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
 
         var resultado = await sender.EnviarTextoAsync(telefonoAdmin, mensaje);
         await RegistrarLogAsync(db, telefonoAdmin, "CuentaPorPagar", cuenta.Id, resultado, ct);
+    }
+
+    /// <summary>
+    /// Avisa a un proveedor (en un único mensaje) sobre todos los productos que le compramos
+    /// y que están actualmente en stock bajo. Se re-consulta la lista de productos en vez de
+    /// reutilizar la que vio el chequeo periódico, porque entre que se publicó el evento y se
+    /// procesa puede haber pasado algo de tiempo (y el volumen de eventos es bajo).
+    /// </summary>
+    private async Task ProcesarStockBajoProveedorAsync(StockBajoProveedorEvent evento, IServiceProvider sp, CancellationToken ct)
+    {
+        var db = sp.GetRequiredService<AppDbContext>();
+        var sender = sp.GetRequiredService<IWhatsAppSender>();
+
+        var proveedor = await db.Proveedores.AsNoTracking().FirstOrDefaultAsync(p => p.Id == evento.ProveedorId, ct);
+        if (proveedor is null || string.IsNullOrWhiteSpace(proveedor.NumeroWhatsApp))
+            return;
+
+        var productos = await db.Productos.AsNoTracking()
+            .Where(p => p.ProveedorId == evento.ProveedorId && p.Activo && p.StockActual <= p.StockMinimo)
+            .Select(p => new { p.Nombre, p.StockActual, p.StockMinimo })
+            .ToListAsync(ct);
+
+        if (productos.Count == 0)
+            return; // Se repuso el stock entre que se publicó el evento y se procesó.
+
+        var mensaje = PlantillasMensajesWhatsApp.StockBajoProveedor(
+            proveedor.Nombre,
+            productos.Select(p => (p.Nombre, p.StockActual, p.StockMinimo)).ToList());
+
+        var resultado = await sender.EnviarTextoAsync(proveedor.NumeroWhatsApp!, mensaje);
+        await RegistrarLogAsync(db, proveedor.NumeroWhatsApp!, "StockBajoProveedor", proveedor.Id, resultado, ct);
     }
 
     private async Task ProcesarPedidoEstadoCambiadoAsync(PedidoEstadoCambiadoEvent evento, IServiceProvider sp, CancellationToken ct)

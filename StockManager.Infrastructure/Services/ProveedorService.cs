@@ -23,7 +23,8 @@ public class ProveedorService : IProveedorService
             request.NumeroIdentificacion,
             request.Telefono,
             request.Email,
-            request.Direccion);
+            request.Direccion,
+            request.NumeroWhatsApp);
 
         _dbContext.Proveedores.Add(proveedor);
         await _dbContext.SaveChangesAsync();
@@ -42,7 +43,8 @@ public class ProveedorService : IProveedorService
             request.NumeroIdentificacion,
             request.Telefono,
             request.Email,
-            request.Direccion);
+            request.Direccion,
+            request.NumeroWhatsApp);
 
         await _dbContext.SaveChangesAsync();
 
@@ -104,5 +106,6 @@ public class ProveedorService : IProveedorService
         proveedor.Telefono,
         proveedor.Email,
         proveedor.Direccion,
-        proveedor.Activo);
+        proveedor.Activo,
+        proveedor.NumeroWhatsApp);
 }

@@ -38,6 +38,12 @@ public class ProveedorConfiguration : IEntityTypeConfiguration<Proveedor>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(p => p.NumeroWhatsApp)
+            .HasMaxLength(20);
+
+        builder.Property(p => p.FechaUltimaAlertaStockBajo)
+            .HasColumnType("datetime2");
+
         builder.HasIndex(p => p.Nombre);
 
         // Único solo entre los que sí tienen NIT informado (muchos proveedores pequeños no lo tendrán).

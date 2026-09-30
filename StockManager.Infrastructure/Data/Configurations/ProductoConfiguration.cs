@@ -57,6 +57,9 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .HasColumnType("datetime2")
             .IsRequired(false);
 
+        builder.Property(p => p.ProveedorId)
+            .IsRequired(false);
+
         // RowVersion para concurrencia optimista — CRÍTICO
         builder.Property(p => p.RowVersion)
             .IsRowVersion();
@@ -67,6 +70,16 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .HasForeignKey(p => p.CategoriaId)
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
+
+        // Relación con Proveedor (opcional): un proveedor puede estar asignado a muchos
+        // productos. Restrict en vez de Cascade/SetNull para forzar reasignar o desactivar
+        // productos explícitamente antes de eliminar un proveedor (aunque en la práctica los
+        // proveedores solo se desactivan, nunca se borran físicamente).
+        builder.HasOne<Proveedor>()
+            .WithMany()
+            .HasForeignKey(p => p.ProveedorId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
 
         // Índice en Nombre para búsquedas rápidas
         builder.HasIndex(p => p.Nombre)
@@ -83,6 +96,9 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
 
         // Índice en StockActual para alertas de bajo stock
         builder.HasIndex(p => p.StockActual);
+
+        // Índice en ProveedorId para el chequeo periódico de stock bajo por proveedor
+        builder.HasIndex(p => p.ProveedorId);
 
         // Constraints de validación
         builder.HasCheckConstraint("CK_Producto_StockActual_GreaterOrEqual_Zero", "[StockActual] >= 0");

@@ -5,7 +5,8 @@ public record CrearProveedorRequest(
     string? NumeroIdentificacion,
     string? Telefono,
     string? Email,
-    string? Direccion
+    string? Direccion,
+    string? NumeroWhatsApp
 );
 
 public record ActualizarProveedorRequest(
@@ -13,7 +14,8 @@ public record ActualizarProveedorRequest(
     string? NumeroIdentificacion,
     string? Telefono,
     string? Email,
-    string? Direccion
+    string? Direccion,
+    string? NumeroWhatsApp
 );
 
 public record ProveedorResponse(
@@ -23,5 +25,6 @@ public record ProveedorResponse(
     string? Telefono,
     string? Email,
     string? Direccion,
-    bool Activo
+    bool Activo,
+    string? NumeroWhatsApp
 );

@@ -35,4 +35,13 @@ public static class PlantillasMensajesWhatsApp
 
         return $"⚠️ Cuenta por pagar a {nombreProveedor} ({concepto}): saldo ${saldoPendiente:N0} de ${montoTotal:N0} total, {cuando} ({fechaVencimiento:dd/MM/yyyy}).";
     }
+
+    public static string StockBajoProveedor(string nombreProveedor, IReadOnlyList<(string Nombre, int StockActual, int StockMinimo)> productos)
+    {
+        var lineas = productos.Select(p => $"• {p.Nombre}: quedan {p.StockActual} (mínimo {p.StockMinimo})");
+
+        return $"📉 Hola {nombreProveedor}, los siguientes productos que nos suministras están en stock bajo:\n"
+             + string.Join("\n", lineas)
+             + "\n¿Podrías ayudarnos a coordinar una reposición?";
+    }
 }

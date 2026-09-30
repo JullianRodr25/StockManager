@@ -94,6 +94,10 @@ builder.Services.AddHostedService<WhatsAppNotificationBackgroundService>();
 // que el dispatcher de arriba efectivamente envía por WhatsApp al admin).
 builder.Services.AddHostedService<CuentasPorPagarVencimientoCheckService>();
 
+// Chequeo diario de productos en stock bajo con proveedor asignado (dispara
+// StockBajoProveedorEvent, que el dispatcher de arriba envía por WhatsApp al proveedor).
+builder.Services.AddHostedService<StockBajoProveedorCheckService>();
+
 // Add OpenAPI/Swagger services
 builder.Services.AddOpenApi();
 

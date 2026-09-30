@@ -17,6 +17,7 @@ public class ProductoResponse
     public decimal TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
+    public int? ProveedorId { get; set; }
 }
 
 public record ProductoCatalogoResponse(
@@ -41,6 +42,7 @@ public class CrearProductoRequest
     [Range(0, 100)]
     public decimal? TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
+    public int? ProveedorId { get; set; }
 }
 
 /// <summary>
@@ -56,6 +58,7 @@ public class ActualizarProductoRequest
     [Range(0, 100)]
     public decimal? TarifaIva { get; set; }
     public string? CodigoBarras { get; set; }
+    public int? ProveedorId { get; set; }
 }
 
 /// <summary>

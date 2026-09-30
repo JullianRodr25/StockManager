@@ -92,3 +92,20 @@ public class CuentaPorPagarProximaAVencerEvent : DomainEvent
         CuentaPorPagarId = cuentaPorPagarId;
     }
 }
+
+/// <summary>
+/// Evento disparado por el chequeo periódico de stock bajo (no por una transacción de
+/// negocio puntual) cuando uno o más productos asignados a un Proveedor caen en o por
+/// debajo de su StockMinimo y a ese proveedor no se le ha avisado todavía hoy. Se dispara
+/// un solo evento por Proveedor (no por producto) para poder avisarle en un único mensaje
+/// de WhatsApp con todos los productos que necesita reponer.
+/// </summary>
+public class StockBajoProveedorEvent : DomainEvent
+{
+    public int ProveedorId { get; }
+
+    public StockBajoProveedorEvent(int proveedorId)
+    {
+        ProveedorId = proveedorId;
+    }
+}
