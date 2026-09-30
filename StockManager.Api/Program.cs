@@ -2,6 +2,7 @@ using StockManager.Infrastructure.Data;
 using StockManager.Infrastructure.Services;
 using StockManager.Infrastructure.Hosting;
 using StockManager.Infrastructure.Notificaciones;
+using StockManager.Infrastructure.RealTime;
 using StockManager.Application.Services;
 using StockManager.Domain.Events;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,27 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Un WebSocket (SignalR) no puede mandar el header "Authorization" como una petición HTTP
+    // normal, así que el cliente manda el JWT como query string ("?access_token=...") en la
+    // conexión al Hub. Este evento es lo único que hace falta para que ese mismo JWT Bearer
+    // que ya se usa en el resto de la API también autentique esa conexión — el resto de
+    // endpoints (que sí usan el header) no se ven afectados.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var esRutaDeHub = context.HttpContext.Request.Path.StartsWithSegments("/hubs");
+
+            if (!string.IsNullOrEmpty(accessToken) && esRutaDeHub)
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Registrar servicios
@@ -84,6 +106,15 @@ builder.Services.AddSingleton<IEventoNotificacionPublisher, ChannelEventoNotific
 
 builder.Services.AddScoped<IFacturaPdfService, QuestPdfFacturaService>();
 builder.Services.AddScoped<IFacturaLinkTokenService, HmacFacturaLinkTokenService>();
+
+// --- Stock en tiempo real (SignalR) ---
+// A diferencia del Channel<DomainEvent> de arriba (que existe para procesar algo de forma
+// asíncrona, con reintentos/registro, como el envío de WhatsApp), esto es un aviso "mejor
+// esfuerzo" para refrescar la pantalla de otros usuarios: no necesita cola ni persistencia,
+// así que VentaService/PedidoService llaman a IStockNotificador directamente después de
+// guardar, en vez de pasar por el Channel.
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IStockNotificador, SignalRStockNotificador>();
 
 builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>
 {
@@ -168,5 +199,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<StockHub>("/hubs/stock");
 
 app.Run();

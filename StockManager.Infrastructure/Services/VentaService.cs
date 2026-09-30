@@ -12,11 +12,37 @@ public class VentaService : IVentaService
 {
     private readonly AppDbContext _dbContext;
     private readonly IEventoNotificacionPublisher _eventoPublisher;
+    private readonly IStockNotificador _stockNotificador;
 
-    public VentaService(AppDbContext dbContext, IEventoNotificacionPublisher eventoPublisher)
+    public VentaService(
+        AppDbContext dbContext,
+        IEventoNotificacionPublisher eventoPublisher,
+        IStockNotificador stockNotificador)
     {
         _dbContext = dbContext;
         _eventoPublisher = eventoPublisher;
+        _stockNotificador = stockNotificador;
+    }
+
+    /// <summary>
+    /// Avisa a las pantallas conectadas que el stock de estos productos cambió, después de
+    /// que el cambio ya quedó guardado. Nunca debe poder tumbar la venta/pedido que la
+    /// disparó: si el Hub falla (ej. sin clientes conectados todavía), se ignora en
+    /// silencio — el usuario que hizo la operación ya recibió su respuesta correcta.
+    /// </summary>
+    private async Task NotificarCambioStockAsync(IEnumerable<Producto> productos)
+    {
+        try
+        {
+            var cambios = productos
+                .Select(p => new CambioStockDto(p.Id, p.StockActual))
+                .ToList();
+            await _stockNotificador.NotificarCambiosAsync(cambios);
+        }
+        catch
+        {
+            // Best-effort: un fallo al avisar en tiempo real no debe afectar la operación de negocio.
+        }
     }
 
     public async Task<VentaResponse> RegistrarVentaAsync(RegistrarVentaRequest request, int empleadoId)
@@ -114,6 +140,8 @@ public class VentaService : IVentaService
                 "El stock de uno de los productos cambió mientras se " +
                 "procesaba la venta. Intenta de nuevo.");
         }
+
+        await NotificarCambioStockAsync(calculos.Select(c => c.Producto));
 
         var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
 
@@ -282,6 +310,8 @@ public class VentaService : IVentaService
                 "El stock de uno de los productos cambió mientras se " +
                 "procesaba la línea. Intenta de nuevo.");
         }
+
+        await NotificarCambioStockAsync([producto]);
 
         await transaction.CommitAsync();
 
@@ -491,6 +521,8 @@ public class VentaService : IVentaService
                 "procesaba el ajuste. Intenta de nuevo.");
         }
 
+        await NotificarCambioStockAsync([producto]);
+
         await transaction.CommitAsync();
 
         var detalles = await ObtenerDetallesVentaAsync(venta.Id);
@@ -568,6 +600,8 @@ public class VentaService : IVentaService
                 "procesaba la eliminación de la línea. Intenta de nuevo.");
         }
 
+        await NotificarCambioStockAsync([producto]);
+
         await transaction.CommitAsync();
 
         var detalles = await ObtenerDetallesVentaAsync(venta.Id);
@@ -607,6 +641,7 @@ public class VentaService : IVentaService
             throw new CuentaConAbonosException(ventaId);
 
         var detalles = await _dbContext.DetallesVenta.Where(d => d.VentaId == ventaId).ToListAsync();
+        var productosAfectados = new List<Producto>();
 
         foreach (var detalle in detalles)
         {
@@ -615,6 +650,7 @@ public class VentaService : IVentaService
                 throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
 
             producto.Reponer(detalle.Cantidad);
+            productosAfectados.Add(producto);
 
             var movimiento = MovimientoStock.Crear(producto.Id, "Ajuste", detalle.Cantidad, "Venta", venta.Id);
             _dbContext.MovimientosStock.Add(movimiento);
@@ -634,6 +670,8 @@ public class VentaService : IVentaService
                 "El stock de uno de los productos cambió mientras se " +
                 "procesaba la cancelación de la cuenta. Intenta de nuevo.");
         }
+
+        await NotificarCambioStockAsync(productosAfectados);
 
         await transaction.CommitAsync();
 

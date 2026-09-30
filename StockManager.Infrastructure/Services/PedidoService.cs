@@ -12,11 +12,32 @@ public class PedidoService : IPedidoService
 {
     private readonly AppDbContext _dbContext;
     private readonly IEventoNotificacionPublisher _eventoPublisher;
+    private readonly IStockNotificador _stockNotificador;
 
-    public PedidoService(AppDbContext dbContext, IEventoNotificacionPublisher eventoPublisher)
+    public PedidoService(
+        AppDbContext dbContext,
+        IEventoNotificacionPublisher eventoPublisher,
+        IStockNotificador stockNotificador)
     {
         _dbContext = dbContext;
         _eventoPublisher = eventoPublisher;
+        _stockNotificador = stockNotificador;
+    }
+
+    /// <summary>Ver VentaService.NotificarCambioStockAsync — mismo criterio de "mejor esfuerzo".</summary>
+    private async Task NotificarCambioStockAsync(IEnumerable<Producto> productos)
+    {
+        try
+        {
+            var cambios = productos
+                .Select(p => new CambioStockDto(p.Id, p.StockActual))
+                .ToList();
+            await _stockNotificador.NotificarCambiosAsync(cambios);
+        }
+        catch
+        {
+            // Best-effort: un fallo al avisar en tiempo real no debe afectar el pedido.
+        }
     }
 
     /// <summary>
@@ -101,6 +122,9 @@ public class PedidoService : IPedidoService
             throw new ConcurrencyException(
                 "El stock de uno de los productos cambió mientras se procesaba el pedido. Intenta de nuevo.");
         }
+
+        await NotificarCambioStockAsync(
+            lineasCreadas.Where(x => x.Calculo.Disponible).Select(x => x.Calculo.Producto));
 
         await transaction.CommitAsync();
 
@@ -265,6 +289,7 @@ public class PedidoService : IPedidoService
             throw new PedidoNoEncontradoException(pedidoId);
 
         var detalles = await _dbContext.DetallesPedido.Where(d => d.PedidoId == pedidoId).ToListAsync();
+        var productosAfectados = new List<Producto>();
 
         foreach (var detalle in detalles.Where(d => d.EstadoLinea == "Disponible"))
         {
@@ -273,6 +298,7 @@ public class PedidoService : IPedidoService
                 throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
 
             producto.Reponer(detalle.Cantidad);
+            productosAfectados.Add(producto);
             _dbContext.MovimientosStock.Add(
                 MovimientoStock.Crear(producto.Id, "Ajuste", detalle.Cantidad, "Pedido", pedido.Id));
         }
@@ -298,6 +324,8 @@ public class PedidoService : IPedidoService
             throw new ConcurrencyException(
                 "El stock de uno de los productos cambió mientras se procesaba la cancelación del pedido. Intenta de nuevo.");
         }
+
+        await NotificarCambioStockAsync(productosAfectados);
 
         await transaction.CommitAsync();
 

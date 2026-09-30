@@ -6,6 +6,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Da acceso a Microsoft.AspNetCore.SignalR (Hub, IHubContext<>) sin convertir este
+         proyecto en un proyecto web: en .NET moderno, SignalR y el resto de ASP.NET Core
+         viajan en el framework compartido "Microsoft.AspNetCore.App", no como paquetes NuGet
+         sueltos. Es la misma técnica que ya usa StockManager.Api (vía Sdk.Web, que la trae
+         implícita), pero aquí se pide explícitamente porque este proyecto usa el Sdk normal. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.101.3" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
