@@ -19,6 +19,9 @@ public class ConfiguracionConfiguration : IEntityTypeConfiguration<Configuracion
             .HasColumnType("decimal(5, 2)")
             .IsRequired();
 
+        builder.Property(c => c.TelefonoNotificacionesAdmin)
+            .HasMaxLength(20);
+
         builder.HasData(new
         {
             Id = 1,

@@ -17,18 +17,30 @@ public class ConfiguracionController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene la tarifa de IVA general vigente.
+    /// Obtiene la configuración general vigente (tarifa de IVA y teléfono de notificaciones
+    /// administrativas por WhatsApp).
     /// </summary>
     [HttpGet]
     [Authorize(Roles = "Admin,Empleado")]
     public async Task<ActionResult<ConfiguracionResponse>> Obtener()
     {
         var configuracion = await _configuracionService.ObtenerAsync();
+
+        // El teléfono de notificaciones administrativas es un dato operativo sensible (a dónde
+        // llegan las alertas de pedidos y cuentas por pagar de la tienda): se oculta para
+        // Empleado aunque el resto de la configuración (la tarifa de IVA) sí le sea visible,
+        // que es justamente el filtrado "por rol" que se pidió para este dato.
+        if (!User.IsInRole("Admin"))
+            configuracion.TelefonoNotificacionesAdmin = null;
+
         return Ok(configuracion);
     }
 
     /// <summary>
-    /// Actualiza la tarifa de IVA general por defecto.
+    /// Actualiza la configuración general. Restringido a Admin: el teléfono de notificaciones
+    /// es un dato sensible desde el punto de vista operativo (a dónde llegan las alertas de
+    /// pedidos y cuentas por pagar), así que solo un administrador puede cambiarlo — igual que
+    /// la tarifa de IVA, con la que comparte este mismo endpoint.
     /// </summary>
     [HttpPut]
     [Authorize(Roles = "Admin")]

@@ -65,6 +65,14 @@ public class CuentasPorPagarVencimientoCheckService : BackgroundService
 
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var configuracionService = scope.ServiceProvider.GetRequiredService<IConfiguracionService>();
+
+        // Si no hay teléfono de administración configurado, ningún aviso se va a poder enviar:
+        // evitamos marcar FechaUltimaAlerta "en falso" (lo que retrasaría el aviso real un día
+        // completo una vez el Admin configure el teléfono) simplemente no corriendo el chequeo.
+        var configuracion = await configuracionService.ObtenerAsync();
+        if (string.IsNullOrWhiteSpace(configuracion.TelefonoNotificacionesAdmin))
+            return;
 
         var hoy = DateTime.UtcNow.Date;
         var limite = hoy.AddDays(_opciones.Value.DiasAvisoVencimientoProveedores);

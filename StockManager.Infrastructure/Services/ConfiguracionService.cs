@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Entities;
 using StockManager.Infrastructure.Data;
 
 namespace StockManager.Infrastructure.Services;
@@ -18,24 +19,26 @@ public class ConfiguracionService : IConfiguracionService
     {
         var configuracion = await _dbContext.Configuraciones.SingleAsync();
 
-        return MapearAResponse(configuracion.TarifaIvaPorDefecto);
+        return MapearAResponse(configuracion);
     }
 
     public async Task<ConfiguracionResponse> ActualizarAsync(ActualizarConfiguracionRequest request)
     {
         var configuracion = await _dbContext.Configuraciones.SingleAsync();
         configuracion.ActualizarTarifaIva(request.TarifaIvaPorDefecto);
+        configuracion.ActualizarTelefonoNotificacionesAdmin(request.TelefonoNotificacionesAdmin);
 
         await _dbContext.SaveChangesAsync();
 
-        return MapearAResponse(configuracion.TarifaIvaPorDefecto);
+        return MapearAResponse(configuracion);
     }
 
-    private static ConfiguracionResponse MapearAResponse(decimal tarifaIvaPorDefecto)
+    private static ConfiguracionResponse MapearAResponse(Configuracion configuracion)
     {
         return new ConfiguracionResponse
         {
-            TarifaIvaPorDefecto = tarifaIvaPorDefecto
+            TarifaIvaPorDefecto = configuracion.TarifaIvaPorDefecto,
+            TelefonoNotificacionesAdmin = configuracion.TelefonoNotificacionesAdmin
         };
     }
 }

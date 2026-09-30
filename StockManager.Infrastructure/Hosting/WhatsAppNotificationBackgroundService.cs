@@ -86,7 +86,8 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
 
     private async Task ProcesarCuentaPorPagarProximaAVencerAsync(CuentaPorPagarProximaAVencerEvent evento, IServiceProvider sp, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(_opciones.Value.AdminNotificationPhone))
+        var telefonoAdmin = await ObtenerTelefonoAdminAsync(sp);
+        if (string.IsNullOrWhiteSpace(telefonoAdmin))
             return;
 
         var db = sp.GetRequiredService<AppDbContext>();
@@ -105,7 +106,6 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
             .Where(a => a.CuentaPorPagarId == cuenta.Id)
             .SumAsync(a => (decimal?)a.Monto, ct) ?? 0m;
 
-        var telefonoAdmin = _opciones.Value.AdminNotificationPhone!;
         var mensaje = PlantillasMensajesWhatsApp.CuentaPorPagarProximaAVencer(
             proveedor.Nombre, cuenta.Concepto, cuenta.MontoTotal, cuenta.MontoTotal - totalAbonado, cuenta.FechaVencimiento);
 
@@ -132,13 +132,29 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
 
         // Pedido recién creado (queda en "Pendiente"): avisar también a la tienda, si hay
         // un teléfono de administración configurado.
-        if (evento.NuevoEstado == "Pendiente" && !string.IsNullOrWhiteSpace(_opciones.Value.AdminNotificationPhone))
+        if (evento.NuevoEstado == "Pendiente")
         {
-            var telefonoAdmin = _opciones.Value.AdminNotificationPhone!;
-            var mensajeAdmin = PlantillasMensajesWhatsApp.PedidoNuevoParaAdmin(pedido.Id, cliente.Nombre, pedido.Total);
-            var resultadoAdmin = await sender.EnviarTextoAsync(telefonoAdmin, mensajeAdmin);
-            await RegistrarLogAsync(db, telefonoAdmin, "Pedido", pedido.Id, resultadoAdmin, ct);
+            var telefonoAdmin = await ObtenerTelefonoAdminAsync(sp);
+            if (!string.IsNullOrWhiteSpace(telefonoAdmin))
+            {
+                var mensajeAdmin = PlantillasMensajesWhatsApp.PedidoNuevoParaAdmin(pedido.Id, cliente.Nombre, pedido.Total);
+                var resultadoAdmin = await sender.EnviarTextoAsync(telefonoAdmin, mensajeAdmin);
+                await RegistrarLogAsync(db, telefonoAdmin, "Pedido", pedido.Id, resultadoAdmin, ct);
+            }
         }
+    }
+
+    /// <summary>
+    /// El teléfono de notificaciones administrativas vive en Configuracion (base de datos),
+    /// no en WhatsAppOptions (appsettings.json), para que un Admin pueda cambiarlo desde la
+    /// pantalla de Configuración sin necesitar un despliegue. Se resuelve por evento (en vez
+    /// de cachearlo) porque el volumen de eventos es bajo y así siempre se usa el valor vigente.
+    /// </summary>
+    private static async Task<string?> ObtenerTelefonoAdminAsync(IServiceProvider sp)
+    {
+        var configuracionService = sp.GetRequiredService<IConfiguracionService>();
+        var configuracion = await configuracionService.ObtenerAsync();
+        return configuracion.TelefonoNotificacionesAdmin;
     }
 
     private async Task ProcesarFacturaGeneradaAsync(FacturaGeneradaEvent evento, IServiceProvider sp, CancellationToken ct)

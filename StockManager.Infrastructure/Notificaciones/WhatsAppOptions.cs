@@ -4,6 +4,11 @@ namespace StockManager.Infrastructure.Notificaciones;
 /// Configuración general de la funcionalidad de notificaciones por WhatsApp (independiente
 /// del proveedor concreto — ver TwilioOptions para las credenciales de Twilio).
 /// Se vincula a la sección "WhatsApp" de appsettings.json.
+///
+/// El número de WhatsApp que recibe las alertas administrativas NO vive acá: es
+/// Configuracion.TelefonoNotificacionesAdmin (tabla Configuracion, vía IConfiguracionService),
+/// para que un Admin pueda cambiarlo desde la pantalla de Configuración sin un despliegue.
+/// Esta clase solo agrupa ajustes técnicos/de infraestructura que sí requieren redeploy.
 /// </summary>
 public class WhatsAppOptions
 {
@@ -12,12 +17,6 @@ public class WhatsAppOptions
     /// intentar enviarlos — útil para desarrollo local sin credenciales de Twilio.
     /// </summary>
     public bool Habilitado { get; set; } = false;
-
-    /// <summary>
-    /// Número de WhatsApp (formato E.164, ej. "+573001234567") al que se avisa cuando
-    /// entra un pedido nuevo. Si queda vacío, simplemente no se envía ese aviso.
-    /// </summary>
-    public string? AdminNotificationPhone { get; set; }
 
     /// <summary>
     /// URL pública base de la API (ej. "https://api.miferreteria.com"), usada para construir
