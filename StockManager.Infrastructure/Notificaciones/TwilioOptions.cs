@@ -19,4 +19,24 @@ public class TwilioOptions
 
     /// <summary>Número remitente, con el prefijo "whatsapp:" incluido (ej. "whatsapp:+14155238886").</summary>
     public string FromWhatsAppNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ContentSid (empiezan con "HX...") de las plantillas de WhatsApp aprobadas por Meta,
+    /// una por cada "familia" de mensaje que el sistema envía. Fuera de la ventana de 24h de
+    /// una conversación (que es el caso normal para todos estos avisos, iniciados por el
+    /// sistema y no en respuesta a un mensaje del destinatario), WhatsApp exige que cualquier
+    /// mensaje use una de estas plantillas — un Body de texto libre es rechazado por Meta.
+    ///
+    /// El texto exacto a enviar a aprobación en la consola de Twilio (Content Template
+    /// Builder) para cada una está documentado en PLANTILLAS-WHATSAPP.md, en la raíz del
+    /// repositorio. Mientras un ContentSid quede vacío, WhatsAppNotificationBackgroundService
+    /// no envía ese tipo de mensaje (queda registrado en NotificacionLog como fallido) en vez
+    /// de arriesgarse a que Twilio/Meta lo rechace o penalice el número por enviar texto libre
+    /// fuera de ventana.
+    /// </summary>
+    public string? ContentSidPedidoActualizacionCliente { get; set; }
+    public string? ContentSidPedidoNuevoAdmin { get; set; }
+    public string? ContentSidAlertaCuentaPorPagar { get; set; }
+    public string? ContentSidAlertaStockBajoProveedor { get; set; }
+    public string? ContentSidFacturaCliente { get; set; }
 }

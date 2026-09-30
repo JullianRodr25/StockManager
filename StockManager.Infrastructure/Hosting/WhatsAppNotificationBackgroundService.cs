@@ -27,17 +27,20 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
     private readonly Channel<DomainEvent> _canal;
     private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<WhatsAppOptions> _opciones;
+    private readonly IOptions<TwilioOptions> _opcionesTwilio;
     private readonly ILogger<WhatsAppNotificationBackgroundService> _logger;
 
     public WhatsAppNotificationBackgroundService(
         Channel<DomainEvent> canal,
         IServiceProvider serviceProvider,
         IOptions<WhatsAppOptions> opciones,
+        IOptions<TwilioOptions> opcionesTwilio,
         ILogger<WhatsAppNotificationBackgroundService> logger)
     {
         _canal = canal;
         _serviceProvider = serviceProvider;
         _opciones = opciones;
+        _opcionesTwilio = opcionesTwilio;
         _logger = logger;
     }
 
@@ -157,15 +160,21 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (proveedor is null)
             return;
 
+        if (!IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidAlertaCuentaPorPagar, out var contentSid))
+        {
+            await RegistrarPlantillaNoConfiguradaAsync(db, telefonoAdmin, "CuentaPorPagar", cuenta.Id, "alerta_cuenta_por_pagar", ct);
+            return;
+        }
+
         var totalAbonado = await db.AbonosCuentaPorPagar
             .AsNoTracking()
             .Where(a => a.CuentaPorPagarId == cuenta.Id)
             .SumAsync(a => (decimal?)a.Monto, ct) ?? 0m;
 
-        var mensaje = PlantillasMensajesWhatsApp.CuentaPorPagarProximaAVencer(
+        var variables = PlantillasMensajesWhatsApp.CuentaPorPagarProximaAVencer(
             proveedor.Nombre, cuenta.Concepto, cuenta.MontoTotal, cuenta.MontoTotal - totalAbonado, cuenta.FechaVencimiento);
 
-        var resultado = await sender.EnviarTextoAsync(telefonoAdmin, mensaje);
+        var resultado = await sender.EnviarPlantillaAsync(telefonoAdmin, contentSid, variables);
         await RegistrarLogAsync(db, telefonoAdmin, "CuentaPorPagar", cuenta.Id, resultado, ct);
     }
 
@@ -184,6 +193,12 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (proveedor is null || string.IsNullOrWhiteSpace(proveedor.NumeroWhatsApp))
             return;
 
+        if (!IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidAlertaStockBajoProveedor, out var contentSid))
+        {
+            await RegistrarPlantillaNoConfiguradaAsync(db, proveedor.NumeroWhatsApp!, "StockBajoProveedor", proveedor.Id, "alerta_stock_bajo_proveedor", ct);
+            return;
+        }
+
         var productos = await db.Productos.AsNoTracking()
             .Where(p => p.ProveedorId == evento.ProveedorId && p.Activo && p.StockActual <= p.StockMinimo)
             .Select(p => new { p.Nombre, p.StockActual, p.StockMinimo })
@@ -192,11 +207,11 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (productos.Count == 0)
             return; // Se repuso el stock entre que se publicó el evento y se procesó.
 
-        var mensaje = PlantillasMensajesWhatsApp.StockBajoProveedor(
+        var variables = PlantillasMensajesWhatsApp.StockBajoProveedor(
             proveedor.Nombre,
             productos.Select(p => (p.Nombre, p.StockActual, p.StockMinimo)).ToList());
 
-        var resultado = await sender.EnviarTextoAsync(proveedor.NumeroWhatsApp!, mensaje);
+        var resultado = await sender.EnviarPlantillaAsync(proveedor.NumeroWhatsApp!, contentSid, variables);
         await RegistrarLogAsync(db, proveedor.NumeroWhatsApp!, "StockBajoProveedor", proveedor.Id, resultado, ct);
     }
 
@@ -213,9 +228,16 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (cliente is null)
             return;
 
-        var mensajeCliente = PlantillasMensajesWhatsApp.PedidoParaCliente(cliente.Nombre, pedido.Id, evento.NuevoEstado);
-        var resultadoCliente = await sender.EnviarTextoAsync(cliente.Telefono, mensajeCliente);
-        await RegistrarLogAsync(db, cliente.Telefono, "Pedido", pedido.Id, resultadoCliente, ct);
+        if (IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidPedidoActualizacionCliente, out var contentSidCliente))
+        {
+            var variablesCliente = PlantillasMensajesWhatsApp.PedidoParaCliente(cliente.Nombre, pedido.Id, evento.NuevoEstado);
+            var resultadoCliente = await sender.EnviarPlantillaAsync(cliente.Telefono, contentSidCliente, variablesCliente);
+            await RegistrarLogAsync(db, cliente.Telefono, "Pedido", pedido.Id, resultadoCliente, ct);
+        }
+        else
+        {
+            await RegistrarPlantillaNoConfiguradaAsync(db, cliente.Telefono, "Pedido", pedido.Id, "pedido_actualizacion_cliente", ct);
+        }
 
         // Pedido recién creado (queda en "Pendiente"): avisar también a la tienda, si hay
         // un teléfono de administración configurado.
@@ -224,9 +246,16 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
             var telefonoAdmin = await ObtenerTelefonoAdminAsync(sp);
             if (!string.IsNullOrWhiteSpace(telefonoAdmin))
             {
-                var mensajeAdmin = PlantillasMensajesWhatsApp.PedidoNuevoParaAdmin(pedido.Id, cliente.Nombre, pedido.Total);
-                var resultadoAdmin = await sender.EnviarTextoAsync(telefonoAdmin, mensajeAdmin);
-                await RegistrarLogAsync(db, telefonoAdmin, "Pedido", pedido.Id, resultadoAdmin, ct);
+                if (IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidPedidoNuevoAdmin, out var contentSidAdmin))
+                {
+                    var variablesAdmin = PlantillasMensajesWhatsApp.PedidoNuevoParaAdmin(pedido.Id, cliente.Nombre, pedido.Total);
+                    var resultadoAdmin = await sender.EnviarPlantillaAsync(telefonoAdmin, contentSidAdmin, variablesAdmin);
+                    await RegistrarLogAsync(db, telefonoAdmin, "Pedido", pedido.Id, resultadoAdmin, ct);
+                }
+                else
+                {
+                    await RegistrarPlantillaNoConfiguradaAsync(db, telefonoAdmin, "Pedido", pedido.Id, "pedido_nuevo_admin", ct);
+                }
             }
         }
     }
@@ -288,15 +317,65 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (string.IsNullOrWhiteSpace(telefono))
             return; // Sin un teléfono a quién enviarle, no hay nada que hacer.
 
+        var referenciaTipo = factura.VentaId.HasValue ? "Venta" : "Pedido";
+        var referenciaId = factura.VentaId ?? factura.PedidoId!.Value;
+
+        if (!IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidFacturaCliente, out var contentSid))
+        {
+            await RegistrarPlantillaNoConfiguradaAsync(db, telefono!, referenciaTipo, referenciaId, "factura_cliente", ct);
+            return;
+        }
+
         var token = tokenService.GenerarToken(factura.Id, TimeSpan.FromMinutes(_opciones.Value.FacturaLinkVigenciaMinutos));
         var urlPdf = $"{_opciones.Value.PublicBaseUrl.TrimEnd('/')}/api/facturas/{factura.Id}/pdf?t={Uri.EscapeDataString(token)}";
 
-        var mensaje = PlantillasMensajesWhatsApp.FacturaParaCliente(nombreCliente ?? "cliente", factura.Numero!);
-        var resultado = await sender.EnviarDocumentoAsync(telefono!, mensaje, urlPdf);
+        var variables = PlantillasMensajesWhatsApp.FacturaParaCliente(nombreCliente ?? "cliente", factura.Numero!, urlPdf);
+        var resultado = await sender.EnviarPlantillaAsync(telefono!, contentSid, variables);
 
-        var referenciaTipo = factura.VentaId.HasValue ? "Venta" : "Pedido";
-        var referenciaId = factura.VentaId ?? factura.PedidoId!.Value;
         await RegistrarLogAsync(db, telefono!, referenciaTipo, referenciaId, resultado, ct);
+    }
+
+    /// <summary>
+    /// true y da el ContentSid listo para usar si la plantilla ya fue aprobada y configurada;
+    /// false si TwilioOptions todavía tiene ese campo vacío (plantilla pendiente de aprobación
+    /// en Meta o simplemente no configurada aún).
+    /// </summary>
+    private static bool IntentarObtenerContentSid(string? contentSidConfigurado, out string contentSid)
+    {
+        if (string.IsNullOrWhiteSpace(contentSidConfigurado))
+        {
+            contentSid = string.Empty;
+            return false;
+        }
+
+        contentSid = contentSidConfigurado;
+        return true;
+    }
+
+    /// <summary>
+    /// Deja constancia en NotificacionLog de que un mensaje no se envió porque su plantilla de
+    /// WhatsApp todavía no está configurada — nunca se intenta mandar como texto libre en su
+    /// lugar, porque fuera de la ventana de 24h de una conversación Meta lo rechazaría (o
+    /// podría penalizar el número). Ver TwilioOptions.ContentSidXxx.
+    /// </summary>
+    private static async Task RegistrarPlantillaNoConfiguradaAsync(
+        AppDbContext db,
+        string destinatario,
+        string referenciaTipo,
+        int referenciaId,
+        string nombrePlantilla,
+        CancellationToken ct)
+    {
+        var log = NotificacionLog.Crear(
+            canal: "WhatsApp",
+            destinatario: destinatario,
+            referenciaTipo: referenciaTipo,
+            referenciaId: referenciaId,
+            estado: "Fallido",
+            detalleError: $"Plantilla '{nombrePlantilla}' no configurada (ContentSid vacío).");
+
+        db.NotificacionesLog.Add(log);
+        await db.SaveChangesAsync(ct);
     }
 
     private static async Task RegistrarLogAsync(

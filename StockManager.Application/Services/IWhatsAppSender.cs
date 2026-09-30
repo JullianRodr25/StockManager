@@ -11,14 +11,24 @@ public record ResultadoEnvioWhatsApp(bool Exitoso, string? Error);
 /// Puerto de salida hacia el proveedor de WhatsApp (hoy: Twilio). Mantener esta interfaz
 /// en Application, separada de la implementación en Infrastructure, permite cambiar de
 /// proveedor (por ejemplo, a la API directa de Meta) sin tocar quién la consume.
+///
+/// Solo expone envío por plantilla (Content Template) — nunca texto libre. Cualquier
+/// mensaje que este sistema envía es iniciado por el negocio (no es una respuesta dentro de
+/// una conversación abierta por el destinatario), así que WhatsApp exige una plantilla
+/// aprobada por Meta; un Body de texto libre sería rechazado en producción. Ver
+/// TwilioOptions.ContentSidXxx y PLANTILLAS-WHATSAPP.md para el texto de cada plantilla.
 /// </summary>
 public interface IWhatsAppSender
 {
-    Task<ResultadoEnvioWhatsApp> EnviarTextoAsync(string telefonoDestino, string mensaje);
-
     /// <summary>
-    /// Envía un mensaje con un documento adjunto. <paramref name="urlDocumento"/> debe ser
-    /// una URL pública (el proveedor la descarga él mismo) — no se sube el archivo directo.
+    /// Envía una plantilla de WhatsApp aprobada. <paramref name="contentSid"/> identifica la
+    /// plantilla (formato "HXxxxxxxxx...", asignado por Twilio al aprobarla). Las
+    /// <paramref name="variables"/> llenan los placeholders "{{1}}", "{{2}}", etc. de esa
+    /// plantilla — tanto los del cuerpo como los del encabezado, si la plantilla tiene un
+    /// encabezado de tipo documento/imagen con una URL dinámica (ej. la factura en PDF).
     /// </summary>
-    Task<ResultadoEnvioWhatsApp> EnviarDocumentoAsync(string telefonoDestino, string mensaje, string urlDocumento);
+    Task<ResultadoEnvioWhatsApp> EnviarPlantillaAsync(
+        string telefonoDestino,
+        string contentSid,
+        IReadOnlyDictionary<string, string> variables);
 }
