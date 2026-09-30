@@ -22,6 +22,9 @@ public class ConfiguracionConfiguration : IEntityTypeConfiguration<Configuracion
         builder.Property(c => c.TelefonoNotificacionesAdmin)
             .HasMaxLength(20);
 
+        builder.Property(c => c.NombreImpresoraTickets)
+            .HasMaxLength(200);
+
         builder.HasData(new
         {
             Id = 1,

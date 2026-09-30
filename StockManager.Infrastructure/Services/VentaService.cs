@@ -77,7 +77,8 @@ public class VentaService : IVentaService
             request.MetodoPago,
             total,
             esCotizacion: false,
-            estado: "Pagada");
+            estado: "Pagada",
+            montoRecibido: request.MontoRecibido);
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
@@ -132,7 +133,9 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             factura.Numero!,
-            detalles);
+            detalles,
+            venta.MontoRecibido,
+            venta.Cambio);
     }
 
     public async Task<(List<VentaResumenResponse> Items, int Total)> ObtenerVentasPaginadoAsync(
@@ -202,7 +205,9 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             numeroFactura,
-            detalles);
+            detalles,
+            venta.MontoRecibido,
+            venta.Cambio);
     }
 
     public async Task<VentaResponse> AbrirFiadoAsync(int clienteId, int empleadoId)
@@ -297,7 +302,7 @@ public class VentaService : IVentaService
             detalles);
     }
 
-    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago)
+    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
@@ -309,7 +314,7 @@ public class VentaService : IVentaService
             throw new ArgumentException(
                 "No se puede cerrar una cuenta fiada sin productos agregados.");
 
-        venta.CerrarFiado(metodoPago);
+        venta.CerrarFiado(metodoPago, montoRecibido);
         await _dbContext.SaveChangesAsync();
 
         var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
@@ -330,7 +335,9 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             factura.Numero!,
-            detalles);
+            detalles,
+            venta.MontoRecibido,
+            venta.Cambio);
     }
 
     public async Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId)
@@ -374,7 +381,11 @@ public class VentaService : IVentaService
 
             var metodoPagoFinal = metodosPagoUsados.Count == 1 ? metodosPagoUsados[0] : "Mixto";
 
-            venta.CerrarFiado(metodoPagoFinal);
+            // Un abono nunca puede exceder el saldo pendiente (se valida más arriba), así que
+            // si el último abono que cierra la cuenta fue en efectivo, lo recibido siempre
+            // coincide exactamente con el total — no hay vuelto que dar en este camino.
+            var montoRecibidoCierre = metodoPagoFinal == "Efectivo" ? venta.Total : (decimal?)null;
+            venta.CerrarFiado(metodoPagoFinal, montoRecibidoCierre);
             await _dbContext.SaveChangesAsync();
 
             var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
@@ -397,7 +408,9 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             numeroFactura,
-            detalles);
+            detalles,
+            venta.MontoRecibido,
+            venta.Cambio);
     }
 
     public async Task<List<AbonoResponse>> ObtenerAbonosAsync(int ventaId)

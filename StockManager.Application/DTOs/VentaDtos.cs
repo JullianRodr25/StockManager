@@ -8,7 +8,8 @@ public record RegistrarVentaRequest(
     string? TelefonoComprador,
     string? EmailComprador,
     string MetodoPago,
-    List<LineaVentaRequest> Lineas
+    List<LineaVentaRequest> Lineas,
+    decimal? MontoRecibido = null
 );
 
 public record DetalleVentaResponse(
@@ -34,7 +35,9 @@ public record VentaResponse(
     string Estado,
     decimal Total,
     string NumeroFactura,
-    List<DetalleVentaResponse> Detalles
+    List<DetalleVentaResponse> Detalles,
+    decimal? MontoRecibido = null,
+    decimal? Cambio = null
 );
 
 public record VentaResumenResponse(
@@ -50,7 +53,7 @@ public record VentaResumenResponse(
 
 public record AbrirFiadoRequest(int ClienteId);
 
-public record CerrarFiadoRequest(string MetodoPago);
+public record CerrarFiadoRequest(string MetodoPago, decimal? MontoRecibido = null);
 
 public record RegistrarAbonoRequest(decimal Monto, string MetodoPago);
 

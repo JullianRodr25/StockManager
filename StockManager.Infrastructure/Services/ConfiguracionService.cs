@@ -27,6 +27,7 @@ public class ConfiguracionService : IConfiguracionService
         var configuracion = await _dbContext.Configuraciones.SingleAsync();
         configuracion.ActualizarTarifaIva(request.TarifaIvaPorDefecto);
         configuracion.ActualizarTelefonoNotificacionesAdmin(request.TelefonoNotificacionesAdmin);
+        configuracion.ActualizarNombreImpresoraTickets(request.NombreImpresoraTickets);
 
         await _dbContext.SaveChangesAsync();
 
@@ -38,7 +39,8 @@ public class ConfiguracionService : IConfiguracionService
         return new ConfiguracionResponse
         {
             TarifaIvaPorDefecto = configuracion.TarifaIvaPorDefecto,
-            TelefonoNotificacionesAdmin = configuracion.TelefonoNotificacionesAdmin
+            TelefonoNotificacionesAdmin = configuracion.TelefonoNotificacionesAdmin,
+            NombreImpresoraTickets = configuracion.NombreImpresoraTickets
         };
     }
 }

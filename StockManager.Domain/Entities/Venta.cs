@@ -22,6 +22,18 @@ public class Venta
     public bool EsCotizacion { get; private set; }
     public string Estado { get; private set; } = null!;
 
+    /// <summary>
+    /// Cuánto efectivo entregó físicamente el cliente, solo cuando MetodoPago es "Efectivo"
+    /// (en cualquier otro método queda null: con tarjeta o transferencia no hay "cambio" que
+    /// calcular). Se guarda el monto recibido —no directamente el cambio— porque es el dato
+    /// que de verdad ocurrió en el mostrador; el cambio (MontoRecibido - Total) se deriva de
+    /// ahí, tanto para el tiquete impreso como para una futura conciliación de caja.
+    /// </summary>
+    public decimal? MontoRecibido { get; private set; }
+
+    /// <summary>Cambio a devolver cuando el pago fue en efectivo; null en cualquier otro método.</summary>
+    public decimal? Cambio => MontoRecibido.HasValue ? MontoRecibido.Value - Total : null;
+
     private Venta() { }
 
     public static Venta Crear(
@@ -33,7 +45,8 @@ public class Venta
         string metodoPago,
         decimal total,
         bool esCotizacion,
-        string estado)
+        string estado,
+        decimal? montoRecibido = null)
     {
         if (empleadoId <= 0)
             throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
@@ -51,6 +64,8 @@ public class Venta
         if (clienteId is null && string.IsNullOrWhiteSpace(nombreComprador))
             throw new ArgumentException("Debe indicar un cliente registrado o el nombre del comprador.");
 
+        montoRecibido = ValidarMontoRecibido(metodoPago, total, montoRecibido);
+
         return new Venta
         {
             EmpleadoId = empleadoId,
@@ -62,8 +77,31 @@ public class Venta
             Fecha = DateTime.UtcNow,
             Total = total,
             EsCotizacion = esCotizacion,
-            Estado = estado
+            Estado = estado,
+            MontoRecibido = montoRecibido
         };
+    }
+
+    /// <summary>
+    /// Si el pago es en efectivo, exige un monto recibido que alcance para cubrir el total (y
+    /// lo devuelve tal cual, para que el llamador lo guarde). Para cualquier otro método,
+    /// ignora lo que le hayan pasado y siempre devuelve null — "cambio" no es un concepto que
+    /// aplique con tarjeta o transferencia, así que no tiene sentido guardarlo ahí.
+    /// </summary>
+    private static decimal? ValidarMontoRecibido(string metodoPago, decimal total, decimal? montoRecibido)
+    {
+        if (metodoPago != "Efectivo")
+            return null;
+
+        if (montoRecibido is null)
+            throw new ArgumentException("Para un pago en efectivo debes indicar el monto recibido.", nameof(montoRecibido));
+
+        if (montoRecibido.Value < total)
+            throw new ArgumentException(
+                $"El monto recibido ({montoRecibido.Value:F2}) no puede ser menor al total ({total:F2}).",
+                nameof(montoRecibido));
+
+        return montoRecibido;
     }
 
     /// <summary>
@@ -122,7 +160,7 @@ public class Venta
     /// <summary>
     /// Cierra una cuenta fiada: exige que esté "Pendiente", fija el método de pago y pasa a "Pagada".
     /// </summary>
-    public void CerrarFiado(string metodoPago)
+    public void CerrarFiado(string metodoPago, decimal? montoRecibido = null)
     {
         if (Estado != "Pendiente")
             throw new VentaEstadoInvalidoException(Id, Estado, "Pendiente");
@@ -131,6 +169,7 @@ public class Venta
             throw new ArgumentException($"El método de pago '{metodoPago}' no es válido.", nameof(metodoPago));
 
         MetodoPago = metodoPago;
+        MontoRecibido = ValidarMontoRecibido(metodoPago, Total, montoRecibido);
         Estado = "Pagada";
     }
 

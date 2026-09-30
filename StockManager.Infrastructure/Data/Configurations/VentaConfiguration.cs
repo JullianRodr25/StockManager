@@ -55,6 +55,14 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
             .HasMaxLength(20)
             .HasDefaultValue("Pagada");
 
+        builder.Property(v => v.MontoRecibido)
+            .HasColumnType("decimal(12, 2)")
+            .IsRequired(false);
+
+        // Cambio es una propiedad calculada en memoria (MontoRecibido - Total), no una columna:
+        // no tiene setter porque nunca se guarda por su cuenta, siempre se deriva de MontoRecibido.
+        builder.Ignore(v => v.Cambio);
+
         // Relación con Empleado
         builder.HasOne<Empleado>()
             .WithMany()

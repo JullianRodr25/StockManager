@@ -19,15 +19,27 @@ public class Configuracion
     /// </summary>
     public string? TelefonoNotificacionesAdmin { get; private set; }
 
+    /// <summary>
+    /// Nombre exacto (tal como lo expone el sistema operativo/driver) de la impresora térmica
+    /// de tiquetes conectada al computador del mostrador, usada por QZ Tray para imprimir la
+    /// factura y para enviar la orden de apertura del cajón de dinero. Se guarda en base de
+    /// datos porque es un dato del equipo físico de cada sucursal, no algo fijo en el código.
+    /// </summary>
+    public string? NombreImpresoraTickets { get; private set; }
+
     private Configuracion() { }
 
-    public static Configuracion Crear(decimal tarifaIvaPorDefecto, string? telefonoNotificacionesAdmin = null)
+    public static Configuracion Crear(
+        decimal tarifaIvaPorDefecto,
+        string? telefonoNotificacionesAdmin = null,
+        string? nombreImpresoraTickets = null)
     {
         if (tarifaIvaPorDefecto < 0 || tarifaIvaPorDefecto > 100)
             throw new ArgumentException("La tarifa de IVA debe estar entre 0 y 100.");
 
         var configuracion = new Configuracion { TarifaIvaPorDefecto = tarifaIvaPorDefecto };
         configuracion.ActualizarTelefonoNotificacionesAdmin(telefonoNotificacionesAdmin);
+        configuracion.ActualizarNombreImpresoraTickets(nombreImpresoraTickets);
         return configuracion;
     }
 
@@ -47,5 +59,10 @@ public class Configuracion
             throw new ArgumentException("El teléfono debe estar en formato internacional E.164, ej. +573001234567.");
 
         TelefonoNotificacionesAdmin = telefono;
+    }
+
+    public void ActualizarNombreImpresoraTickets(string? nuevoNombre)
+    {
+        NombreImpresoraTickets = string.IsNullOrWhiteSpace(nuevoNombre) ? null : nuevoNombre.Trim();
     }
 }
