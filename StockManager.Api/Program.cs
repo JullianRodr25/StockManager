@@ -100,20 +100,38 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 
-// Configurar CORS para React frontends (web + PWA)
+// Configurar CORS para los frontends (web + PWA). En local se permite cualquier puerto de
+// localhost (comodidad de desarrollo); en producción, solo los orígenes explícitamente
+// listados en "AllowedOrigins" (ej. el dominio de Azure Static Web Apps del frontend
+// desplegado). Nunca se abre CORS a cualquier origen: la API usa JWT Bearer, no cookies,
+// pero seguir restringiendo el origen evita que cualquier sitio pueda invocarla desde un
+// navegador con un token robado por otra vía (XSS en otro sitio, etc.).
+var origenesPermitidosProduccion = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendDev", policy =>
     {
         policy.SetIsOriginAllowed(origin =>
                   Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                  uri.Host == "localhost")
+                  (uri.Host == "localhost" || origenesPermitidosProduccion.Contains(origin, StringComparer.OrdinalIgnoreCase)))
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
+
+// Aplica cualquier migración de EF Core pendiente al arrancar. Es el enfoque más simple para
+// un despliegue sin acceso a una consola con `dotnet ef` contra la base de datos de producción
+// (ej. Azure SQL): la propia API deja la base al día en cada arranque. EF Core solo aplica las
+// migraciones que falten (es idempotente), así que no hay riesgo de reaplicar algo dos veces.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
