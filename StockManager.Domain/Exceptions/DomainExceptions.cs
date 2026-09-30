@@ -285,3 +285,47 @@ public class OperacionInvalidaCuentaPorPagarException : DomainException
 {
     public OperacionInvalidaCuentaPorPagarException(string message) : base(message) { }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra un cliente con el ID especificado.
+/// </summary>
+public class ClienteNoEncontradoException : DomainException
+{
+    public int ClienteId { get; }
+
+    public ClienteNoEncontradoException(int clienteId)
+        : base($"No se encontró el cliente con ID {clienteId}.")
+    {
+        ClienteId = clienteId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar desactivar un cliente que todavía tiene Pedidos en un
+/// estado activo (Pendiente, Confirmado, EnPreparacion o EnCamino). Desactivarlo rompería
+/// la posibilidad de completar/entregar ese pedido en curso.
+/// </summary>
+public class ClienteConPedidosActivosException : DomainException
+{
+    public int ClienteId { get; }
+
+    public ClienteConPedidosActivosException(int clienteId)
+        : base($"El cliente con ID {clienteId} tiene pedidos activos y no puede desactivarse.")
+    {
+        ClienteId = clienteId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra una notificación interna con el ID especificado.
+/// </summary>
+public class NotificacionInternaNoEncontradaException : DomainException
+{
+    public int NotificacionId { get; }
+
+    public NotificacionInternaNoEncontradaException(int notificacionId)
+        : base($"No se encontró la notificación con ID {notificacionId}.")
+    {
+        NotificacionId = notificacionId;
+    }
+}

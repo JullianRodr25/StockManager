@@ -60,6 +60,10 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.Property(p => p.ProveedorId)
             .IsRequired(false);
 
+        builder.Property(p => p.NotificacionStockBajoActiva)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         // RowVersion para concurrencia optimista — CRÍTICO
         builder.Property(p => p.RowVersion)
             .IsRowVersion();

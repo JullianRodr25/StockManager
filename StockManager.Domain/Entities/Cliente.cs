@@ -52,6 +52,31 @@ public class Cliente
         };
     }
 
+    /// <summary>
+    /// Actualiza los datos de contacto del cliente. NO permite cambiar NumeroIdentificacion
+    /// (es su identificador de login, igual que la cédula de un Empleado) ni PasswordHash
+    /// (eso requeriría un flujo de cambio de contraseña aparte, con su propia validación).
+    /// </summary>
+    public void ActualizarInformacion(string nombre, string email, string telefono, string direccion)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            throw new ArgumentException("El nombre del cliente no puede estar vacío.", nameof(nombre));
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("El email no puede estar vacío.", nameof(email));
+
+        if (string.IsNullOrWhiteSpace(telefono))
+            throw new ArgumentException("El teléfono no puede estar vacío.", nameof(telefono));
+
+        if (string.IsNullOrWhiteSpace(direccion))
+            throw new ArgumentException("La dirección no puede estar vacía.", nameof(direccion));
+
+        Nombre = nombre.Trim();
+        Email = email.Trim().ToLower();
+        Telefono = telefono.Trim();
+        Direccion = direccion.Trim();
+    }
+
     public void Desactivar() => Activo = false;
     public void Activar() => Activo = true;
 }

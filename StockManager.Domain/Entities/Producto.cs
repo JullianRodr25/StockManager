@@ -37,6 +37,15 @@ public class Producto
     /// </summary>
     public int? ProveedorId { get; private set; }
 
+    /// <summary>
+    /// True mientras ya se generó una NotificacionInterna de tipo "StockBajo" para el
+    /// episodio actual de stock bajo (StockActual &lt;= StockMinimo) y el producto no se ha
+    /// repuesto todavía. Evita que el chequeo periódico regenere la misma notificación una y
+    /// otra vez; se limpia automáticamente cuando el stock vuelve a subir por encima del
+    /// mínimo, para que una caída futura sí dispare un aviso nuevo.
+    /// </summary>
+    public bool NotificacionStockBajoActiva { get; private set; }
+
     // Concurrencia optimista — EF Core maneja automáticamente este campo
     public byte[]? RowVersion { get; set; }
 
@@ -225,5 +234,22 @@ public class Producto
     public void MarcarEtiquetaImpresa()
     {
         FechaImpresionEtiqueta = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marca que ya se generó la notificación interna de stock bajo para el episodio actual.
+    /// </summary>
+    public void MarcarNotificacionStockBajoActiva()
+    {
+        NotificacionStockBajoActiva = true;
+    }
+
+    /// <summary>
+    /// Limpia la bandera de stock bajo (el producto se repuso por encima del mínimo), para
+    /// que una futura caída por debajo del mínimo dispare una notificación nueva.
+    /// </summary>
+    public void LimpiarNotificacionStockBajo()
+    {
+        NotificacionStockBajoActiva = false;
     }
 }

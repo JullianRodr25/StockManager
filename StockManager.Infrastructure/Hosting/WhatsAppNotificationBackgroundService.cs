@@ -58,12 +58,17 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
 
     private async Task ProcesarEventoAsync(DomainEvent evento, CancellationToken ct)
     {
-        // Interruptor general: en un ambiente sin credenciales de Twilio configuradas (ej.
-        // desarrollo local), los eventos simplemente se descartan sin intentar el envío.
+        using var scope = _serviceProvider.CreateScope();
+
+        // Las notificaciones internas (campana del panel) son independientes de si el envío
+        // por WhatsApp está habilitado — nunca deben quedar apagadas solo porque WhatsApp lo
+        // está (ver GenerarNotificacionInternaSiAplicaAsync).
+        await GenerarNotificacionInternaSiAplicaAsync(evento, scope.ServiceProvider, ct);
+
+        // Interruptor general de WhatsApp: en un ambiente sin credenciales de Twilio
+        // configuradas (ej. desarrollo local), los envíos reales simplemente se descartan.
         if (!_opciones.Value.Habilitado)
             return;
-
-        using var scope = _serviceProvider.CreateScope();
 
         switch (evento)
         {
@@ -85,6 +90,53 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
 
             // Otros eventos de dominio (ProductoVendidoEvent, ProductoRepuestoEvent) no
             // generan notificación por WhatsApp; se ignoran silenciosamente acá.
+        }
+    }
+
+    /// <summary>
+    /// Genera la notificación interna correspondiente (campana del panel) para los eventos
+    /// que le interesan al personal, sin importar si el envío por WhatsApp está habilitado.
+    /// Los otros eventos (venta/reposición de stock, factura generada, stock bajo a
+    /// proveedor) no generan campana — ya sea porque no son accionables por el empleado
+    /// (factura) o porque el chequeo de stock bajo (NotificacionesStockBajoCheckService) ya
+    /// cubre esa alerta de forma general.
+    /// </summary>
+    private async Task GenerarNotificacionInternaSiAplicaAsync(DomainEvent evento, IServiceProvider sp, CancellationToken ct)
+    {
+        var notificaciones = sp.GetRequiredService<INotificacionInternaService>();
+
+        switch (evento)
+        {
+            case PedidoEstadoCambiadoEvent pedidoEvento when pedidoEvento.NuevoEstado == "Pendiente":
+                var db = sp.GetRequiredService<AppDbContext>();
+                var pedido = await db.Pedidos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pedidoEvento.PedidoId, ct);
+                if (pedido is not null)
+                {
+                    var cliente = await db.Clientes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == pedido.ClienteId, ct);
+                    await notificaciones.CrearAsync(
+                        "PedidoNuevo",
+                        $"Nuevo pedido #{pedido.Id}",
+                        $"{cliente?.Nombre ?? "Un cliente"} hizo un pedido por ${pedido.Total:N0}.",
+                        "Pedido",
+                        pedido.Id);
+                }
+                break;
+
+            case CuentaPorPagarProximaAVencerEvent cuentaEvento:
+                var db2 = sp.GetRequiredService<AppDbContext>();
+                var cuenta = await db2.CuentasPorPagar.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cuentaEvento.CuentaPorPagarId, ct);
+                if (cuenta is not null)
+                {
+                    var proveedor = await db2.Proveedores.AsNoTracking().FirstOrDefaultAsync(p => p.Id == cuenta.ProveedorId, ct);
+                    var vencida = cuenta.FechaVencimiento.Date < DateTime.UtcNow.Date;
+                    await notificaciones.CrearAsync(
+                        "CuentaPorPagarProximaAVencer",
+                        vencida ? "Cuenta por pagar vencida" : "Cuenta por pagar próxima a vencer",
+                        $"{proveedor?.Nombre ?? "Un proveedor"} — {cuenta.Concepto}, vence el {cuenta.FechaVencimiento:dd/MM/yyyy}.",
+                        "CuentaPorPagar",
+                        cuenta.Id);
+                }
+                break;
         }
     }
 

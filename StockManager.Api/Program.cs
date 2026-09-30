@@ -57,6 +57,8 @@ builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<ICuentaPorPagarService, CuentaPorPagarService>();
+builder.Services.AddScoped<INotificacionInternaService, NotificacionInternaService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IProductoService>(sp => 
     new ProductoService(
         sp.GetRequiredService<AppDbContext>(),
@@ -97,6 +99,11 @@ builder.Services.AddHostedService<CuentasPorPagarVencimientoCheckService>();
 // Chequeo diario de productos en stock bajo con proveedor asignado (dispara
 // StockBajoProveedorEvent, que el dispatcher de arriba envía por WhatsApp al proveedor).
 builder.Services.AddHostedService<StockBajoProveedorCheckService>();
+
+// Chequeo cada hora de productos en stock bajo (cualquiera, tenga o no proveedor) para
+// alimentar la campana de notificaciones internas del panel. Independiente de
+// WhatsApp:Habilitado.
+builder.Services.AddHostedService<NotificacionesStockBajoCheckService>();
 
 // Add OpenAPI/Swagger services
 builder.Services.AddOpenApi();
