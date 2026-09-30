@@ -55,6 +55,8 @@ builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IProveedorService, ProveedorService>();
+builder.Services.AddScoped<ICuentaPorPagarService, CuentaPorPagarService>();
 builder.Services.AddScoped<IProductoService>(sp => 
     new ProductoService(
         sp.GetRequiredService<AppDbContext>(),
@@ -87,6 +89,10 @@ builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>
 });
 
 builder.Services.AddHostedService<WhatsAppNotificationBackgroundService>();
+
+// Chequeo diario de cuentas por pagar próximas a vencer (dispara CuentaPorPagarProximaAVencerEvent,
+// que el dispatcher de arriba efectivamente envía por WhatsApp al admin).
+builder.Services.AddHostedService<CuentasPorPagarVencimientoCheckService>();
 
 // Add OpenAPI/Swagger services
 builder.Services.AddOpenApi();

@@ -229,3 +229,59 @@ public class OperacionInvalidaPedidoException : DomainException
 {
     public OperacionInvalidaPedidoException(string message) : base(message) { }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra un proveedor con el ID especificado.
+/// </summary>
+public class ProveedorNoEncontradoException : DomainException
+{
+    public int ProveedorId { get; }
+
+    public ProveedorNoEncontradoException(int proveedorId)
+        : base($"No se encontró el proveedor con ID {proveedorId}.")
+    {
+        ProveedorId = proveedorId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra una cuenta por pagar con el ID especificado.
+/// </summary>
+public class CuentaPorPagarNoEncontradaException : DomainException
+{
+    public int CuentaPorPagarId { get; }
+
+    public CuentaPorPagarNoEncontradaException(int cuentaPorPagarId)
+        : base($"No se encontró la cuenta por pagar con ID {cuentaPorPagarId}.")
+    {
+        CuentaPorPagarId = cuentaPorPagarId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando se intenta una operación sobre una cuenta por pagar que no
+/// está en el estado requerido (ej. pagar o cancelar una que ya no está Pendiente).
+/// </summary>
+public class CuentaPorPagarEstadoInvalidoException : DomainException
+{
+    public int CuentaPorPagarId { get; }
+    public string EstadoActual { get; }
+    public string EstadoEsperado { get; }
+
+    public CuentaPorPagarEstadoInvalidoException(int cuentaPorPagarId, string estadoActual, string estadoEsperado)
+        : base($"La cuenta por pagar {cuentaPorPagarId} está en estado '{estadoActual}', se esperaba '{estadoEsperado}'.")
+    {
+        CuentaPorPagarId = cuentaPorPagarId;
+        EstadoActual = estadoActual;
+        EstadoEsperado = estadoEsperado;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar cancelar una cuenta por pagar que ya tiene abonos
+/// registrados, o dejar su saldo negativo con un abono mayor al pendiente.
+/// </summary>
+public class OperacionInvalidaCuentaPorPagarException : DomainException
+{
+    public OperacionInvalidaCuentaPorPagarException(string message) : base(message) { }
+}

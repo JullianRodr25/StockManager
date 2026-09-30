@@ -30,6 +30,9 @@ public class AppDbContext : DbContext
     public DbSet<BackorderRequest> BackorderRequests { get; set; } = null!;
     public DbSet<Factura> Facturas { get; set; } = null!;
     public DbSet<NotificacionLog> NotificacionesLog { get; set; } = null!;
+    public DbSet<Proveedor> Proveedores { get; set; } = null!;
+    public DbSet<CuentaPorPagar> CuentasPorPagar { get; set; } = null!;
+    public DbSet<AbonoCuentaPorPagar> AbonosCuentaPorPagar { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,5 +53,8 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new BackorderRequestConfiguration());
         modelBuilder.ApplyConfiguration(new FacturaConfiguration());
         modelBuilder.ApplyConfiguration(new NotificacionLogConfiguration());
+        modelBuilder.ApplyConfiguration(new ProveedorConfiguration());
+        modelBuilder.ApplyConfiguration(new CuentaPorPagarConfiguration());
+        modelBuilder.ApplyConfiguration(new AbonoCuentaPorPagarConfiguration());
     }
 }

@@ -37,4 +37,11 @@ public class WhatsAppOptions
     /// largo y aleatorio, distinto por ambiente, y nunca compartirse fuera del backend.
     /// </summary>
     public string LinkSecret { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Días de anticipación con que se avisa al admin que una CuentaPorPagar está por vencer
+    /// (0 = solo el mismo día de vencimiento). Una cuenta ya vencida siempre se avisa,
+    /// independientemente de este valor.
+    /// </summary>
+    public int DiasAvisoVencimientoProveedores { get; set; } = 3;
 }

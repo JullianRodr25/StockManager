@@ -75,9 +75,42 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
                 await ProcesarFacturaGeneradaAsync(facturaEvento, scope.ServiceProvider, ct);
                 break;
 
+            case CuentaPorPagarProximaAVencerEvent cuentaEvento:
+                await ProcesarCuentaPorPagarProximaAVencerAsync(cuentaEvento, scope.ServiceProvider, ct);
+                break;
+
             // Otros eventos de dominio (ProductoVendidoEvent, ProductoRepuestoEvent) no
             // generan notificación por WhatsApp; se ignoran silenciosamente acá.
         }
+    }
+
+    private async Task ProcesarCuentaPorPagarProximaAVencerAsync(CuentaPorPagarProximaAVencerEvent evento, IServiceProvider sp, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(_opciones.Value.AdminNotificationPhone))
+            return;
+
+        var db = sp.GetRequiredService<AppDbContext>();
+        var sender = sp.GetRequiredService<IWhatsAppSender>();
+
+        var cuenta = await db.CuentasPorPagar.AsNoTracking().FirstOrDefaultAsync(c => c.Id == evento.CuentaPorPagarId, ct);
+        if (cuenta is null)
+            return;
+
+        var proveedor = await db.Proveedores.AsNoTracking().FirstOrDefaultAsync(p => p.Id == cuenta.ProveedorId, ct);
+        if (proveedor is null)
+            return;
+
+        var totalAbonado = await db.AbonosCuentaPorPagar
+            .AsNoTracking()
+            .Where(a => a.CuentaPorPagarId == cuenta.Id)
+            .SumAsync(a => (decimal?)a.Monto, ct) ?? 0m;
+
+        var telefonoAdmin = _opciones.Value.AdminNotificationPhone!;
+        var mensaje = PlantillasMensajesWhatsApp.CuentaPorPagarProximaAVencer(
+            proveedor.Nombre, cuenta.Concepto, cuenta.MontoTotal, cuenta.MontoTotal - totalAbonado, cuenta.FechaVencimiento);
+
+        var resultado = await sender.EnviarTextoAsync(telefonoAdmin, mensaje);
+        await RegistrarLogAsync(db, telefonoAdmin, "CuentaPorPagar", cuenta.Id, resultado, ct);
     }
 
     private async Task ProcesarPedidoEstadoCambiadoAsync(PedidoEstadoCambiadoEvent evento, IServiceProvider sp, CancellationToken ct)

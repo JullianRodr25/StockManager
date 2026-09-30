@@ -22,4 +22,17 @@ public static class PlantillasMensajesWhatsApp
 
     public static string FacturaParaCliente(string nombreCliente, string numeroFactura) =>
         $"¡Hola {nombreCliente}! Te adjuntamos la factura {numeroFactura} de tu compra. Gracias por confiar en nosotros.";
+
+    public static string CuentaPorPagarProximaAVencer(string nombreProveedor, string concepto, decimal montoTotal, decimal saldoPendiente, DateTime fechaVencimiento)
+    {
+        var diasRestantes = (fechaVencimiento.Date - DateTime.UtcNow.Date).Days;
+        var cuando = diasRestantes switch
+        {
+            < 0 => $"venció hace {Math.Abs(diasRestantes)} día(s)",
+            0 => "vence HOY",
+            _ => $"vence en {diasRestantes} día(s)"
+        };
+
+        return $"⚠️ Cuenta por pagar a {nombreProveedor} ({concepto}): saldo ${saldoPendiente:N0} de ${montoTotal:N0} total, {cuando} ({fechaVencimiento:dd/MM/yyyy}).";
+    }
 }

@@ -77,3 +77,18 @@ public class FacturaGeneradaEvent : DomainEvent
         FacturaId = facturaId;
     }
 }
+
+/// <summary>
+/// Evento disparado por el chequeo periódico de cuentas por pagar (no por una transacción
+/// de negocio puntual) cuando una CuentaPorPagar entra en su ventana de aviso de
+/// vencimiento (o ya está vencida) y no se le ha avisado al admin todavía hoy.
+/// </summary>
+public class CuentaPorPagarProximaAVencerEvent : DomainEvent
+{
+    public int CuentaPorPagarId { get; }
+
+    public CuentaPorPagarProximaAVencerEvent(int cuentaPorPagarId)
+    {
+        CuentaPorPagarId = cuentaPorPagarId;
+    }
+}
