@@ -183,14 +183,16 @@ namespace StockManager.Infrastructure.Services
             // Hashear el password
             var passwordHash = _passwordHasherCliente.HashPassword(null!, request.Password);
 
-            // Usar el factory method Cliente.Crear
+            // Usar el factory method Cliente.Crear. Este es el único punto de autoregistro
+            // público (PWA), así que el origen siempre es "Pwa".
             var cliente = Cliente.Crear(
                 numeroIdentificacion: numeroNormalizado,
                 nombre: request.Nombre,
                 email: emailNormalizado,
                 passwordHash: passwordHash,
                 telefono: request.Telefono,
-                direccion: request.Direccion);
+                direccion: request.Direccion,
+                origenRegistro: "Pwa");
 
             // Agregar a la base de datos
             _db.Clientes.Add(cliente);

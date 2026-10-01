@@ -45,6 +45,29 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(c => c.OrigenRegistro)
+            .IsRequired()
+            .HasMaxLength(10)
+            .HasDefaultValue("Caja");
+
+        builder.Property(c => c.TipoDocumentoFiscal)
+            .HasMaxLength(20);
+
+        builder.Property(c => c.NumeroDocumentoFiscal)
+            .HasMaxLength(30);
+
+        builder.Property(c => c.RazonSocialFiscal)
+            .HasMaxLength(200);
+
+        builder.Property(c => c.DireccionFiscal)
+            .HasMaxLength(300);
+
+        builder.Property(c => c.EmailFacturacion)
+            .HasMaxLength(200);
+
+        // Propiedad calculada en memoria (igual que Venta.Cambio), no una columna.
+        builder.Ignore(c => c.TieneDatosFacturacionElectronicaCompletos);
+
         // Índice único en NumeroIdentificacion para login
         builder.HasIndex(c => c.NumeroIdentificacion)
             .IsUnique();

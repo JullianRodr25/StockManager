@@ -6,6 +6,16 @@ namespace StockManager.Domain.Entities;
 /// </summary>
 public class Cliente
 {
+    // "Pwa": se autoregistró desde la PWA pública. "Caja": lo creó un Empleado/Admin desde el
+    // panel (típicamente un cliente de mostrador). Puramente informativo (reportes/filtros):
+    // no cambia ninguna regla de validación ni de permisos.
+    private static readonly string[] OrigenesValidos = { "Pwa", "Caja" };
+
+    // Catálogo simplificado de tipo de documento fiscal (no es el mismo concepto que
+    // NumeroIdentificacion, que es el documento de login/cédula): un cliente puede comprar a
+    // título personal pero pedir la factura a nombre de una empresa (NIT), por ejemplo.
+    private static readonly string[] TiposDocumentoFiscalValidos = { "CC", "NIT", "CE", "Pasaporte", "Otro" };
+
     public int Id { get; private set; }
     public string NumeroIdentificacion { get; private set; } = null!;  // Cédula, Pasaporte, etc.
     public string Nombre { get; private set; } = null!;
@@ -15,9 +25,40 @@ public class Cliente
     public string Direccion { get; private set; } = null!;
     public bool Activo { get; private set; }
 
+    /// <summary>"Pwa" o "Caja" — canal por el que se creó el cliente. Ver OrigenesValidos.</summary>
+    public string OrigenRegistro { get; private set; } = null!;
+
+    // --- Datos para solicitar factura electrónica (todos opcionales: un cliente puede no
+    // necesitarla nunca). Se guardan acá para no tener que volver a pedirlos en cada venta;
+    // VentaService los copia ("snapshot") a la Venta en el momento en que se solicita, así que
+    // cambiarlos después no altera facturas ya emitidas.
+    public string? TipoDocumentoFiscal { get; private set; }
+    public string? NumeroDocumentoFiscal { get; private set; }
+    public string? RazonSocialFiscal { get; private set; }
+    public string? DireccionFiscal { get; private set; }
+    public string? EmailFacturacion { get; private set; }
+
+    /// <summary>
+    /// true cuando hay lo mínimo que exige la DIAN para expedir una factura electrónica
+    /// (tipo + número de documento y razón social); dirección y correo son recomendados pero
+    /// no bloquean. Lo usa el frontend para decidir si puede ofrecer "Solicitar factura
+    /// electrónica" con un clic o si primero hay que pedir esos datos.
+    /// </summary>
+    public bool TieneDatosFacturacionElectronicaCompletos =>
+        !string.IsNullOrWhiteSpace(TipoDocumentoFiscal) &&
+        !string.IsNullOrWhiteSpace(NumeroDocumentoFiscal) &&
+        !string.IsNullOrWhiteSpace(RazonSocialFiscal);
+
     private Cliente() { }
 
-    public static Cliente Crear(string numeroIdentificacion, string nombre, string email, string passwordHash, string telefono, string direccion)
+    public static Cliente Crear(
+        string numeroIdentificacion,
+        string nombre,
+        string email,
+        string passwordHash,
+        string telefono,
+        string direccion,
+        string origenRegistro)
     {
         if (string.IsNullOrWhiteSpace(numeroIdentificacion))
             throw new ArgumentException("El número de identificación no puede estar vacío.", nameof(numeroIdentificacion));
@@ -40,6 +81,9 @@ public class Cliente
         if (string.IsNullOrWhiteSpace(direccion))
             throw new ArgumentException("La dirección no puede estar vacía.", nameof(direccion));
 
+        if (!OrigenesValidos.Contains(origenRegistro))
+            throw new ArgumentException($"El origen de registro '{origenRegistro}' no es válido.", nameof(origenRegistro));
+
         return new Cliente
         {
             NumeroIdentificacion = numeroIdentificacion.Trim(),
@@ -48,8 +92,33 @@ public class Cliente
             PasswordHash = passwordHash,
             Telefono = telefono.Trim(),
             Direccion = direccion.Trim(),
-            Activo = true
+            Activo = true,
+            OrigenRegistro = origenRegistro
         };
+    }
+
+    /// <summary>
+    /// Actualiza los datos fiscales usados para solicitar factura electrónica. Todos
+    /// opcionales (null/vacío limpia el campo); si se deja vacío el tipo, número o razón
+    /// social, TieneDatosFacturacionElectronicaCompletos vuelve a dar false. No valida el
+    /// número de documento contra un formato específico (el NIT colombiano incluye dígito de
+    /// verificación con reglas propias que no vale la pena duplicar acá).
+    /// </summary>
+    public void ActualizarDatosFacturacionElectronica(
+        string? tipoDocumentoFiscal,
+        string? numeroDocumentoFiscal,
+        string? razonSocialFiscal,
+        string? direccionFiscal,
+        string? emailFacturacion)
+    {
+        if (!string.IsNullOrWhiteSpace(tipoDocumentoFiscal) && !TiposDocumentoFiscalValidos.Contains(tipoDocumentoFiscal))
+            throw new ArgumentException($"El tipo de documento fiscal '{tipoDocumentoFiscal}' no es válido.", nameof(tipoDocumentoFiscal));
+
+        TipoDocumentoFiscal = string.IsNullOrWhiteSpace(tipoDocumentoFiscal) ? null : tipoDocumentoFiscal.Trim();
+        NumeroDocumentoFiscal = string.IsNullOrWhiteSpace(numeroDocumentoFiscal) ? null : numeroDocumentoFiscal.Trim();
+        RazonSocialFiscal = string.IsNullOrWhiteSpace(razonSocialFiscal) ? null : razonSocialFiscal.Trim();
+        DireccionFiscal = string.IsNullOrWhiteSpace(direccionFiscal) ? null : direccionFiscal.Trim();
+        EmailFacturacion = string.IsNullOrWhiteSpace(emailFacturacion) ? null : emailFacturacion.Trim();
     }
 
     /// <summary>

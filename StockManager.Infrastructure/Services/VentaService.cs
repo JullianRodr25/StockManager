@@ -50,14 +50,27 @@ public class VentaService : IVentaService
         if (request.Lineas == null || request.Lineas.Count == 0)
             throw new ArgumentException("Debe incluir al menos un producto");
 
+        Cliente? cliente = null;
         if (request.ClienteId.HasValue)
         {
-            var clienteExiste = await _dbContext.Clientes
-                .AnyAsync(c => c.Id == request.ClienteId.Value);
+            cliente = await _dbContext.Clientes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.ClienteId.Value);
 
-            if (!clienteExiste)
+            if (cliente is null)
                 throw new ArgumentException($"El cliente con ID {request.ClienteId.Value} no existe.");
         }
+
+        // Si se pidió factura electrónica, los datos fiscales de ESTA venta mandan sobre los
+        // del perfil del Cliente (ej. quiere facturar a nombre de una empresa distinta); si la
+        // venta no trajo alguno, se completa con lo guardado en el Cliente. Para un comprador
+        // sin registrar, solo quedan los que haya traído la venta — Venta.Crear exige los
+        // obligatorios y rechaza la venta si faltan.
+        var tipoDocumentoFiscal = request.TipoDocumentoFiscal ?? cliente?.TipoDocumentoFiscal;
+        var numeroDocumentoFiscal = request.NumeroDocumentoFiscal ?? cliente?.NumeroDocumentoFiscal;
+        var razonSocialFiscal = request.RazonSocialFiscal ?? cliente?.RazonSocialFiscal;
+        var direccionFiscal = request.DireccionFiscal ?? cliente?.DireccionFiscal;
+        var emailFacturacionFiscal = request.EmailFacturacion ?? cliente?.EmailFacturacion;
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
@@ -111,7 +124,13 @@ public class VentaService : IVentaService
             esCotizacion: false,
             estado: "Pagada",
             montoRecibido: request.MontoRecibido,
-            detallesPago: AConTuplasDetallesPago(request.DetallesPago));
+            detallesPago: AConTuplasDetallesPago(request.DetallesPago),
+            requiereFacturaElectronica: request.RequiereFacturaElectronica,
+            tipoDocumentoFacturado: tipoDocumentoFiscal,
+            numeroDocumentoFacturado: numeroDocumentoFiscal,
+            razonSocialFacturada: razonSocialFiscal,
+            direccionFacturada: direccionFiscal,
+            emailFacturacion: emailFacturacionFiscal);
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
@@ -179,7 +198,14 @@ public class VentaService : IVentaService
             detalles,
             venta.MontoRecibido,
             venta.Cambio,
-            detallesPago);
+            detallesPago,
+            venta.RequiereFacturaElectronica,
+            venta.EstadoFacturaElectronica,
+            venta.TipoDocumentoFacturado,
+            venta.NumeroDocumentoFacturado,
+            venta.RazonSocialFacturada,
+            venta.DireccionFacturada,
+            venta.EmailFacturacion);
     }
 
     public async Task<(List<VentaResumenResponse> Items, int Total)> ObtenerVentasPaginadoAsync(
@@ -253,7 +279,14 @@ public class VentaService : IVentaService
             detalles,
             venta.MontoRecibido,
             venta.Cambio,
-            detallesPago);
+            detallesPago,
+            venta.RequiereFacturaElectronica,
+            venta.EstadoFacturaElectronica,
+            venta.TipoDocumentoFacturado,
+            venta.NumeroDocumentoFacturado,
+            venta.RazonSocialFacturada,
+            venta.DireccionFacturada,
+            venta.EmailFacturacion);
     }
 
     public async Task<VentaResponse> AbrirFiadoAsync(int clienteId, int empleadoId)
@@ -283,7 +316,14 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             string.Empty,
-            new List<DetalleVentaResponse>());
+            new List<DetalleVentaResponse>(),
+            RequiereFacturaElectronica: venta.RequiereFacturaElectronica,
+            EstadoFacturaElectronica: venta.EstadoFacturaElectronica,
+            TipoDocumentoFacturado: venta.TipoDocumentoFacturado,
+            NumeroDocumentoFacturado: venta.NumeroDocumentoFacturado,
+            RazonSocialFacturada: venta.RazonSocialFacturada,
+            DireccionFacturada: venta.DireccionFacturada,
+            EmailFacturacion: venta.EmailFacturacion);
     }
 
     public async Task<VentaResponse> AgregarLineaFiadoAsync(int ventaId, LineaVentaRequest linea)
@@ -347,7 +387,14 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             string.Empty,
-            detalles);
+            detalles,
+            RequiereFacturaElectronica: venta.RequiereFacturaElectronica,
+            EstadoFacturaElectronica: venta.EstadoFacturaElectronica,
+            TipoDocumentoFacturado: venta.TipoDocumentoFacturado,
+            NumeroDocumentoFacturado: venta.NumeroDocumentoFacturado,
+            RazonSocialFacturada: venta.RazonSocialFacturada,
+            DireccionFacturada: venta.DireccionFacturada,
+            EmailFacturacion: venta.EmailFacturacion);
     }
 
     public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null)
@@ -395,7 +442,14 @@ public class VentaService : IVentaService
             detalles,
             venta.MontoRecibido,
             venta.Cambio,
-            detallesPagoRespuesta);
+            detallesPagoRespuesta,
+            venta.RequiereFacturaElectronica,
+            venta.EstadoFacturaElectronica,
+            venta.TipoDocumentoFacturado,
+            venta.NumeroDocumentoFacturado,
+            venta.RazonSocialFacturada,
+            venta.DireccionFacturada,
+            venta.EmailFacturacion);
     }
 
     public async Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId)
@@ -485,7 +539,14 @@ public class VentaService : IVentaService
             detalles,
             venta.MontoRecibido,
             venta.Cambio,
-            detallesPago);
+            detallesPago,
+            venta.RequiereFacturaElectronica,
+            venta.EstadoFacturaElectronica,
+            venta.TipoDocumentoFacturado,
+            venta.NumeroDocumentoFacturado,
+            venta.RazonSocialFacturada,
+            venta.DireccionFacturada,
+            venta.EmailFacturacion);
     }
 
     public async Task<List<AbonoResponse>> ObtenerAbonosAsync(int ventaId)
@@ -587,7 +648,14 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             string.Empty,
-            detalles);
+            detalles,
+            RequiereFacturaElectronica: venta.RequiereFacturaElectronica,
+            EstadoFacturaElectronica: venta.EstadoFacturaElectronica,
+            TipoDocumentoFacturado: venta.TipoDocumentoFacturado,
+            NumeroDocumentoFacturado: venta.NumeroDocumentoFacturado,
+            RazonSocialFacturada: venta.RazonSocialFacturada,
+            DireccionFacturada: venta.DireccionFacturada,
+            EmailFacturacion: venta.EmailFacturacion);
     }
 
     public async Task<VentaResponse> QuitarLineaAsync(int ventaId, int detalleId)
@@ -668,7 +736,14 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             string.Empty,
-            detalles);
+            detalles,
+            RequiereFacturaElectronica: venta.RequiereFacturaElectronica,
+            EstadoFacturaElectronica: venta.EstadoFacturaElectronica,
+            TipoDocumentoFacturado: venta.TipoDocumentoFacturado,
+            NumeroDocumentoFacturado: venta.NumeroDocumentoFacturado,
+            RazonSocialFacturada: venta.RazonSocialFacturada,
+            DireccionFacturada: venta.DireccionFacturada,
+            EmailFacturacion: venta.EmailFacturacion);
     }
 
     /// <summary>
@@ -737,7 +812,14 @@ public class VentaService : IVentaService
             venta.Estado,
             venta.Total,
             string.Empty,
-            new List<DetalleVentaResponse>());
+            new List<DetalleVentaResponse>(),
+            RequiereFacturaElectronica: venta.RequiereFacturaElectronica,
+            EstadoFacturaElectronica: venta.EstadoFacturaElectronica,
+            TipoDocumentoFacturado: venta.TipoDocumentoFacturado,
+            NumeroDocumentoFacturado: venta.NumeroDocumentoFacturado,
+            RazonSocialFacturada: venta.RazonSocialFacturada,
+            DireccionFacturada: venta.DireccionFacturada,
+            EmailFacturacion: venta.EmailFacturacion);
     }
 
     /// <summary>

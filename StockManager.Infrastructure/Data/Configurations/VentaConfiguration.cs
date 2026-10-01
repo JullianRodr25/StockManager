@@ -59,6 +59,30 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
             .HasColumnType("decimal(12, 2)")
             .IsRequired(false);
 
+        builder.Property(v => v.RequiereFacturaElectronica)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(v => v.EstadoFacturaElectronica)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("NoAplica");
+
+        builder.Property(v => v.TipoDocumentoFacturado)
+            .HasMaxLength(20);
+
+        builder.Property(v => v.NumeroDocumentoFacturado)
+            .HasMaxLength(30);
+
+        builder.Property(v => v.RazonSocialFacturada)
+            .HasMaxLength(200);
+
+        builder.Property(v => v.DireccionFacturada)
+            .HasMaxLength(300);
+
+        builder.Property(v => v.EmailFacturacion)
+            .HasMaxLength(200);
+
         // Cambio es una propiedad calculada en memoria (MontoRecibido - Total), no una columna:
         // no tiene setter porque nunca se guarda por su cuenta, siempre se deriva de MontoRecibido.
         builder.Ignore(v => v.Cambio);

@@ -53,7 +53,14 @@ public class ClienteService : IClienteService
                 c.Email,
                 c.Telefono,
                 c.Direccion,
-                c.Activo))
+                c.Activo,
+                c.OrigenRegistro,
+                c.TipoDocumentoFiscal,
+                c.NumeroDocumentoFiscal,
+                c.RazonSocialFiscal,
+                c.DireccionFiscal,
+                c.EmailFacturacion,
+                c.TieneDatosFacturacionElectronicaCompletos))
             .ToListAsync();
     }
 
@@ -69,7 +76,14 @@ public class ClienteService : IClienteService
                 c.Email,
                 c.Telefono,
                 c.Direccion,
-                c.Activo))
+                c.Activo,
+                c.OrigenRegistro,
+                c.TipoDocumentoFiscal,
+                c.NumeroDocumentoFiscal,
+                c.RazonSocialFiscal,
+                c.DireccionFiscal,
+                c.EmailFacturacion,
+                c.TieneDatosFacturacionElectronicaCompletos))
             .FirstOrDefaultAsync();
     }
 
@@ -93,18 +107,51 @@ public class ClienteService : IClienteService
 
         var passwordHash = _passwordHasher.HashPassword(null!, passwordAUsar);
 
+        // Único endpoint de creación "manual" (panel/caja); el autoregistro público de la PWA
+        // pasa por AuthService.RegistrarClienteAsync, que usa origenRegistro "Pwa".
         var cliente = Cliente.Crear(
             numeroIdentificacion: numeroNormalizado,
             nombre: request.Nombre,
             email: emailNormalizado,
             passwordHash: passwordHash,
             telefono: request.Telefono,
-            direccion: request.Direccion);
+            direccion: request.Direccion,
+            origenRegistro: "Caja");
+
+        if (request.TipoDocumentoFiscal is not null || request.NumeroDocumentoFiscal is not null ||
+            request.RazonSocialFiscal is not null || request.DireccionFiscal is not null ||
+            request.EmailFacturacion is not null)
+        {
+            cliente.ActualizarDatosFacturacionElectronica(
+                request.TipoDocumentoFiscal,
+                request.NumeroDocumentoFiscal,
+                request.RazonSocialFiscal,
+                request.DireccionFiscal,
+                request.EmailFacturacion);
+        }
 
         _dbContext.Clientes.Add(cliente);
         await _dbContext.SaveChangesAsync();
 
         return new ClienteCreadoResponse(MapearResponse(cliente), passwordGenerada);
+    }
+
+    public async Task<ClienteResponse> ActualizarDatosFacturacionElectronicaAsync(int id, ActualizarDatosFacturacionRequest request)
+    {
+        var cliente = await _dbContext.Clientes.FirstOrDefaultAsync(c => c.Id == id);
+        if (cliente == null)
+            throw new ClienteNoEncontradoException(id);
+
+        cliente.ActualizarDatosFacturacionElectronica(
+            request.TipoDocumentoFiscal,
+            request.NumeroDocumentoFiscal,
+            request.RazonSocialFiscal,
+            request.DireccionFiscal,
+            request.EmailFacturacion);
+
+        await _dbContext.SaveChangesAsync();
+
+        return MapearResponse(cliente);
     }
 
     public async Task<ClienteResponse> ActualizarClienteAsync(int id, ActualizarClienteRequest request)
@@ -164,7 +211,14 @@ public class ClienteService : IClienteService
         cliente.Email,
         cliente.Telefono,
         cliente.Direccion,
-        cliente.Activo);
+        cliente.Activo,
+        cliente.OrigenRegistro,
+        cliente.TipoDocumentoFiscal,
+        cliente.NumeroDocumentoFiscal,
+        cliente.RazonSocialFiscal,
+        cliente.DireccionFiscal,
+        cliente.EmailFacturacion,
+        cliente.TieneDatosFacturacionElectronicaCompletos);
 
     /// <summary>
     /// Genera una contraseña temporal aleatoria de 12 caracteres (mayúsculas, minúsculas,

@@ -19,7 +19,21 @@ public record RegistrarVentaRequest(
     string MetodoPago,
     List<LineaVentaRequest> Lineas,
     decimal? MontoRecibido = null,
-    List<DetallePagoRequest>? DetallesPago = null
+    List<DetallePagoRequest>? DetallesPago = null,
+    // true si el comprador pidió factura electrónica en esta venta puntual (no es un dato
+    // del Cliente: el mismo cliente puede pedirla unas veces y otras no). Si viene true y no
+    // se informan los campos fiscales de abajo, VentaService intenta completarlos con los
+    // datos guardados en el perfil del Cliente (requiere ClienteId); si tampoco los tiene,
+    // la venta se rechaza.
+    bool RequiereFacturaElectronica = false,
+    // Datos fiscales de ESTA venta: se usan tal cual si vienen informados (ej. el cliente
+    // quiere facturar a nombre de una empresa distinta a su perfil, o es un comprador nuevo
+    // que se registra en el momento), o quedan null para que se completen desde el Cliente.
+    string? TipoDocumentoFiscal = null,
+    string? NumeroDocumentoFiscal = null,
+    string? RazonSocialFiscal = null,
+    string? DireccionFiscal = null,
+    string? EmailFacturacion = null
 );
 
 public record DetalleVentaResponse(
@@ -48,7 +62,14 @@ public record VentaResponse(
     List<DetalleVentaResponse> Detalles,
     decimal? MontoRecibido = null,
     decimal? Cambio = null,
-    List<DetallePagoResponse>? DetallesPago = null
+    List<DetallePagoResponse>? DetallesPago = null,
+    bool RequiereFacturaElectronica = false,
+    string EstadoFacturaElectronica = "NoAplica",
+    string? TipoDocumentoFacturado = null,
+    string? NumeroDocumentoFacturado = null,
+    string? RazonSocialFacturada = null,
+    string? DireccionFacturada = null,
+    string? EmailFacturacion = null
 );
 
 public record VentaResumenResponse(

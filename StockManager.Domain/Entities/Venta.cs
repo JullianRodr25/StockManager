@@ -17,6 +17,14 @@ public class Venta
     /// </summary>
     private static readonly string[] MetodosPagoIndividualesValidos = { "Efectivo", "Tarjeta", "Transferencia" };
 
+    /// <summary>
+    /// "NoAplica": no se pidió factura electrónica (documento equivalente POS normal).
+    /// "Pendiente": se pidió, pero el sistema todavía no transmite a la DIAN (no hay
+    /// proveedor tecnológico certificado integrado aún). "Transmitida"/"Error" quedan listos
+    /// para cuando se conecte ese proveedor.
+    /// </summary>
+    private static readonly string[] EstadosFacturaElectronicaValidos = { "NoAplica", "Pendiente", "Transmitida", "Error" };
+
     public int Id { get; private set; }
     public int EmpleadoId { get; private set; }
     public int? ClienteId { get; private set; }
@@ -28,6 +36,19 @@ public class Venta
     public decimal Total { get; private set; }
     public bool EsCotizacion { get; private set; }
     public string Estado { get; private set; } = null!;
+
+    public bool RequiereFacturaElectronica { get; private set; }
+    public string EstadoFacturaElectronica { get; private set; } = "NoAplica";
+
+    // Snapshot de los datos fiscales al momento de la venta (copiados del Cliente, o de los
+    // que haya traído la venta puntual): si el cliente corrige su NIT después, las facturas ya
+    // emitidas no deben cambiar retroactivamente. Solo tienen valor cuando
+    // RequiereFacturaElectronica es true.
+    public string? TipoDocumentoFacturado { get; private set; }
+    public string? NumeroDocumentoFacturado { get; private set; }
+    public string? RazonSocialFacturada { get; private set; }
+    public string? DireccionFacturada { get; private set; }
+    public string? EmailFacturacion { get; private set; }
 
     /// <summary>
     /// Cuánto efectivo entregó físicamente el cliente, solo cuando MetodoPago es "Efectivo"
@@ -54,7 +75,13 @@ public class Venta
         bool esCotizacion,
         string estado,
         decimal? montoRecibido = null,
-        IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago = null)
+        IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago = null,
+        bool requiereFacturaElectronica = false,
+        string? tipoDocumentoFacturado = null,
+        string? numeroDocumentoFacturado = null,
+        string? razonSocialFacturada = null,
+        string? direccionFacturada = null,
+        string? emailFacturacion = null)
     {
         if (empleadoId <= 0)
             throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
@@ -75,6 +102,9 @@ public class Venta
         montoRecibido = ValidarMontoRecibido(metodoPago, total, montoRecibido);
         ValidarDetallesPago(metodoPago, total, detallesPago);
 
+        var datosFactura = ValidarYNormalizarFacturaElectronica(
+            requiereFacturaElectronica, tipoDocumentoFacturado, numeroDocumentoFacturado, razonSocialFacturada);
+
         return new Venta
         {
             EmpleadoId = empleadoId,
@@ -87,8 +117,51 @@ public class Venta
             Total = total,
             EsCotizacion = esCotizacion,
             Estado = estado,
-            MontoRecibido = montoRecibido
+            MontoRecibido = montoRecibido,
+            RequiereFacturaElectronica = requiereFacturaElectronica,
+            EstadoFacturaElectronica = requiereFacturaElectronica ? "Pendiente" : "NoAplica",
+            TipoDocumentoFacturado = datosFactura.Tipo,
+            NumeroDocumentoFacturado = datosFactura.Numero,
+            RazonSocialFacturada = datosFactura.RazonSocial,
+            DireccionFacturada = requiereFacturaElectronica ? direccionFacturada?.Trim() : null,
+            EmailFacturacion = requiereFacturaElectronica ? emailFacturacion?.Trim() : null
         };
+    }
+
+    /// <summary>
+    /// Si se solicitó factura electrónica, exige lo mínimo que pide la DIAN para expedirla
+    /// (tipo + número de documento fiscal y razón social) y los normaliza (trim); dirección y
+    /// correo son recomendados pero no bloquean la venta. Si no se solicitó, ignora cualquier
+    /// dato fiscal que hayan pasado por error — una venta sin factura electrónica no debe
+    /// guardar esos datos.
+    /// </summary>
+    private static (string? Tipo, string? Numero, string? RazonSocial) ValidarYNormalizarFacturaElectronica(
+        bool requiereFacturaElectronica, string? tipo, string? numero, string? razonSocial)
+    {
+        if (!requiereFacturaElectronica)
+            return (null, null, null);
+
+        if (string.IsNullOrWhiteSpace(tipo) || string.IsNullOrWhiteSpace(numero) || string.IsNullOrWhiteSpace(razonSocial))
+            throw new ArgumentException(
+                "Para solicitar factura electrónica se requiere tipo y número de documento fiscal, y la razón social.");
+
+        return (tipo.Trim(), numero.Trim(), razonSocial.Trim());
+    }
+
+    /// <summary>
+    /// Hook para cuando se integre un proveedor tecnológico certificado ante la DIAN: ese
+    /// servicio llamará esto para pasar de "Pendiente" a "Transmitida" (éxito) o "Error"
+    /// (falló el envío), nunca al revés ni sobre una venta que no pidió factura electrónica.
+    /// </summary>
+    public void MarcarEstadoFacturaElectronica(string nuevoEstado)
+    {
+        if (!RequiereFacturaElectronica)
+            throw new InvalidOperationException("Esta venta no solicitó factura electrónica.");
+
+        if (!EstadosFacturaElectronicaValidos.Contains(nuevoEstado) || nuevoEstado == "NoAplica")
+            throw new ArgumentException($"El estado de factura electrónica '{nuevoEstado}' no es válido.", nameof(nuevoEstado));
+
+        EstadoFacturaElectronica = nuevoEstado;
     }
 
     /// <summary>

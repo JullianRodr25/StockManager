@@ -24,6 +24,14 @@ public interface IClienteService
     Task<ClienteResponse> ActualizarClienteAsync(int id, ActualizarClienteRequest request);
 
     /// <summary>
+    /// Actualiza (o limpia, con campos null/vacíos) los datos fiscales que se usan para
+    /// solicitar factura electrónica en una venta. Separado de ActualizarClienteAsync a
+    /// propósito: son datos de un propósito distinto (facturación vs. contacto) y no siempre
+    /// los edita la misma persona en el mismo momento.
+    /// </summary>
+    Task<ClienteResponse> ActualizarDatosFacturacionElectronicaAsync(int id, ActualizarDatosFacturacionRequest request);
+
+    /// <summary>
     /// Desactiva un cliente. Lanza ClienteConPedidosActivosException si el cliente todavía
     /// tiene algún Pedido en estado Pendiente, Confirmado, EnPreparacion o EnCamino.
     /// </summary>

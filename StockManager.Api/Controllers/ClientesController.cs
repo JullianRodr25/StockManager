@@ -102,6 +102,32 @@ public class ClientesController : ControllerBase
     }
 
     /// <summary>
+    /// Actualiza los datos fiscales de un cliente (sección "Datos para factura electrónica"),
+    /// separados de los datos de contacto que maneja Actualizar().
+    /// </summary>
+    [HttpPut("{id}/datos-facturacion")]
+    public async Task<IActionResult> ActualizarDatosFacturacion(int id, [FromBody] ActualizarDatosFacturacionRequest request)
+    {
+        try
+        {
+            var cliente = await _clienteService.ActualizarDatosFacturacionElectronicaAsync(id, request);
+            return Ok(cliente);
+        }
+        catch (ClienteNoEncontradoException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Error al actualizar los datos de facturación" });
+        }
+    }
+
+    /// <summary>
     /// Desactiva un cliente (no se borran, para conservar el historial de ventas/pedidos).
     /// Se rechaza si el cliente todavía tiene pedidos en un estado activo.
     /// </summary>
