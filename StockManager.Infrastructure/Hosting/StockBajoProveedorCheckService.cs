@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using StockManager.Application.Services;
 using StockManager.Domain.Events;
 using StockManager.Infrastructure.Data;
 using StockManager.Infrastructure.Notificaciones;
