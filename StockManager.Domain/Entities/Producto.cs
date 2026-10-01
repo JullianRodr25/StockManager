@@ -173,6 +173,28 @@ public class Producto
     }
 
     /// <summary>
+    /// Ajuste manual del stock (ej. mercancía que llega, corrección de un conteo físico), desde
+    /// el panel de Inventario — no pasa por Vender()/Reponer() porque no está atado a una venta
+    /// ni a un pedido, y a propósito no exige Activo = true (corregir el conteo de un producto
+    /// inactivo sigue siendo válido). delta puede ser positivo o negativo; nunca puede dejar el
+    /// stock en negativo.
+    /// </summary>
+    /// <param name="delta">Cuánto sumar (positivo) o restar (negativo) al stock actual.</param>
+    /// <returns>El nuevo stock tras el ajuste</returns>
+    public int AjustarStock(int delta)
+    {
+        if (delta == 0)
+            throw new ArgumentException("El ajuste no puede ser 0.", nameof(delta));
+
+        var nuevoStock = StockActual + delta;
+        if (nuevoStock < 0)
+            throw new StockInsuficienteException(StockActual, -delta);
+
+        StockActual = nuevoStock;
+        return StockActual;
+    }
+
+    /// <summary>
     /// Desactiva el producto.
     /// </summary>
     public void Desactivar()

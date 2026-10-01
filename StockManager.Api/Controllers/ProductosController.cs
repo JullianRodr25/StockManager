@@ -285,4 +285,42 @@ public class ProductosController : ControllerBase
             return StatusCode(500, new { message = "Error al reactivar el producto" });
         }
     }
+
+    /// <summary>
+    /// Ajusta manualmente el stock de un producto (ej. llegó mercancía, corrección de un
+    /// conteo físico), fuera del flujo de ventas/pedidos. Delta puede ser positivo o negativo;
+    /// no puede dejar el stock en negativo.
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpPatch("{id}/ajustar-stock")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AjustarStock(int id, [FromBody] AjustarStockRequest request)
+    {
+        try
+        {
+            var productoResponse = await _productoService.AjustarStockAsync(id, request.Delta);
+            return Ok(productoResponse);
+        }
+        catch (StockManager.Domain.Exceptions.ProductoNoEncontradoException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (StockManager.Domain.Exceptions.StockInsuficienteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (StockManager.Domain.Exceptions.ConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // TODO: loguear ex con ILogger cuando se agregue logging
+            return StatusCode(500, new { message = "Error al ajustar el stock" });
+        }
+    }
 }

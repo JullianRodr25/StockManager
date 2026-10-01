@@ -81,12 +81,13 @@ builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<ICuentaPorPagarService, CuentaPorPagarService>();
 builder.Services.AddScoped<INotificacionInternaService, NotificacionInternaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-builder.Services.AddScoped<IProductoService>(sp => 
+builder.Services.AddScoped<IProductoService>(sp =>
     new ProductoService(
         sp.GetRequiredService<AppDbContext>(),
         sp.GetRequiredService<IBarcodeService>(),
         sp.GetRequiredService<ICategoriaService>(),
-        sp.GetRequiredService<IConfiguracionService>()));
+        sp.GetRequiredService<IConfiguracionService>(),
+        sp.GetRequiredService<IStockNotificador>()));
 
 // Registrar el HostedService para bootstrap del Admin inicial
 builder.Services.AddHostedService<AdminBootstrapHostedService>();

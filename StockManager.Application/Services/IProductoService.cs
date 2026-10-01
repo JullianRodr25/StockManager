@@ -54,6 +54,15 @@ public interface IProductoService
     Task ReactivarProductoAsync(int id);
 
     /// <summary>
+    /// Ajusta manualmente el stock de un producto (entrada de mercancía, corrección de un
+    /// conteo físico), fuera del flujo de ventas/pedidos. Registra el movimiento en el
+    /// historial (MovimientoStock) y avisa a las pantallas conectadas en tiempo real.
+    /// </summary>
+    /// <param name="id">Id del producto</param>
+    /// <param name="delta">Cuánto sumar (positivo) o restar (negativo) al stock actual</param>
+    Task<ProductoResponse> AjustarStockAsync(int id, int delta);
+
+    /// <summary>
     /// Importa productos masivamente desde un archivo Excel.
     /// Continúa con las siguientes filas incluso si algunas fallan.
     /// </summary>

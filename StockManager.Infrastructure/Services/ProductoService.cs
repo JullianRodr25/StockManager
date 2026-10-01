@@ -17,17 +17,20 @@ public class ProductoService : IProductoService
     private readonly IBarcodeService _barcodeService;
     private readonly ICategoriaService _categoriaService;
     private readonly IConfiguracionService _configuracionService;
+    private readonly IStockNotificador _stockNotificador;
 
     public ProductoService(
         AppDbContext dbContext,
         IBarcodeService barcodeService,
         ICategoriaService categoriaService,
-        IConfiguracionService configuracionService)
+        IConfiguracionService configuracionService,
+        IStockNotificador stockNotificador)
     {
         _dbContext = dbContext;
         _barcodeService = barcodeService;
         _categoriaService = categoriaService;
         _configuracionService = configuracionService;
+        _stockNotificador = stockNotificador;
     }
 
     public async Task<ProductoResponse?> ObtenerProductoPorIdAsync(int id)
@@ -470,6 +473,44 @@ public class ProductoService : IProductoService
 
         producto.Activar();
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<ProductoResponse> AjustarStockAsync(int id, int delta)
+    {
+        var producto = await _dbContext.Productos.FindAsync(id);
+        if (producto == null)
+            throw new Domain.Exceptions.ProductoNoEncontradoException(id);
+
+        producto.AjustarStock(delta);
+
+        var movimiento = MovimientoStock.Crear(
+            producto.Id,
+            delta > 0 ? "Entrada" : "Ajuste",
+            Math.Abs(delta),
+            "Ajuste");
+        _dbContext.MovimientosStock.Add(movimiento);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new Domain.Exceptions.ConcurrencyException(
+                "El stock de este producto cambió mientras se procesaba el ajuste. Intenta de nuevo.");
+        }
+
+        try
+        {
+            await _stockNotificador.NotificarCambiosAsync(
+                new[] { new CambioStockDto(producto.Id, producto.StockActual) });
+        }
+        catch
+        {
+            // Best-effort: un fallo al avisar en tiempo real no debe afectar el ajuste ya guardado.
+        }
+
+        return MapearAResponse(producto);
     }
 
     private static ProductoResponse MapearAResponse(Producto producto)

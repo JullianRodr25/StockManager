@@ -72,6 +72,16 @@ public class ActualizarProductoRequest
 }
 
 /// <summary>
+/// DTO para ajustar manualmente el stock de un producto (ej. llegó mercancía, corrección de
+/// un conteo físico). Delta puede ser positivo (suma) o negativo (resta); el backend valida
+/// que el resultado no quede negativo.
+/// </summary>
+public class AjustarStockRequest
+{
+    public int Delta { get; set; }
+}
+
+/// <summary>
 /// DTO para la respuesta de importación masiva desde Excel/CSV.
 /// Incluye un resumen de la operación y lista de errores (si los hay).
 /// </summary>
