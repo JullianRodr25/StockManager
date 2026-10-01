@@ -47,3 +47,17 @@ public record RegistrarClienteRequest(
     string Direccion);
 
 public record RegistrarResponse(int Id, string Message);
+
+// Recuperación de contraseña DTOs
+public record SolicitarRecuperacionRequest(
+    [Required(ErrorMessage = "El email es requerido")]
+    [EmailAddress(ErrorMessage = "El email no tiene un formato válido")]
+    string Email);
+
+public record RestablecerContrasenaRequest(
+    [Required(ErrorMessage = "El token es requerido")]
+    string Token,
+
+    [Required(ErrorMessage = "La contraseña es requerida")]
+    [MinLength(8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres")]
+    string NuevaPassword);

@@ -34,5 +34,23 @@ namespace StockManager.Application.Services
         /// Lanza excepciones de dominio si hay duplicación.
         /// </summary>
         Task<int> RegistrarClienteAsync(RegistrarClienteRequest request);
+
+        /// <summary>
+        /// Inicia el flujo de recuperación de contraseña: si el email pertenece a un Empleado
+        /// o a un Cliente (son globalmente únicos entre ambas tablas), envía un correo con un
+        /// link firmado y temporal para restablecer la contraseña. Si el email no está
+        /// registrado, no hace nada — pero de cara al llamador el comportamiento es idéntico
+        /// en ambos casos (no lanza excepción, no indica si el email existía), para no revelar
+        /// qué correos están registrados en el sistema.
+        /// </summary>
+        Task SolicitarRecuperacionAsync(string email);
+
+        /// <summary>
+        /// Completa el flujo de recuperación de contraseña: valida el token firmado (emitido
+        /// por SolicitarRecuperacionAsync) y, si es válido y no ha expirado, actualiza el hash
+        /// de contraseña del Empleado o Cliente al que pertenece. Retorna false si el token es
+        /// inválido, expiró, o el usuario ya no existe.
+        /// </summary>
+        Task<bool> RestablecerContrasenaAsync(string token, string nuevaPassword);
     }
 }

@@ -79,4 +79,18 @@ public class Cliente
 
     public void Desactivar() => Activo = false;
     public void Activar() => Activo = true;
+
+    /// <summary>
+    /// Reemplaza el hash de contraseña del cliente. Usado por el flujo de recuperación por
+    /// correo (token firmado, ver IPasswordResetTokenService). La validación de la contraseña
+    /// en texto plano (longitud, etc.) ocurre antes, en la capa de aplicación; aquí solo se
+    /// persiste el hash ya calculado.
+    /// </summary>
+    public void ActualizarPasswordHash(string nuevoHash)
+    {
+        if (string.IsNullOrWhiteSpace(nuevoHash))
+            throw new ArgumentException("El hash de contraseña no puede estar vacío.", nameof(nuevoHash));
+
+        PasswordHash = nuevoHash;
+    }
 }

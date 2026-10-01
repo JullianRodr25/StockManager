@@ -1,9 +1,12 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using StockManager.Application.Services;
 using StockManager.Application.DTOs;
 using StockManager.Infrastructure.Data;
+using StockManager.Infrastructure.Notificaciones;
 using StockManager.Domain.Entities;
 using StockManager.Domain.Exceptions;
 
@@ -18,6 +21,10 @@ namespace StockManager.Infrastructure.Services
     {
         private readonly AppDbContext _db;
         private readonly ITokenService _tokenService;
+        private readonly IPasswordResetTokenService _passwordResetTokenService;
+        private readonly IEmailSender _emailSender;
+        private readonly EmailOptions _emailOpciones;
+        private readonly ILogger<AuthService> _logger;
         private readonly PasswordHasher<Empleado> _passwordHasherEmpleado;
         private readonly PasswordHasher<Cliente> _passwordHasherCliente;
 
@@ -25,10 +32,20 @@ namespace StockManager.Infrastructure.Services
         private static readonly string _dummyEmpleadoHash = new PasswordHasher<Empleado>().HashPassword((Empleado?)null!, "DummyPassword123!");
         private static readonly string _dummyClienteHash = new PasswordHasher<Cliente>().HashPassword((Cliente?)null!, "DummyPassword123!");
 
-        public AuthService(AppDbContext db, ITokenService tokenService)
+        public AuthService(
+            AppDbContext db,
+            ITokenService tokenService,
+            IPasswordResetTokenService passwordResetTokenService,
+            IEmailSender emailSender,
+            IOptions<EmailOptions> emailOpciones,
+            ILogger<AuthService> logger)
         {
             _db = db;
             _tokenService = tokenService;
+            _passwordResetTokenService = passwordResetTokenService;
+            _emailSender = emailSender;
+            _emailOpciones = emailOpciones.Value;
+            _logger = logger;
             _passwordHasherEmpleado = new PasswordHasher<Empleado>();
             _passwordHasherCliente = new PasswordHasher<Cliente>();
         }
@@ -180,6 +197,110 @@ namespace StockManager.Infrastructure.Services
             await _db.SaveChangesAsync();
 
             return cliente.Id;
+        }
+
+        // ===== RECUPERACIÓN DE CONTRASEÑA =====
+
+        public async Task SolicitarRecuperacionAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return;
+
+            var emailNormalizado = email.Trim().ToLower();
+
+            // El email es globalmente único entre Empleados y Clientes (ver
+            // RegistrarClienteAsync arriba), así que basta con buscar en ambas tablas para
+            // saber a quién pertenece, sin que el llamador tenga que indicar el tipo de usuario.
+            var empleado = await _db.Empleados.FirstOrDefaultAsync(e => e.Email == emailNormalizado);
+            var cliente = empleado == null
+                ? await _db.Clientes.FirstOrDefaultAsync(c => c.Email == emailNormalizado)
+                : null;
+
+            // Si el email no está registrado, no se envía nada — pero tampoco se informa al
+            // llamador (mismo principio anti-enumeración que el login: la respuesta pública es
+            // idéntica exista o no la cuenta).
+            if (empleado == null && cliente == null)
+                return;
+
+            var vigencia = TimeSpan.FromMinutes(_emailOpciones.RecuperacionVigenciaMinutos);
+            string tipoUsuario;
+            int usuarioId;
+            string nombre;
+            string destinatario;
+            string urlBase;
+
+            if (empleado != null)
+            {
+                tipoUsuario = "Empleado";
+                usuarioId = empleado.Id;
+                nombre = empleado.Nombre;
+                destinatario = empleado.Email;
+                urlBase = _emailOpciones.FrontendBaseUrlPanel;
+            }
+            else
+            {
+                tipoUsuario = "Cliente";
+                usuarioId = cliente!.Id;
+                nombre = cliente.Nombre;
+                destinatario = cliente.Email;
+                urlBase = _emailOpciones.FrontendBaseUrlPwa;
+            }
+
+            var token = _passwordResetTokenService.GenerarToken(tipoUsuario, usuarioId, vigencia);
+            var link = $"{urlBase.TrimEnd('/')}/restablecer-contrasena?token={Uri.EscapeDataString(token)}";
+
+            var htmlContenido = $"""
+                <p>Hola {System.Net.WebUtility.HtmlEncode(nombre)},</p>
+                <p>Recibimos una solicitud para restablecer tu contraseña. Si fuiste tú, hacé clic en el siguiente enlace (válido por {_emailOpciones.RecuperacionVigenciaMinutos} minutos):</p>
+                <p><a href="{link}">Restablecer mi contraseña</a></p>
+                <p>Si no solicitaste esto, podés ignorar este correo — tu contraseña actual sigue siendo válida.</p>
+                """;
+
+            // Envío de "mejor esfuerzo": un fallo del proveedor de correo no debe filtrarse
+            // como un error al usuario que pidió recuperar su contraseña (misma respuesta
+            // genérica en ambos casos), solo queda registrado en el log.
+            try
+            {
+                var resultado = await _emailSender.EnviarAsync(destinatario, nombre, "Restablecer tu contraseña", htmlContenido);
+                if (!resultado.Exitoso)
+                    _logger.LogWarning("No se pudo enviar el correo de recuperación a {Email}: {Error}", destinatario, resultado.Error);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado enviando correo de recuperación a {Email}", destinatario);
+            }
+        }
+
+        public async Task<bool> RestablecerContrasenaAsync(string token, string nuevaPassword)
+        {
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(nuevaPassword))
+                return false;
+
+            var payload = _passwordResetTokenService.ValidarToken(token);
+            if (payload == null)
+                return false;
+
+            if (payload.TipoUsuario == "Empleado")
+            {
+                var empleado = await _db.Empleados.FirstOrDefaultAsync(e => e.Id == payload.UsuarioId);
+                if (empleado == null)
+                    return false;
+
+                var nuevoHash = _passwordHasherEmpleado.HashPassword(empleado, nuevaPassword);
+                empleado.ActualizarPasswordHash(nuevoHash);
+            }
+            else
+            {
+                var cliente = await _db.Clientes.FirstOrDefaultAsync(c => c.Id == payload.UsuarioId);
+                if (cliente == null)
+                    return false;
+
+                var nuevoHash = _passwordHasherCliente.HashPassword(cliente, nuevaPassword);
+                cliente.ActualizarPasswordHash(nuevoHash);
+            }
+
+            await _db.SaveChangesAsync();
+            return true;
         }
     }
 }

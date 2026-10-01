@@ -110,8 +110,45 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             // Log aquí si es necesario
-            return StatusCode(StatusCodes.Status500InternalServerError, 
+            return StatusCode(StatusCodes.Status500InternalServerError,
                 new { message = "Ocurrió un error al registrar el cliente" });
         }
+    }
+
+    // ===== RECUPERACIÓN DE CONTRASEÑA ENDPOINTS =====
+
+    /// <summary>
+    /// Inicia el flujo de recuperación de contraseña. Endpoint público, sin autenticación.
+    /// Responde siempre con el mismo mensaje genérico, exista o no el email, para no revelar
+    /// qué correos están registrados en el sistema (mismo principio que el login).
+    /// </summary>
+    [HttpPost("recuperar-contrasena")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RecuperarContrasena([FromBody] SolicitarRecuperacionRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        await _authService.SolicitarRecuperacionAsync(request.Email);
+
+        return Ok(new { message = "Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña." });
+    }
+
+    /// <summary>
+    /// Completa el flujo de recuperación de contraseña a partir del token firmado recibido
+    /// por correo. Endpoint público, sin autenticación (el token es en sí la credencial).
+    /// </summary>
+    [HttpPost("restablecer-contrasena")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RestablecerContrasena([FromBody] RestablecerContrasenaRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var exito = await _authService.RestablecerContrasenaAsync(request.Token, request.NuevaPassword);
+        if (!exito)
+            return BadRequest(new { message = "El enlace de restablecimiento no es válido o expiró." });
+
+        return Ok(new { message = "Tu contraseña fue actualizada exitosamente." });
     }
 }

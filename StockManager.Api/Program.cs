@@ -123,6 +123,19 @@ builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>
 
 builder.Services.AddHostedService<WhatsAppNotificationBackgroundService>();
 
+// --- Recuperación de contraseña por correo (Brevo) ---
+// A diferencia de WhatsApp (asíncrono, vía Channel + BackgroundService, porque son avisos
+// que pueden esperar), el correo de recuperación se envía en línea dentro de la propia
+// petición HTTP de "olvidé mi contraseña": es la única acción de esa pantalla, así que no
+// hay nada que perder esperando la respuesta del proveedor (con timeout del HttpClient).
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection("Email:Brevo"));
+builder.Services.AddScoped<IPasswordResetTokenService, HmacPasswordResetTokenService>();
+builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com/");
+});
+
 // Chequeo diario de cuentas por pagar próximas a vencer (dispara CuentaPorPagarProximaAVencerEvent,
 // que el dispatcher de arriba efectivamente envía por WhatsApp al admin).
 builder.Services.AddHostedService<CuentasPorPagarVencimientoCheckService>();
