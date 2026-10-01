@@ -19,6 +19,17 @@ public class ConfiguracionResponse
     /// aún no se ha configurado.
     /// </summary>
     public string? NombreImpresoraTickets { get; set; }
+
+    /// <summary>
+    /// Datos del emisor (negocio) que se imprimen en el encabezado de la factura y del
+    /// tiquete físico: razón social, NIT, dirección, teléfono y correo. Todos opcionales;
+    /// null mientras un Admin no los haya configurado.
+    /// </summary>
+    public string? NombreEmpresa { get; set; }
+    public string? NitEmpresa { get; set; }
+    public string? DireccionEmpresa { get; set; }
+    public string? TelefonoEmpresa { get; set; }
+    public string? EmailEmpresa { get; set; }
 }
 
 public class ActualizarConfiguracionRequest
@@ -32,4 +43,10 @@ public class ActualizarConfiguracionRequest
     public string? TelefonoNotificacionesAdmin { get; set; }
 
     public string? NombreImpresoraTickets { get; set; }
+
+    public string? NombreEmpresa { get; set; }
+    public string? NitEmpresa { get; set; }
+    public string? DireccionEmpresa { get; set; }
+    public string? TelefonoEmpresa { get; set; }
+    public string? EmailEmpresa { get; set; }
 }

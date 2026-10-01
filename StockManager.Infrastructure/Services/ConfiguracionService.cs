@@ -28,6 +28,12 @@ public class ConfiguracionService : IConfiguracionService
         configuracion.ActualizarTarifaIva(request.TarifaIvaPorDefecto);
         configuracion.ActualizarTelefonoNotificacionesAdmin(request.TelefonoNotificacionesAdmin);
         configuracion.ActualizarNombreImpresoraTickets(request.NombreImpresoraTickets);
+        configuracion.ActualizarDatosEmpresa(
+            request.NombreEmpresa,
+            request.NitEmpresa,
+            request.DireccionEmpresa,
+            request.TelefonoEmpresa,
+            request.EmailEmpresa);
 
         await _dbContext.SaveChangesAsync();
 
@@ -40,7 +46,12 @@ public class ConfiguracionService : IConfiguracionService
         {
             TarifaIvaPorDefecto = configuracion.TarifaIvaPorDefecto,
             TelefonoNotificacionesAdmin = configuracion.TelefonoNotificacionesAdmin,
-            NombreImpresoraTickets = configuracion.NombreImpresoraTickets
+            NombreImpresoraTickets = configuracion.NombreImpresoraTickets,
+            NombreEmpresa = configuracion.NombreEmpresa,
+            NitEmpresa = configuracion.NitEmpresa,
+            DireccionEmpresa = configuracion.DireccionEmpresa,
+            TelefonoEmpresa = configuracion.TelefonoEmpresa,
+            EmailEmpresa = configuracion.EmailEmpresa
         };
     }
 }

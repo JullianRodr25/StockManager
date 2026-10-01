@@ -27,12 +27,27 @@ public class Configuracion
     /// </summary>
     public string? NombreImpresoraTickets { get; private set; }
 
+    // --- Datos del emisor (negocio) que se imprimen en el encabezado del tiquete físico y de
+    // la factura. Antes estaban escritos fijos en el código (impresionService.ts); viven acá
+    // para que un Admin los pueda corregir desde la pantalla de Configuración sin desplegar
+    // un cambio de código (ej. si cambia el NIT, la dirección o el teléfono del negocio).
+    public string? NombreEmpresa { get; private set; }
+    public string? NitEmpresa { get; private set; }
+    public string? DireccionEmpresa { get; private set; }
+    public string? TelefonoEmpresa { get; private set; }
+    public string? EmailEmpresa { get; private set; }
+
     private Configuracion() { }
 
     public static Configuracion Crear(
         decimal tarifaIvaPorDefecto,
         string? telefonoNotificacionesAdmin = null,
-        string? nombreImpresoraTickets = null)
+        string? nombreImpresoraTickets = null,
+        string? nombreEmpresa = null,
+        string? nitEmpresa = null,
+        string? direccionEmpresa = null,
+        string? telefonoEmpresa = null,
+        string? emailEmpresa = null)
     {
         if (tarifaIvaPorDefecto < 0 || tarifaIvaPorDefecto > 100)
             throw new ArgumentException("La tarifa de IVA debe estar entre 0 y 100.");
@@ -40,6 +55,7 @@ public class Configuracion
         var configuracion = new Configuracion { TarifaIvaPorDefecto = tarifaIvaPorDefecto };
         configuracion.ActualizarTelefonoNotificacionesAdmin(telefonoNotificacionesAdmin);
         configuracion.ActualizarNombreImpresoraTickets(nombreImpresoraTickets);
+        configuracion.ActualizarDatosEmpresa(nombreEmpresa, nitEmpresa, direccionEmpresa, telefonoEmpresa, emailEmpresa);
         return configuracion;
     }
 
@@ -64,5 +80,25 @@ public class Configuracion
     public void ActualizarNombreImpresoraTickets(string? nuevoNombre)
     {
         NombreImpresoraTickets = string.IsNullOrWhiteSpace(nuevoNombre) ? null : nuevoNombre.Trim();
+    }
+
+    /// <summary>
+    /// Actualiza los datos del emisor (negocio) que se imprimen en el tiquete físico y en la
+    /// factura. Todos son opcionales (texto libre, sin validación de formato) porque son datos
+    /// puramente informativos: a diferencia del teléfono de notificaciones, acá no hay un
+    /// formato único que validar (el NIT colombiano y la dirección no siguen un patrón fijo).
+    /// </summary>
+    public void ActualizarDatosEmpresa(
+        string? nombreEmpresa,
+        string? nitEmpresa,
+        string? direccionEmpresa,
+        string? telefonoEmpresa,
+        string? emailEmpresa)
+    {
+        NombreEmpresa = string.IsNullOrWhiteSpace(nombreEmpresa) ? null : nombreEmpresa.Trim();
+        NitEmpresa = string.IsNullOrWhiteSpace(nitEmpresa) ? null : nitEmpresa.Trim();
+        DireccionEmpresa = string.IsNullOrWhiteSpace(direccionEmpresa) ? null : direccionEmpresa.Trim();
+        TelefonoEmpresa = string.IsNullOrWhiteSpace(telefonoEmpresa) ? null : telefonoEmpresa.Trim();
+        EmailEmpresa = string.IsNullOrWhiteSpace(emailEmpresa) ? null : emailEmpresa.Trim();
     }
 }
