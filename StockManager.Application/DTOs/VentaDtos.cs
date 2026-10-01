@@ -2,6 +2,15 @@ namespace StockManager.Application.DTOs;
 
 public record LineaVentaRequest(int ProductoId, int Cantidad);
 
+/// <summary>
+/// Una línea del desglose de un pago "Mixto": cuánto de la venta se pagó con este método
+/// individual. Solo tiene sentido cuando el MetodoPago de la venta/cierre es "Mixto" — para
+/// cualquier otro método no debe enviarse (ver Venta.ValidarDetallesPago).
+/// </summary>
+public record DetallePagoRequest(string MetodoPago, decimal Monto);
+
+public record DetallePagoResponse(string MetodoPago, decimal Monto);
+
 public record RegistrarVentaRequest(
     int? ClienteId,
     string? NombreComprador,
@@ -9,7 +18,8 @@ public record RegistrarVentaRequest(
     string? EmailComprador,
     string MetodoPago,
     List<LineaVentaRequest> Lineas,
-    decimal? MontoRecibido = null
+    decimal? MontoRecibido = null,
+    List<DetallePagoRequest>? DetallesPago = null
 );
 
 public record DetalleVentaResponse(
@@ -37,7 +47,8 @@ public record VentaResponse(
     string NumeroFactura,
     List<DetalleVentaResponse> Detalles,
     decimal? MontoRecibido = null,
-    decimal? Cambio = null
+    decimal? Cambio = null,
+    List<DetallePagoResponse>? DetallesPago = null
 );
 
 public record VentaResumenResponse(
@@ -53,7 +64,7 @@ public record VentaResumenResponse(
 
 public record AbrirFiadoRequest(int ClienteId);
 
-public record CerrarFiadoRequest(string MetodoPago, decimal? MontoRecibido = null);
+public record CerrarFiadoRequest(string MetodoPago, decimal? MontoRecibido = null, List<DetallePagoRequest>? DetallesPago = null);
 
 public record RegistrarAbonoRequest(decimal Monto, string MetodoPago);
 

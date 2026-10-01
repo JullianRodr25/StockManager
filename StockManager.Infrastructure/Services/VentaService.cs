@@ -104,7 +104,8 @@ public class VentaService : IVentaService
             total,
             esCotizacion: false,
             estado: "Pagada",
-            montoRecibido: request.MontoRecibido);
+            montoRecibido: request.MontoRecibido,
+            detallesPago: AConTuplasDetallesPago(request.DetallesPago));
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
@@ -130,6 +131,13 @@ public class VentaService : IVentaService
             _dbContext.MovimientosStock.Add(movimiento);
         }
 
+        // El desglose ya fue validado por Venta.Crear (suma == total); acá solo se persiste.
+        if (venta.MetodoPago == "Mixto")
+        {
+            foreach (var linea in request.DetallesPago!)
+                _dbContext.DetallesPagoVenta.Add(DetallePagoVenta.Crear(venta.Id, linea.MetodoPago, linea.Monto));
+        }
+
         try
         {
             await _dbContext.SaveChangesAsync();
@@ -148,6 +156,7 @@ public class VentaService : IVentaService
         await transaction.CommitAsync();
 
         var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+        var detallesPago = await ObtenerDetallesPagoAsync(venta.Id, venta.MetodoPago);
 
         return new VentaResponse(
             venta.Id,
@@ -163,7 +172,8 @@ public class VentaService : IVentaService
             factura.Numero!,
             detalles,
             venta.MontoRecibido,
-            venta.Cambio);
+            venta.Cambio,
+            detallesPago);
     }
 
     public async Task<(List<VentaResumenResponse> Items, int Total)> ObtenerVentasPaginadoAsync(
@@ -220,6 +230,7 @@ public class VentaService : IVentaService
             .FirstOrDefaultAsync() ?? string.Empty;
 
         var detalles = await ObtenerDetallesVentaAsync(id);
+        var detallesPago = await ObtenerDetallesPagoAsync(id, venta.MetodoPago);
 
         return new VentaResponse(
             venta.Id,
@@ -235,7 +246,8 @@ public class VentaService : IVentaService
             numeroFactura,
             detalles,
             venta.MontoRecibido,
-            venta.Cambio);
+            venta.Cambio,
+            detallesPago);
     }
 
     public async Task<VentaResponse> AbrirFiadoAsync(int clienteId, int empleadoId)
@@ -332,7 +344,7 @@ public class VentaService : IVentaService
             detalles);
     }
 
-    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null)
+    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
@@ -344,7 +356,15 @@ public class VentaService : IVentaService
             throw new ArgumentException(
                 "No se puede cerrar una cuenta fiada sin productos agregados.");
 
-        venta.CerrarFiado(metodoPago, montoRecibido);
+        venta.CerrarFiado(metodoPago, montoRecibido, AConTuplasDetallesPago(detallesPago));
+
+        // El desglose ya fue validado por Venta.CerrarFiado (suma == total); acá solo se persiste.
+        if (venta.MetodoPago == "Mixto")
+        {
+            foreach (var linea in detallesPago!)
+                _dbContext.DetallesPagoVenta.Add(DetallePagoVenta.Crear(venta.Id, linea.MetodoPago, linea.Monto));
+        }
+
         await _dbContext.SaveChangesAsync();
 
         var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
@@ -352,6 +372,7 @@ public class VentaService : IVentaService
         await transaction.CommitAsync();
 
         var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+        var detallesPagoRespuesta = await ObtenerDetallesPagoAsync(venta.Id, venta.MetodoPago);
 
         return new VentaResponse(
             venta.Id,
@@ -367,7 +388,8 @@ public class VentaService : IVentaService
             factura.Numero!,
             detalles,
             venta.MontoRecibido,
-            venta.Cambio);
+            venta.Cambio,
+            detallesPagoRespuesta);
     }
 
     public async Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId)
@@ -411,11 +433,26 @@ public class VentaService : IVentaService
 
             var metodoPagoFinal = metodosPagoUsados.Count == 1 ? metodosPagoUsados[0] : "Mixto";
 
+            // Si la cuenta se cierra en "Mixto" (los abonos usaron más de un método), el
+            // desglose real para validar Venta.CerrarFiado se arma agrupando los propios
+            // abonos ya guardados — no se duplica en DetallesPagoVenta porque ObtenerDetallesPagoAsync
+            // ya sabe derivarlo de ahí para la respuesta (ver ese método).
+            List<(string MetodoPago, decimal Monto)>? detallesParaValidar = null;
+            if (metodoPagoFinal == "Mixto")
+            {
+                var montosPorMetodo = await _dbContext.AbonosCuenta
+                    .Where(a => a.VentaId == ventaId)
+                    .GroupBy(a => a.MetodoPago)
+                    .Select(g => new { Metodo = g.Key, Monto = g.Sum(a => a.Monto) })
+                    .ToListAsync();
+                detallesParaValidar = montosPorMetodo.Select(x => (x.Metodo, x.Monto)).ToList();
+            }
+
             // Un abono nunca puede exceder el saldo pendiente (se valida más arriba), así que
             // si el último abono que cierra la cuenta fue en efectivo, lo recibido siempre
             // coincide exactamente con el total — no hay vuelto que dar en este camino.
             var montoRecibidoCierre = metodoPagoFinal == "Efectivo" ? venta.Total : (decimal?)null;
-            venta.CerrarFiado(metodoPagoFinal, montoRecibidoCierre);
+            venta.CerrarFiado(metodoPagoFinal, montoRecibidoCierre, detallesParaValidar);
             await _dbContext.SaveChangesAsync();
 
             var factura = await GenerarFacturaAsync(venta.Id, venta.Total);
@@ -425,6 +462,7 @@ public class VentaService : IVentaService
         await transaction.CommitAsync();
 
         var detalles = await ObtenerDetallesVentaAsync(venta.Id);
+        var detallesPago = await ObtenerDetallesPagoAsync(venta.Id, venta.MetodoPago);
 
         return new VentaResponse(
             venta.Id,
@@ -440,7 +478,8 @@ public class VentaService : IVentaService
             numeroFactura,
             detalles,
             venta.MontoRecibido,
-            venta.Cambio);
+            venta.Cambio,
+            detallesPago);
     }
 
     public async Task<List<AbonoResponse>> ObtenerAbonosAsync(int ventaId)
@@ -709,6 +748,44 @@ public class VentaService : IVentaService
         _eventoPublisher.Publicar(new FacturaGeneradaEvent(factura.Id));
 
         return factura;
+    }
+
+    /// <summary>
+    /// Convierte el desglose de pago que llega del DTO al formato de tuplas que entiende el
+    /// dominio (Venta.Crear/Venta.CerrarFiado), para no filtrar un tipo de Application hacia
+    /// Domain.
+    /// </summary>
+    private static List<(string MetodoPago, decimal Monto)>? AConTuplasDetallesPago(List<DetallePagoRequest>? detallesPago) =>
+        detallesPago?.Select(d => (d.MetodoPago, d.Monto)).ToList();
+
+    /// <summary>
+    /// Devuelve el desglose de pago de una venta para mostrarlo en VentaResponse. Si el método
+    /// no es "Mixto" no hay nada que desglosar (ni vale la pena consultar la base de datos).
+    /// Para una venta/cierre directo con "Mixto", el desglose vive en DetallesPagoVenta; para
+    /// una cuenta fiada que llegó a "Mixto" porque sus abonos usaron métodos distintos (ver
+    /// RegistrarAbonoAsync), no se duplica el concepto de "pago" creando también filas en
+    /// DetallesPagoVenta — en su lugar, se deriva agrupando los abonos ya guardados.
+    /// </summary>
+    private async Task<List<DetallePagoResponse>> ObtenerDetallesPagoAsync(int ventaId, string? metodoPago)
+    {
+        if (metodoPago != "Mixto")
+            return new List<DetallePagoResponse>();
+
+        var deVentaDirecta = await _dbContext.DetallesPagoVenta
+            .AsNoTracking()
+            .Where(d => d.VentaId == ventaId)
+            .Select(d => new DetallePagoResponse(d.MetodoPago, d.Monto))
+            .ToListAsync();
+
+        if (deVentaDirecta.Count > 0)
+            return deVentaDirecta;
+
+        return await _dbContext.AbonosCuenta
+            .AsNoTracking()
+            .Where(a => a.VentaId == ventaId)
+            .GroupBy(a => a.MetodoPago)
+            .Select(g => new DetallePagoResponse(g.Key, g.Sum(a => a.Monto)))
+            .ToListAsync();
     }
 
     private async Task<List<DetalleVentaResponse>> ObtenerDetallesVentaAsync(int ventaId)

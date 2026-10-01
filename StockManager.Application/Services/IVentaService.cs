@@ -15,7 +15,7 @@ public interface IVentaService
 
     Task<VentaResponse> AgregarLineaFiadoAsync(int ventaId, LineaVentaRequest linea);
 
-    Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null);
+    Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null);
 
     Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId);
 

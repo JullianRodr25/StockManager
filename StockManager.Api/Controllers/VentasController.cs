@@ -169,7 +169,7 @@ public class VentasController : ControllerBase
     {
         try
         {
-            var venta = await _ventaService.CerrarFiadoAsync(id, request.MetodoPago, request.MontoRecibido);
+            var venta = await _ventaService.CerrarFiadoAsync(id, request.MetodoPago, request.MontoRecibido, request.DetallesPago);
             return Ok(venta);
         }
         catch (VentaNoEncontradaException ex)

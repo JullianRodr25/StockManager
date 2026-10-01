@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<Venta> Ventas { get; set; } = null!;
     public DbSet<DetalleVenta> DetallesVenta { get; set; } = null!;
     public DbSet<AbonoCuenta> AbonosCuenta { get; set; } = null!;
+    public DbSet<DetallePagoVenta> DetallesPagoVenta { get; set; } = null!;
     public DbSet<Pedido> Pedidos { get; set; } = null!;
     public DbSet<DetallePedido> DetallesPedido { get; set; } = null!;
     public DbSet<MovimientoStock> MovimientosStock { get; set; } = null!;
@@ -48,6 +49,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new VentaConfiguration());
         modelBuilder.ApplyConfiguration(new DetalleVentaConfiguration());
         modelBuilder.ApplyConfiguration(new AbonoCuentaConfiguration());
+        modelBuilder.ApplyConfiguration(new DetallePagoVentaConfiguration());
         modelBuilder.ApplyConfiguration(new PedidoConfiguration());
         modelBuilder.ApplyConfiguration(new DetallePedidoConfiguration());
         modelBuilder.ApplyConfiguration(new MovimientoStockConfiguration());

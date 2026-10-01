@@ -10,6 +10,13 @@ public class Venta
 {
     private static readonly string[] MetodosPagoValidos = { "Efectivo", "Tarjeta", "Transferencia", "Mixto" };
 
+    /// <summary>
+    /// Métodos que puede llevar una línea individual del desglose de un pago "Mixto". "Mixto"
+    /// en sí mismo no es un método individual válido — no tendría sentido una línea "Mixto"
+    /// dentro del propio desglose de un pago Mixto.
+    /// </summary>
+    private static readonly string[] MetodosPagoIndividualesValidos = { "Efectivo", "Tarjeta", "Transferencia" };
+
     public int Id { get; private set; }
     public int EmpleadoId { get; private set; }
     public int? ClienteId { get; private set; }
@@ -46,7 +53,8 @@ public class Venta
         decimal total,
         bool esCotizacion,
         string estado,
-        decimal? montoRecibido = null)
+        decimal? montoRecibido = null,
+        IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago = null)
     {
         if (empleadoId <= 0)
             throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
@@ -65,6 +73,7 @@ public class Venta
             throw new ArgumentException("Debe indicar un cliente registrado o el nombre del comprador.");
 
         montoRecibido = ValidarMontoRecibido(metodoPago, total, montoRecibido);
+        ValidarDetallesPago(metodoPago, total, detallesPago);
 
         return new Venta
         {
@@ -102,6 +111,42 @@ public class Venta
                 nameof(montoRecibido));
 
         return montoRecibido;
+    }
+
+    /// <summary>
+    /// Si el pago es "Mixto", exige un desglose de al menos dos líneas (método + monto) cuya
+    /// suma sea exactamente igual al total — sin tolerancia: una venta no puede quedar pagada
+    /// "casi completa" por un redondeo. Cada línea debe usar un método individual válido
+    /// (ningún método puede repetirse como "Mixto" dentro de su propio desglose). Para
+    /// cualquier otro método, el desglose no debe venir informado: un pago de un solo método
+    /// no tiene nada que desglosar.
+    /// </summary>
+    private static void ValidarDetallesPago(string metodoPago, decimal total, IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago)
+    {
+        if (metodoPago != "Mixto")
+        {
+            if (detallesPago is { Count: > 0 })
+                throw new ArgumentException("El desglose de pago solo aplica cuando el método es 'Mixto'.", nameof(detallesPago));
+            return;
+        }
+
+        if (detallesPago is null || detallesPago.Count < 2)
+            throw new ArgumentException("Un pago 'Mixto' requiere al menos dos métodos de pago distintos con su monto.", nameof(detallesPago));
+
+        foreach (var (metodoPagoLinea, monto) in detallesPago)
+        {
+            if (!MetodosPagoIndividualesValidos.Contains(metodoPagoLinea))
+                throw new ArgumentException($"El método de pago '{metodoPagoLinea}' no es válido dentro del desglose de un pago Mixto.", nameof(detallesPago));
+
+            if (monto <= 0)
+                throw new ArgumentException("Cada línea del desglose de pago debe tener un monto mayor a 0.", nameof(detallesPago));
+        }
+
+        var sumaDetalles = detallesPago.Sum(d => d.Monto);
+        if (sumaDetalles != total)
+            throw new ArgumentException(
+                $"La suma del desglose de pago ({sumaDetalles:F2}) debe ser igual al total de la venta ({total:F2}).",
+                nameof(detallesPago));
     }
 
     /// <summary>
@@ -160,13 +205,15 @@ public class Venta
     /// <summary>
     /// Cierra una cuenta fiada: exige que esté "Pendiente", fija el método de pago y pasa a "Pagada".
     /// </summary>
-    public void CerrarFiado(string metodoPago, decimal? montoRecibido = null)
+    public void CerrarFiado(string metodoPago, decimal? montoRecibido = null, IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago = null)
     {
         if (Estado != "Pendiente")
             throw new VentaEstadoInvalidoException(Id, Estado, "Pendiente");
 
         if (!MetodosPagoValidos.Contains(metodoPago))
             throw new ArgumentException($"El método de pago '{metodoPago}' no es válido.", nameof(metodoPago));
+
+        ValidarDetallesPago(metodoPago, Total, detallesPago);
 
         MetodoPago = metodoPago;
         MontoRecibido = ValidarMontoRecibido(metodoPago, Total, montoRecibido);
