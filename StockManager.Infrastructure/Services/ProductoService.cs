@@ -161,7 +161,9 @@ public class ProductoService : IProductoService
             request.Precio,
             request.StockInicial,
             request.StockMinimo,
+            request.AplicaIva,
             tarifaIva,
+            request.Costo,
             request.CodigoBarras,
             request.ProveedorId);
 
@@ -222,7 +224,9 @@ public class ProductoService : IProductoService
             request.Nombre,
             request.CategoriaId,
             request.Precio,
+            request.Costo,
             request.StockMinimo,
+            request.AplicaIva,
             request.TarifaIva ?? producto.TarifaIva,
             codigoBarrasNormalizado,
             request.ProveedorId);
@@ -259,6 +263,7 @@ public class ProductoService : IProductoService
                     var stockMinimoStr = fila.Cell(5).GetString()?.Trim();
                     var codigoBarras = fila.Cell(6).GetString()?.Trim();
                     var tarifaIvaStr = fila.Cell(7).GetString()?.Trim();
+                    var costoStr = fila.Cell(8).GetString()?.Trim();
 
                     try
                     {
@@ -285,6 +290,13 @@ public class ProductoService : IProductoService
                             tarifaIva = tarifaIvaImportada;
                         }
 
+                        decimal costo = 0;
+                        if (!string.IsNullOrWhiteSpace(costoStr))
+                        {
+                            if (!decimal.TryParse(costoStr, out costo))
+                                throw new InvalidOperationException("El costo debe ser un número válido.");
+                        }
+
                         // Buscar o crear categoría usando el servicio de categorías (case-insensitive)
                         var categoria = await _categoriaService.ObtenerOCrearPorNombreAsync(categoriaNombre);
 
@@ -295,6 +307,10 @@ public class ProductoService : IProductoService
                         if (existeProducto)
                             throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
 
+                        // Sin columna explícita de "aplica IVA" en la plantilla: si la fila trae
+                        // una tarifa en 0, se interpreta como "no aplica"; en cualquier otro
+                        // caso (tarifa > 0 o celda vacía, que cae al default general) sí aplica.
+                        var aplicaIva = tarifaIva != 0;
                         tarifaIva ??= (await _configuracionService.ObtenerAsync()).TarifaIvaPorDefecto;
 
                         // Crear producto
@@ -304,7 +320,9 @@ public class ProductoService : IProductoService
                             precio,
                             stockInicial,
                             stockMinimo,
+                            aplicaIva,
                             tarifaIva.Value,
+                            costo,
                             string.IsNullOrEmpty(codigoBarras) ? null : codigoBarras);
 
                         _dbContext.Productos.Add(producto);
@@ -464,7 +482,9 @@ public class ProductoService : IProductoService
             Precio = producto.Precio,
             StockActual = producto.StockActual,
             StockMinimo = producto.StockMinimo,
+            AplicaIva = producto.AplicaIva,
             TarifaIva = producto.TarifaIva,
+            Costo = producto.Costo,
             CodigoBarras = producto.CodigoBarras,
             Activo = producto.Activo,
             ProveedorId = producto.ProveedorId

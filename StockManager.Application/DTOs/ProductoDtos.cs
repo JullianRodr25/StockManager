@@ -14,7 +14,9 @@ public class ProductoResponse
     public decimal Precio { get; set; }
     public int StockActual { get; set; }
     public int StockMinimo { get; set; }
+    public bool AplicaIva { get; set; }
     public decimal TarifaIva { get; set; }
+    public decimal Costo { get; set; }
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
     public int? ProveedorId { get; set; }
@@ -39,8 +41,14 @@ public class CrearProductoRequest
     public decimal Precio { get; set; }
     public int StockInicial { get; set; }
     public int StockMinimo { get; set; }
+    // Si el producto causa IVA. TarifaIva solo se usa (y se exige con sentido) cuando esto es
+    // true; si es false, el backend siempre guarda TarifaIva = 0 sin importar lo que venga acá.
+    public bool AplicaIva { get; set; } = true;
     [Range(0, 100)]
     public decimal? TarifaIva { get; set; }
+    // Costo de adquisición, para métricas de rentabilidad. Nunca participa en el cálculo de
+    // una venta ni se muestra al cliente.
+    public decimal Costo { get; set; }
     public string? CodigoBarras { get; set; }
     public int? ProveedorId { get; set; }
 }
@@ -55,8 +63,10 @@ public class ActualizarProductoRequest
     public int CategoriaId { get; set; }
     public decimal Precio { get; set; }
     public int StockMinimo { get; set; }
+    public bool AplicaIva { get; set; } = true;
     [Range(0, 100)]
     public decimal? TarifaIva { get; set; }
+    public decimal Costo { get; set; }
     public string? CodigoBarras { get; set; }
     public int? ProveedorId { get; set; }
 }

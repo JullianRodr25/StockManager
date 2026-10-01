@@ -79,9 +79,15 @@ public class VentaService : IVentaService
                 throw new ArgumentException(
                     $"La cantidad para el producto '{producto.Nombre}' debe ser mayor a 0.");
             
-            var subtotalSinIva = producto.Precio * linea.Cantidad;
-            var iva = subtotalSinIva * (producto.TarifaIva / 100m);
-            var subtotalConIva = subtotalSinIva + iva;
+            // Precio ya es el valor final que paga el cliente (IVA incluido cuando el producto
+            // aplica IVA) — nunca se le suma IVA encima. Para la factura se descompone ese
+            // bruto en base + IVA: iva = bruto * tarifa%, base = bruto - iva. Si el producto no
+            // aplica IVA, TarifaIva siempre vale 0 (invariante del dominio), así que iva da 0 y
+            // la base es igual al bruto.
+            var bruto = producto.Precio * linea.Cantidad;
+            var iva = bruto * (producto.TarifaIva / 100m);
+            var subtotalSinIva = bruto - iva;
+            var subtotalConIva = bruto;
 
             calculos.Add(new CalculoLinea(
                 producto,
@@ -298,9 +304,9 @@ public class VentaService : IVentaService
         if (producto == null)
             throw new ArgumentException($"El producto con ID {linea.ProductoId} no existe.");
 
-        var subtotalSinIva = producto.Precio * linea.Cantidad;
-        var iva = subtotalSinIva * (producto.TarifaIva / 100m);
-        var subtotalConIva = subtotalSinIva + iva;
+        // Ver RegistrarVentaAsync: Precio ya incluye el IVA, se descompone, no se suma.
+        var bruto = producto.Precio * linea.Cantidad;
+        var subtotalConIva = bruto;
 
         producto.Vender(linea.Cantidad);
 
@@ -519,7 +525,10 @@ public class VentaService : IVentaService
         if (diferencia == 0)
             throw new ArgumentException("La nueva cantidad es igual a la actual.");
 
-        var deltaMonetario = diferencia * detalle.PrecioUnitario * (1m + producto.TarifaIva / 100m);
+        // PrecioUnitario ya es el valor final (IVA incluido si aplica) que se cobró por unidad,
+        // así que el impacto de cambiar la cantidad es una simple multiplicación directa — no
+        // hay que volver a sumarle IVA encima (ver RegistrarVentaAsync).
+        var deltaMonetario = diferencia * detalle.PrecioUnitario;
 
         if (deltaMonetario < 0)
         {
@@ -607,7 +616,9 @@ public class VentaService : IVentaService
         if (producto == null)
             throw new ArgumentException($"El producto con ID {detalle.ProductoId} no existe.");
 
-        var subtotalConIva = detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m);
+        // PrecioUnitario ya es el valor final cobrado (ver RegistrarVentaAsync); quitar la línea
+        // resta exactamente eso del total, sin volver a aplicarle IVA.
+        var subtotalConIva = detalle.PrecioUnitario * detalle.Cantidad;
 
         var totalAbonado = await _dbContext.AbonosCuenta
             .Where(a => a.VentaId == ventaId)
@@ -797,15 +808,18 @@ public class VentaService : IVentaService
                 _dbContext.Productos.AsNoTracking(),
                 detalle => detalle.ProductoId,
                 producto => producto.Id,
+                // PrecioUnitario ya es el valor final cobrado por unidad (IVA incluido cuando el
+                // producto aplica); acá se descompone en base + IVA para mostrarlo desglosado en
+                // la factura, nunca se le suma IVA encima (ver RegistrarVentaAsync).
                 (detalle, producto) => new DetalleVentaResponse(
                     detalle.Id,
                     detalle.ProductoId,
                     producto.Nombre,
                     detalle.Cantidad,
                     detalle.PrecioUnitario,
-                    detalle.PrecioUnitario * detalle.Cantidad,
+                    (detalle.PrecioUnitario * detalle.Cantidad) - (detalle.PrecioUnitario * detalle.Cantidad * (producto.TarifaIva / 100m)),
                     detalle.PrecioUnitario * detalle.Cantidad * (producto.TarifaIva / 100m),
-                    detalle.PrecioUnitario * detalle.Cantidad * (1m + producto.TarifaIva / 100m)))
+                    detalle.PrecioUnitario * detalle.Cantidad))
             .ToListAsync();
     }
 

@@ -36,9 +36,18 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.Property(p => p.StockMinimo)
             .IsRequired();
 
+        builder.Property(p => p.AplicaIva)
+            .IsRequired()
+            .HasDefaultValue(true);
+
         builder.Property(p => p.TarifaIva)
             .HasColumnType("decimal(5, 2)")
             .HasDefaultValue(19.00m)
+            .IsRequired();
+
+        builder.Property(p => p.Costo)
+            .HasColumnType("decimal(12, 2)")
+            .HasDefaultValue(0m)
             .IsRequired();
 
         builder.Property(p => p.Activo)
@@ -108,5 +117,6 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.HasCheckConstraint("CK_Producto_StockActual_GreaterOrEqual_Zero", "[StockActual] >= 0");
         builder.HasCheckConstraint("CK_Producto_Precio_GreaterOrEqual_Zero", "[Precio] >= 0");
         builder.HasCheckConstraint("CK_Producto_TarifaIva_Between_Zero_And_OneHundred", "[TarifaIva] >= 0 AND [TarifaIva] <= 100");
+        builder.HasCheckConstraint("CK_Producto_Costo_GreaterOrEqual_Zero", "[Costo] >= 0");
     }
 }

@@ -24,7 +24,23 @@ public class Producto
     public decimal Precio { get; private set; }
     public int StockActual { get; private set; }
     public int StockMinimo { get; private set; }
+
+    /// <summary>
+    /// True si este producto causa IVA. Cuando es false, TarifaIva siempre vale 0 — se
+    /// mantiene así por invariante (ver Crear/ActualizarInformacion) para que nunca quede un
+    /// estado ambiguo de "tarifa en 0 pero no se sabe si fue a propósito o quedó sin llenar".
+    /// </summary>
+    public bool AplicaIva { get; private set; }
     public decimal TarifaIva { get; private set; }
+
+    /// <summary>
+    /// Costo de adquisición del producto (lo que cuesta comprarlo/producirlo), para calcular
+    /// métricas de rentabilidad (margen = Precio - Costo). Es puramente informativo para el
+    /// negocio: nunca se expone al cliente ni participa en el cálculo de IVA o del total de
+    /// una venta — eso depende solo de Precio y TarifaIva.
+    /// </summary>
+    public decimal Costo { get; private set; }
+
     public bool Activo { get; private set; }
     public string? CodigoBarras { get; private set; }
     public bool EsCodigoGenerado { get; private set; }
@@ -61,7 +77,9 @@ public class Producto
         decimal precio,
         int stockActual,
         int stockMinimo,
+        bool aplicaIva,
         decimal tarifaIva,
+        decimal costo = 0,
         string? codigoBarras = null,
         int? proveedorId = null)
     {
@@ -76,6 +94,9 @@ public class Producto
 
         if (precio <= 0)
             throw new ArgumentException("El precio debe ser mayor a 0.", nameof(precio));
+
+        if (costo < 0)
+            throw new ArgumentException("El costo no puede ser negativo.", nameof(costo));
 
         if (stockActual < 0)
             throw new ArgumentException("El stock actual no puede ser negativo.", nameof(stockActual));
@@ -97,9 +118,14 @@ public class Producto
             Nombre = nombre.Trim(),
             CategoriaId = categoriaId,
             Precio = precio,
+            Costo = costo,
             StockActual = stockActual,
             StockMinimo = stockMinimo,
-            TarifaIva = tarifaIva,
+            AplicaIva = aplicaIva,
+            // Invariante: un producto que no aplica IVA siempre guarda tarifa 0, para que
+            // nunca quede ambigüedad sobre si el 0% fue elegido a propósito o es un resabio
+            // de una tarifa que ya no aplica (ver AplicaIva).
+            TarifaIva = aplicaIva ? tarifaIva : 0,
             Activo = true,
             CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras.Trim(),
             EsCodigoGenerado = false,
@@ -185,15 +211,27 @@ public class Producto
     }
 
     /// <summary>
-    /// Actualiza la información general del producto (nombre, categoría, precio, stock mínimo y código de barras).
-    /// NO modifica StockActual; el stock solo cambia vía Vender()/Reponer().
+    /// Actualiza la información general del producto (nombre, categoría, precio, costo, stock
+    /// mínimo, IVA y código de barras). NO modifica StockActual; el stock solo cambia vía
+    /// Vender()/Reponer().
     /// </summary>
-    public void ActualizarInformacion(string nombre, int categoriaId, decimal precio, int stockMinimo, decimal tarifaIva, string? codigoBarras, int? proveedorId = null)
+    public void ActualizarInformacion(
+        string nombre,
+        int categoriaId,
+        decimal precio,
+        decimal costo,
+        int stockMinimo,
+        bool aplicaIva,
+        decimal tarifaIva,
+        string? codigoBarras,
+        int? proveedorId = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre no puede estar vacío.");
         if (precio < 0)
             throw new ArgumentException("El precio no puede ser negativo.");
+        if (costo < 0)
+            throw new ArgumentException("El costo no puede ser negativo.");
         if (stockMinimo < 0)
             throw new ArgumentException("El stock mínimo no puede ser negativo.");
         if (tarifaIva < 0 || tarifaIva > 100)
@@ -204,8 +242,10 @@ public class Producto
         Nombre = nombre.Trim();
         CategoriaId = categoriaId;
         Precio = precio;
+        Costo = costo;
         StockMinimo = stockMinimo;
-        TarifaIva = tarifaIva;
+        AplicaIva = aplicaIva;
+        TarifaIva = aplicaIva ? tarifaIva : 0;
         CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
         ProveedorId = proveedorId;
     }
