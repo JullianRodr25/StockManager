@@ -186,7 +186,10 @@ public class VentaService : IVentaService
         return new VentaResponse(
             venta.Id,
             venta.ClienteId,
-            venta.NombreComprador,
+            // Un cliente registrado nunca trae NombreComprador propio (el frontend solo pide
+            // ese campo para un comprador sin registrar); se completa con el nombre actual del
+            // Cliente para que la factura recién creada no se muestre sin nombre.
+            venta.NombreComprador ?? cliente?.Nombre,
             venta.TelefonoComprador,
             venta.EmailComprador,
             venta.MetodoPago,
@@ -246,6 +249,33 @@ public class VentaService : IVentaService
                     factura != null ? (factura.Numero ?? string.Empty) : string.Empty))
             .ToListAsync();
 
+        // Un cliente registrado nunca trae NombreComprador propio (el frontend solo pide ese
+        // campo para un comprador sin registrar), así que sin esto el historial mostraba
+        // "Cliente #N" en vez del nombre. Se resuelve acá, en memoria, con una sola consulta
+        // extra por página (como mucho "tamanoPagina" IDs distintos) en vez de un tercer join
+        // en la consulta principal, que ya combina Ventas y Facturas.
+        var idsClientesFaltantes = items
+            .Where(i => i.NombreComprador == null && i.ClienteId.HasValue)
+            .Select(i => i.ClienteId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (idsClientesFaltantes.Count > 0)
+        {
+            var nombresPorClienteId = await _dbContext.Clientes
+                .AsNoTracking()
+                .Where(c => idsClientesFaltantes.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Nombre);
+
+            items = items
+                .Select(i =>
+                    i.NombreComprador == null && i.ClienteId.HasValue &&
+                    nombresPorClienteId.TryGetValue(i.ClienteId.Value, out var nombre)
+                        ? i with { NombreComprador = nombre }
+                        : i)
+                .ToList();
+        }
+
         return (items, total);
     }
 
@@ -264,10 +294,23 @@ public class VentaService : IVentaService
         var detalles = await ObtenerDetallesVentaAsync(id);
         var detallesPago = await ObtenerDetallesPagoAsync(id, venta.MetodoPago);
 
+        // Un cliente registrado nunca trae NombreComprador propio (el frontend solo pide ese
+        // campo para un comprador sin registrar); se completa con el nombre actual del
+        // Cliente para no mostrar "Cliente #N" en el detalle de la venta.
+        var nombreComprador = venta.NombreComprador;
+        if (nombreComprador is null && venta.ClienteId.HasValue)
+        {
+            nombreComprador = await _dbContext.Clientes
+                .AsNoTracking()
+                .Where(c => c.Id == venta.ClienteId.Value)
+                .Select(c => c.Nombre)
+                .FirstOrDefaultAsync();
+        }
+
         return new VentaResponse(
             venta.Id,
             venta.ClienteId,
-            venta.NombreComprador,
+            nombreComprador,
             venta.TelefonoComprador,
             venta.EmailComprador,
             venta.MetodoPago,
