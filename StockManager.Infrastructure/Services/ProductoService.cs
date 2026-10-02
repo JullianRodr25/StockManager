@@ -141,6 +141,21 @@ public class ProductoService : IProductoService
         return (items, total);
     }
 
+    public async Task<List<CategoriaResponse>> ObtenerCategoriasCatalogoAsync()
+    {
+        return await _dbContext.Productos.AsNoTracking()
+            .Where(p => p.Activo)
+            .Select(p => p.CategoriaId)
+            .Distinct()
+            .Join(
+                _dbContext.Categorias.AsNoTracking(),
+                categoriaId => categoriaId,
+                categoria => categoria.Id,
+                (categoriaId, categoria) => new CategoriaResponse { Id = categoria.Id, Nombre = categoria.Nombre })
+            .OrderBy(c => c.Nombre)
+            .ToListAsync();
+    }
+
     public async Task<ProductoResponse> CrearProductoAsync(CrearProductoRequest request)
     {
         // Validar que la categoría existe

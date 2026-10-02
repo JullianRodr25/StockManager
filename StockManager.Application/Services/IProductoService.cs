@@ -32,6 +32,14 @@ public interface IProductoService
     Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId);
 
     /// <summary>
+    /// Obtiene las categorías que tienen al menos un producto activo, para armar los chips de
+    /// filtro del catálogo público (PWA). A diferencia de ICategoriaService.ObtenerTodasAsync
+    /// (que lista TODAS las categorías para el panel admin), esta nunca devuelve una categoría
+    /// vacía que el cliente no podría filtrar a nada.
+    /// </summary>
+    Task<List<CategoriaResponse>> ObtenerCategoriasCatalogoAsync();
+
+    /// <summary>
     /// Crea un nuevo producto.
     /// Si CodigoBarras viene vacío, lo genera automáticamente.
     /// </summary>

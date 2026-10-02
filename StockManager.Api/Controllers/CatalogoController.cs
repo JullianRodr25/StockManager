@@ -37,4 +37,16 @@ public class CatalogoController : ControllerBase
             totalPaginas = (int)Math.Ceiling((double)total / tamanoPagina)
         });
     }
+
+    /// <summary>
+    /// Obtiene las categorías disponibles para filtrar el catálogo (solo las que tienen al
+    /// menos un producto activo).
+    /// </summary>
+    [HttpGet("categorias")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<IActionResult> ObtenerCategorias()
+    {
+        var categorias = await _productoService.ObtenerCategoriasCatalogoAsync();
+        return Ok(categorias);
+    }
 }
