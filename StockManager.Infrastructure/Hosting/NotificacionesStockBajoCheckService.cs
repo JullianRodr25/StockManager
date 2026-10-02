@@ -8,12 +8,15 @@ using StockManager.Infrastructure.Data;
 namespace StockManager.Infrastructure.Hosting;
 
 /// <summary>
-/// Revisa periódicamente todos los productos activos y genera (o limpia) la notificación
-/// interna de "stock bajo" en la campana del panel. A diferencia de
-/// StockBajoProveedorCheckService (que solo mira productos con Proveedor asignado y
-/// WhatsApp configurado, para avisarle al proveedor), este chequeo es general — cualquier
-/// producto activo en stock bajo genera un aviso interno para el personal — y es
-/// independiente de WhatsApp:Habilitado, porque no envía nada por WhatsApp.
+/// Respaldo periódico de la alerta de "stock bajo" en la campana del panel: la vía principal
+/// es instantánea (ver StockBajoInstantaneoStockNotificador, que revisa el producto apenas se
+/// confirma una venta, un pedido o un ajuste de stock), así que este barrido solo hace falta
+/// para los casos que esa vía no cubre — por ejemplo, si se sube el StockMinimo de un
+/// producto sin que su stock se mueva, o una importación masiva por Excel que deja productos
+/// ya por debajo de su mínimo. A diferencia de StockBajoProveedorCheckService (que solo mira
+/// productos con Proveedor asignado y WhatsApp configurado, para avisarle al proveedor), este
+/// chequeo es general — cualquier producto activo en stock bajo genera un aviso interno para
+/// el personal — y es independiente de WhatsApp:Habilitado, porque no envía nada por WhatsApp.
 ///
 /// Producto.NotificacionStockBajoActiva evita reabrir la misma notificación mientras el
 /// stock sigue bajo: solo se genera una vez por "episodio" (hasta que se repone por encima
@@ -22,10 +25,11 @@ namespace StockManager.Infrastructure.Hosting;
 /// </summary>
 public class NotificacionesStockBajoCheckService : BackgroundService
 {
-    // Más frecuente que los chequeos diarios (cuentas por pagar, stock bajo a proveedores)
-    // porque esto solo alimenta un badge en el panel, no envía nada externo: es barato
-    // revisarlo seguido y le da al personal una alerta razonablemente oportuna.
-    private static readonly TimeSpan IntervaloEntreChequeos = TimeSpan.FromHours(1);
+    // Es solo un respaldo (la vía instantánea cubre el caso normal), así que no hace falta
+    // revisar tan seguido como antes; se deja en 15 minutos — barato de todos modos — para
+    // que los casos borde que no pasan por la vía instantánea (ver el comentario de la clase)
+    // no queden sin avisar por mucho tiempo.
+    private static readonly TimeSpan IntervaloEntreChequeos = TimeSpan.FromMinutes(15);
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificacionesStockBajoCheckService> _logger;
@@ -74,9 +78,10 @@ public class NotificacionesStockBajoCheckService : BackgroundService
 
         foreach (var producto in productos)
         {
-            var enStockBajo = producto.StockActual <= producto.StockMinimo;
+            var resultado = StockBajoEvaluador.Evaluar(
+                producto.StockActual, producto.StockMinimo, producto.NotificacionStockBajoActiva);
 
-            if (enStockBajo && !producto.NotificacionStockBajoActiva)
+            if (resultado.DebeNotificar)
             {
                 producto.MarcarNotificacionStockBajoActiva();
                 huboAlertaNueva = true;
@@ -88,7 +93,7 @@ public class NotificacionesStockBajoCheckService : BackgroundService
                     "Producto",
                     producto.Id);
             }
-            else if (!enStockBajo && producto.NotificacionStockBajoActiva)
+            else if (resultado.DebeLimpiarBandera)
             {
                 producto.LimpiarNotificacionStockBajo();
             }

@@ -114,8 +114,20 @@ builder.Services.AddScoped<IFacturaLinkTokenService, HmacFacturaLinkTokenService
 // esfuerzo" para refrescar la pantalla de otros usuarios: no necesita cola ni persistencia,
 // así que VentaService/PedidoService llaman a IStockNotificador directamente después de
 // guardar, en vez de pasar por el Channel.
+//
+// IStockNotificador se resuelve como StockBajoInstantaneoStockNotificador, que decora a
+// SignalRStockNotificador: además de avisar en tiempo real, revisa al instante la alerta de
+// "stock bajo" de la campana para los productos recién cambiados (ver esa clase). Así, todo
+// quien ya llama a IStockNotificador después de vender/reponer/ajustar stock obtiene la
+// alerta instantánea gratis, sin tener que acordarse de llamarla aparte.
 builder.Services.AddSignalR();
-builder.Services.AddScoped<IStockNotificador, SignalRStockNotificador>();
+builder.Services.AddScoped<SignalRStockNotificador>();
+builder.Services.AddScoped<IStockNotificador>(sp =>
+    new StockBajoInstantaneoStockNotificador(
+        sp.GetRequiredService<SignalRStockNotificador>(),
+        sp.GetRequiredService<AppDbContext>(),
+        sp.GetRequiredService<INotificacionInternaService>(),
+        sp.GetRequiredService<ILogger<StockBajoInstantaneoStockNotificador>>()));
 
 builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>
 {
