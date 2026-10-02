@@ -19,6 +19,17 @@ public class Pedido
     public DateTime Fecha { get; private set; }
     public string Estado { get; private set; } = null!;  // Pendiente | Confirmado | EnPreparacion | EnCamino | Entregado | Cancelado
     public string Direccion { get; private set; } = null!;
+
+    /// <summary>
+    /// Coordenadas del pin que el cliente ubicó en el mapa al hacer el pedido (selector estilo
+    /// Rappi en la PWA, ver componente MapaDireccion). Null en pedidos antiguos creados antes
+    /// de que existiera el selector, o si el cliente completó el checkout sin confirmar un pin
+    /// (no son obligatorias: Direccion en texto sigue siendo la fuente que usa el repartidor
+    /// cuando no hay coordenadas).
+    /// </summary>
+    public double? Latitud { get; private set; }
+    public double? Longitud { get; private set; }
+
     public decimal Total { get; private set; }
 
     /// <summary>
@@ -34,7 +45,7 @@ public class Pedido
     /// de sus líneas), igual que en Venta, para que quede congelado al precio del momento
     /// del pedido y no cambie si el producto sube o baja de precio después.
     /// </summary>
-    public static Pedido Crear(int clienteId, string direccion, decimal total)
+    public static Pedido Crear(int clienteId, string direccion, decimal total, double? latitud = null, double? longitud = null)
     {
         if (clienteId <= 0)
             throw new ArgumentException("ClienteId debe ser mayor a 0.", nameof(clienteId));
@@ -45,12 +56,25 @@ public class Pedido
         if (total < 0)
             throw new ArgumentException("El total no puede ser negativo.", nameof(total));
 
+        // Ambas coordenadas van juntas o ninguna — un solo valor suelto no ubica nada en el
+        // mapa y probablemente indica un bug del lado del cliente (frontend) que las envía.
+        if (latitud.HasValue != longitud.HasValue)
+            throw new ArgumentException("Latitud y longitud deben enviarse juntas o ninguna de las dos.");
+
+        if (latitud.HasValue && (latitud < -90 || latitud > 90))
+            throw new ArgumentException("La latitud debe estar entre -90 y 90.", nameof(latitud));
+
+        if (longitud.HasValue && (longitud < -180 || longitud > 180))
+            throw new ArgumentException("La longitud debe estar entre -180 y 180.", nameof(longitud));
+
         return new Pedido
         {
             ClienteId = clienteId,
             Fecha = DateTime.UtcNow,
             Estado = "Pendiente",
             Direccion = direccion.Trim(),
+            Latitud = latitud,
+            Longitud = longitud,
             Total = total
         };
     }

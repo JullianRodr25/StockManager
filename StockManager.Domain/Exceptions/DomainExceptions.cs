@@ -317,6 +317,18 @@ public class ClienteConPedidosActivosException : DomainException
 }
 
 /// <summary>
+/// Excepción lanzada cuando un cliente intenta cambiar su propia contraseña (autenticado)
+/// pero la contraseña actual que confirmó no coincide con la almacenada.
+/// </summary>
+public class ContrasenaActualIncorrectaException : DomainException
+{
+    public ContrasenaActualIncorrectaException()
+        : base("La contraseña actual no es correcta.")
+    {
+    }
+}
+
+/// <summary>
 /// Excepción lanzada cuando no se encuentra una notificación interna con el ID especificado.
 /// </summary>
 public class NotificacionInternaNoEncontradaException : DomainException

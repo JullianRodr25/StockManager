@@ -80,7 +80,7 @@ public class PedidoService : IPedidoService
 
         var total = calculos.Sum(c => c.PrecioUnitario * c.Cantidad);
 
-        var pedido = Pedido.Crear(clienteId, request.Direccion, total);
+        var pedido = Pedido.Crear(clienteId, request.Direccion, total, request.Latitud, request.Longitud);
         _dbContext.Pedidos.Add(pedido);
         await _dbContext.SaveChangesAsync();
 
@@ -202,6 +202,8 @@ public class PedidoService : IPedidoService
             pedido.ClienteId,
             clienteNombre,
             pedido.Direccion,
+            pedido.Latitud,
+            pedido.Longitud,
             pedido.Fecha,
             pedido.Estado,
             pedido.Total,

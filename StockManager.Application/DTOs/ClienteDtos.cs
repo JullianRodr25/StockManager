@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace StockManager.Application.DTOs;
 
 public record ClienteResponse(
@@ -69,4 +71,19 @@ public record ActualizarDatosFacturacionRequest(
 public record ClienteCreadoResponse(
     ClienteResponse Cliente,
     string? PasswordTemporal
+);
+
+/// <summary>
+/// DTO para que el propio cliente autenticado cambie su contraseña desde "Mi cuenta" en la
+/// PWA (distinto del flujo de recuperación por correo, que no requiere conocer la actual).
+/// Exige PasswordActual para evitar que una sesión robada/dejada abierta pueda tomar control
+/// total de la cuenta con solo cambiar la contraseña.
+/// </summary>
+public record CambiarPasswordPropioRequest(
+    [Required(ErrorMessage = "La contraseña actual es requerida")]
+    string PasswordActual,
+
+    [Required(ErrorMessage = "La nueva contraseña es requerida")]
+    [MinLength(8, ErrorMessage = "La nueva contraseña debe tener al menos 8 caracteres")]
+    string PasswordNueva
 );

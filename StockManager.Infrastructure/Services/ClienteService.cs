@@ -204,6 +204,22 @@ public class ClienteService : IClienteService
         return MapearResponse(cliente);
     }
 
+    public async Task CambiarPasswordPropioAsync(int clienteId, CambiarPasswordPropioRequest request)
+    {
+        var cliente = await _dbContext.Clientes.FirstOrDefaultAsync(c => c.Id == clienteId);
+        if (cliente == null)
+            throw new ClienteNoEncontradoException(clienteId);
+
+        var resultado = _passwordHasher.VerifyHashedPassword(cliente, cliente.PasswordHash, request.PasswordActual);
+        if (resultado == PasswordVerificationResult.Failed)
+            throw new ContrasenaActualIncorrectaException();
+
+        var nuevoHash = _passwordHasher.HashPassword(cliente, request.PasswordNueva);
+        cliente.ActualizarPasswordHash(nuevoHash);
+
+        await _dbContext.SaveChangesAsync();
+    }
+
     private static ClienteResponse MapearResponse(Cliente cliente) => new(
         cliente.Id,
         cliente.NumeroIdentificacion,

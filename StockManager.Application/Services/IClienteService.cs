@@ -38,4 +38,11 @@ public interface IClienteService
     Task<ClienteResponse> DesactivarClienteAsync(int id);
 
     Task<ClienteResponse> ActivarClienteAsync(int id);
+
+    /// <summary>
+    /// Cambia la contraseña del propio cliente autenticado (flujo "Mi cuenta" de la PWA, no
+    /// el de recuperación por correo). Lanza ContrasenaActualIncorrectaException si
+    /// PasswordActual no coincide con la almacenada.
+    /// </summary>
+    Task CambiarPasswordPropioAsync(int clienteId, CambiarPasswordPropioRequest request);
 }
