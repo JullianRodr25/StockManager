@@ -18,6 +18,14 @@ using StockManager.Domain.Exceptions;
 /// </summary>
 public class Producto
 {
+    /// <summary>
+    /// Máximo de fotos permitidas en la galería de un producto (ver ProductoFoto). Es una
+    /// constante de dominio, no de configuración: un límite bajo y fijo evita que el costo de
+    /// almacenamiento en Blob Storage crezca sin control, y es más que suficiente para un
+    /// catálogo de ferretería (Homecenter, la referencia, muestra 4-5 fotos por producto).
+    /// </summary>
+    public const int MaxFotos = 6;
+
     public int Id { get; private set; }
     public string Nombre { get; private set; } = null!;
     public int CategoriaId { get; private set; }

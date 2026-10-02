@@ -329,6 +329,40 @@ public class ContrasenaActualIncorrectaException : DomainException
 }
 
 /// <summary>
+/// Excepción lanzada cuando no se encuentra una foto de producto con el ID especificado (o no
+/// pertenece al producto indicado).
+/// </summary>
+public class ProductoFotoNoEncontradaException : DomainException
+{
+    public int ProductoId { get; }
+    public int FotoId { get; }
+
+    public ProductoFotoNoEncontradaException(int productoId, int fotoId)
+        : base($"No se encontró la foto {fotoId} para el producto {productoId}.")
+    {
+        ProductoId = productoId;
+        FotoId = fotoId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar agregar una foto a un producto que ya alcanzó el máximo
+/// permitido (ver Producto.MaxFotos).
+/// </summary>
+public class LimiteFotosProductoExcedidoException : DomainException
+{
+    public int ProductoId { get; }
+    public int Maximo { get; }
+
+    public LimiteFotosProductoExcedidoException(int productoId, int maximo)
+        : base($"El producto {productoId} ya tiene el máximo de {maximo} fotos permitidas.")
+    {
+        ProductoId = productoId;
+        Maximo = maximo;
+    }
+}
+
+/// <summary>
 /// Excepción lanzada cuando no se encuentra una notificación interna con el ID especificado.
 /// </summary>
 public class NotificacionInternaNoEncontradaException : DomainException

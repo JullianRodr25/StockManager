@@ -41,7 +41,7 @@ public class ProductoService : IProductoService
         if (producto == null)
             return null;
 
-        return MapearAResponse(producto);
+        return MapearAResponse(producto, await ObtenerFotosAsync(producto.Id));
     }
 
     public async Task<ProductoResponse?> ObtenerProductoPorCodigoBarrasAsync(string codigoBarras)
@@ -52,7 +52,7 @@ public class ProductoService : IProductoService
         if (producto == null)
             return null;
 
-        return MapearAResponse(producto);
+        return MapearAResponse(producto, await ObtenerFotosAsync(producto.Id));
     }
 
     public async Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(
@@ -79,7 +79,10 @@ public class ProductoService : IProductoService
             .Take(tamanoPagina)
             .ToListAsync();
 
-        var items = productos.Select(MapearAResponse).ToList();
+        var fotosPorProducto = await ObtenerFotosPorProductoIdsAsync(productos.Select(p => p.Id));
+        var items = productos
+            .Select(p => MapearAResponse(p, fotosPorProducto.GetValueOrDefault(p.Id)))
+            .ToList();
         return (items, total);
     }
 
@@ -115,17 +118,25 @@ public class ProductoService : IProductoService
         var total = await query.CountAsync();
         var skip = (pagina - 1) * tamanoPagina;
 
-        var items = await query
+        var productosPagina = await query
             .OrderBy(p => p.Id)
             .Skip(skip)
             .Take(tamanoPagina)
+            .ToListAsync();
+
+        // Una sola consulta extra para traer las fotos de todos los productos de esta página
+        // (en vez de una consulta por producto, que sería N+1 en un grid de hasta 50 items).
+        var fotosPorProducto = await ObtenerFotosPorProductoIdsAsync(productosPagina.Select(p => p.Id));
+
+        var items = productosPagina
             .Select(p => new ProductoCatalogoResponse(
                 p.Id,
                 p.Nombre,
                 p.CategoriaNombre,
                 p.Precio,
-                p.StockActual > 0))
-            .ToListAsync();
+                p.StockActual > 0,
+                fotosPorProducto.GetValueOrDefault(p.Id) ?? new List<ProductoFotoResponse>()))
+            .ToList();
 
         return (items, total);
     }
@@ -236,7 +247,7 @@ public class ProductoService : IProductoService
 
         await _dbContext.SaveChangesAsync();
 
-        return MapearAResponse(producto);
+        return MapearAResponse(producto, await ObtenerFotosAsync(producto.Id));
     }
 
     public async Task<ImportarProductosResponse> ImportarProductosDesdeExcelAsync(Stream archivoStream)
@@ -510,10 +521,46 @@ public class ProductoService : IProductoService
             // Best-effort: un fallo al avisar en tiempo real no debe afectar el ajuste ya guardado.
         }
 
-        return MapearAResponse(producto);
+        return MapearAResponse(producto, await ObtenerFotosAsync(producto.Id));
     }
 
-    private static ProductoResponse MapearAResponse(Producto producto)
+    /// <summary>
+    /// Trae las fotos de un solo producto, ya ordenadas para el carrusel. Para pantallas con
+    /// un producto a la vez (detalle, crear, actualizar, ajustar stock); para listas paginadas
+    /// usar ObtenerFotosPorProductoIdsAsync y evitar N+1.
+    /// </summary>
+    private async Task<List<ProductoFotoResponse>> ObtenerFotosAsync(int productoId)
+    {
+        return await _dbContext.ProductoFotos.AsNoTracking()
+            .Where(f => f.ProductoId == productoId)
+            .OrderBy(f => f.Orden)
+            .Select(f => new ProductoFotoResponse(f.Id, f.Url, f.Orden))
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Trae las fotos de varios productos en una sola consulta, agrupadas por ProductoId. Usar
+    /// en listas/paginación en vez de llamar ObtenerFotosAsync por cada item.
+    /// </summary>
+    private async Task<Dictionary<int, List<ProductoFotoResponse>>> ObtenerFotosPorProductoIdsAsync(IEnumerable<int> productoIds)
+    {
+        var ids = productoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<int, List<ProductoFotoResponse>>();
+
+        var fotos = await _dbContext.ProductoFotos.AsNoTracking()
+            .Where(f => ids.Contains(f.ProductoId))
+            .OrderBy(f => f.Orden)
+            .ToListAsync();
+
+        return fotos
+            .GroupBy(f => f.ProductoId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(f => new ProductoFotoResponse(f.Id, f.Url, f.Orden)).ToList());
+    }
+
+    private static ProductoResponse MapearAResponse(Producto producto, IReadOnlyList<ProductoFotoResponse>? fotos = null)
     {
         return new ProductoResponse
         {
@@ -528,7 +575,8 @@ public class ProductoService : IProductoService
             Costo = producto.Costo,
             CodigoBarras = producto.CodigoBarras,
             Activo = producto.Activo,
-            ProveedorId = producto.ProveedorId
+            ProveedorId = producto.ProveedorId,
+            Fotos = fotos?.ToList() ?? new List<ProductoFotoResponse>()
         };
     }
 }

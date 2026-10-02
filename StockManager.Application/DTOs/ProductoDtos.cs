@@ -20,14 +20,31 @@ public class ProductoResponse
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
     public int? ProveedorId { get; set; }
+
+    /// <summary>
+    /// Galería de fotos del producto, ordenadas para el carrusel (ver ProductoFoto). Lista
+    /// vacía si el producto todavía no tiene fotos — nunca null, para que el frontend no tenga
+    /// que chequear nulidad antes de iterar.
+    /// </summary>
+    public List<ProductoFotoResponse> Fotos { get; set; } = new();
 }
+
+/// <summary>
+/// DTO de una foto individual de la galería de un producto.
+/// </summary>
+public record ProductoFotoResponse(
+    int Id,
+    string Url,
+    int Orden
+);
 
 public record ProductoCatalogoResponse(
     int Id,
     string Nombre,
     string CategoriaNombre,
     decimal Precio,
-    bool Disponible
+    bool Disponible,
+    IReadOnlyList<ProductoFotoResponse> Fotos
 );
 
 /// <summary>
