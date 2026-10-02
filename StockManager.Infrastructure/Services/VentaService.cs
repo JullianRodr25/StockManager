@@ -912,4 +912,42 @@ public class VentaService : IVentaService
         decimal SubtotalSinIva,
         decimal Iva,
         decimal SubtotalConIva);
+
+    public async Task<List<ProductoVentaRecienteResponse>> ObtenerProductosRecientesAsync(int limite = 10)
+    {
+        // Se trae una ventana acotada de las líneas de venta más recientes (no canceladas) ya
+        // ordenadas por fecha, y la deduplicación por producto (quedarse con la primera, que es
+        // la más reciente) se hace en memoria: así se evita un GROUP BY que chocaría con "más
+        // reciente", que no es una operación de agregación. La ventana (10x el límite pedido)
+        // es generosa para cubrir el caso de un cajero que vende el mismo producto varias veces
+        // seguidas sin que eso "tape" el cupo de productos distintos.
+        var lineasRecientes = await _dbContext.DetallesVenta
+            .AsNoTracking()
+            .Join(
+                _dbContext.Ventas.AsNoTracking().Where(v => v.Estado != "Cancelada"),
+                detalle => detalle.VentaId,
+                venta => venta.Id,
+                (detalle, venta) => new { detalle.ProductoId, venta.Fecha })
+            .OrderByDescending(x => x.Fecha)
+            .Take(Math.Max(limite, 1) * 10)
+            .ToListAsync();
+
+        var productoIdsRecientes = lineasRecientes
+            .GroupBy(x => x.ProductoId)
+            .Select(g => g.Key)
+            .Take(Math.Max(limite, 1))
+            .ToList();
+
+        // El orden de productoIdsRecientes ya es el de más a menos reciente, pero el Where de
+        // abajo no lo conserva, así que se reordena en memoria uniendo contra un diccionario.
+        var productosPorId = await _dbContext.Productos
+            .AsNoTracking()
+            .Where(p => productoIdsRecientes.Contains(p.Id) && p.Activo)
+            .ToDictionaryAsync(p => p.Id);
+
+        return productoIdsRecientes
+            .Where(productosPorId.ContainsKey)
+            .Select(id => new ProductoVentaRecienteResponse(id, productosPorId[id].Nombre))
+            .ToList();
+    }
 }

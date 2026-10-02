@@ -78,6 +78,18 @@ public class VentasController : ControllerBase
     }
 
     /// <summary>
+    /// Los últimos N productos distintos vendidos, de más a menos reciente, para los accesos
+    /// directos del mostrador en Ventas.
+    /// </summary>
+    [HttpGet("productos-recientes")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerProductosRecientes([FromQuery] int limite = 10)
+    {
+        var productos = await _ventaService.ObtenerProductosRecientesAsync(limite);
+        return Ok(productos);
+    }
+
+    /// <summary>
     /// Obtiene una venta por su ID, incluyendo sus detalles y número de factura.
     /// </summary>
     [HttpGet("{id}")]

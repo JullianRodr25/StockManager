@@ -99,3 +99,12 @@ public record AbonoResponse(
 );
 
 public record EditarCantidadLineaRequest(int Cantidad);
+
+/// <summary>
+/// Un producto vendido recientemente, para los accesos directos del mostrador en Ventas (el
+/// cajero suele vender siempre los mismos productos; esto evita tener que buscarlos cada vez).
+/// Solo trae el ID y el nombre: el precio, el stock y el resto de datos para agregarlo al
+/// carrito ya los tiene el frontend en la lista de productos que carga Inventario/Ventas, así
+/// que no hace falta duplicarlos aquí ni mantenerlos sincronizados en dos lugares.
+/// </summary>
+public record ProductoVentaRecienteResponse(int ProductoId, string Nombre);

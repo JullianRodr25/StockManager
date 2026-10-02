@@ -26,4 +26,10 @@ public interface IVentaService
     Task<VentaResponse> QuitarLineaAsync(int ventaId, int detalleId);
 
     Task<VentaResponse> CancelarCuentaAsync(int ventaId);
+
+    /// <summary>
+    /// Los últimos N productos distintos vendidos (de más a menos reciente), para los accesos
+    /// directos del mostrador en Ventas. Ignora ventas Canceladas y productos inactivos.
+    /// </summary>
+    Task<List<ProductoVentaRecienteResponse>> ObtenerProductosRecientesAsync(int limite = 10);
 }
