@@ -3,6 +3,7 @@ using StockManager.Infrastructure.Services;
 using StockManager.Infrastructure.Hosting;
 using StockManager.Infrastructure.Notificaciones;
 using StockManager.Infrastructure.RealTime;
+using StockManager.Infrastructure.Almacenamiento;
 using StockManager.Application.Services;
 using StockManager.Domain.Events;
 using Microsoft.EntityFrameworkCore;
@@ -148,6 +149,17 @@ builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
 {
     client.BaseAddress = new Uri("https://api.brevo.com/");
 });
+
+// --- Azure Blob Storage (fotos de perfil de Cliente + galería de fotos de Producto) ---
+// Se registra IOptions<BlobStorageOptions> siempre (aun con la sección "BlobStorage" vacía en
+// appsettings.json): eso no rompe ValidateOnBuild, que solo valida que el GRAFO de dependencias
+// sea resoluble, no que los valores de configuración sean válidos. AzureBlobStorageService recién
+// lanza su excepción (ConnectionString vacía) cuando el propio DI intenta CONSTRUIRLO — y como
+// solo lo pide ProductoFotosController/el endpoint de foto de perfil (activados por request, no
+// parte del grafo eager-validado), el resto de la API sigue arrancando con normalidad aunque la
+// cadena de conexión real todavía no esté configurada en Azure App Service.
+builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
+builder.Services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
 
 // Chequeo diario de cuentas por pagar próximas a vencer (dispara CuentaPorPagarProximaAVencerEvent,
 // que el dispatcher de arriba efectivamente envía por WhatsApp al admin).
