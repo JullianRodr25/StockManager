@@ -23,6 +23,17 @@ public class Cliente
     public string PasswordHash { get; private set; } = null!;
     public string Telefono { get; private set; } = null!;  // Usado para WhatsApp
     public string Direccion { get; private set; } = null!;
+
+    /// <summary>
+    /// Coordenadas del pin que el cliente ubicó en el mapa desde "Mi cuenta" (mismo selector
+    /// MapaDireccion que usan Registro y Checkout). Null si nunca lo usó o si solo escribió la
+    /// dirección a mano — igual que en Pedido, Direccion en texto sigue siendo la fuente que
+    /// no depende de tener coordenadas. Checkout la usa como punto de partida del mapa cuando
+    /// el cliente todavía no fijó una ubicación distinta para ese pedido en particular.
+    /// </summary>
+    public double? Latitud { get; private set; }
+    public double? Longitud { get; private set; }
+
     public bool Activo { get; private set; }
 
     /// <summary>"Pwa" o "Caja" — canal por el que se creó el cliente. Ver OrigenesValidos.</summary>
@@ -132,7 +143,13 @@ public class Cliente
     /// (es su identificador de login, igual que la cédula de un Empleado) ni PasswordHash
     /// (eso requeriría un flujo de cambio de contraseña aparte, con su propia validación).
     /// </summary>
-    public void ActualizarInformacion(string nombre, string email, string telefono, string direccion)
+    public void ActualizarInformacion(
+        string nombre,
+        string email,
+        string telefono,
+        string direccion,
+        double? latitud = null,
+        double? longitud = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del cliente no puede estar vacío.", nameof(nombre));
@@ -146,10 +163,23 @@ public class Cliente
         if (string.IsNullOrWhiteSpace(direccion))
             throw new ArgumentException("La dirección no puede estar vacía.", nameof(direccion));
 
+        // Misma regla que Pedido.Crear: ambas coordenadas van juntas o ninguna — un solo valor
+        // suelto no ubica nada en el mapa y probablemente indica un bug del lado del cliente.
+        if (latitud.HasValue != longitud.HasValue)
+            throw new ArgumentException("Latitud y longitud deben enviarse juntas o ninguna de las dos.");
+
+        if (latitud.HasValue && (latitud < -90 || latitud > 90))
+            throw new ArgumentException("La latitud debe estar entre -90 y 90.", nameof(latitud));
+
+        if (longitud.HasValue && (longitud < -180 || longitud > 180))
+            throw new ArgumentException("La longitud debe estar entre -180 y 180.", nameof(longitud));
+
         Nombre = nombre.Trim();
         Email = email.Trim().ToLower();
         Telefono = telefono.Trim();
         Direccion = direccion.Trim();
+        Latitud = latitud;
+        Longitud = longitud;
     }
 
     public void Desactivar() => Activo = false;

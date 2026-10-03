@@ -9,6 +9,9 @@ public record ClienteResponse(
     string Email,
     string Telefono,
     string Direccion,
+    /// <summary>Coordenadas del pin guardado desde "Mi cuenta" (ver Cliente.Latitud/Longitud). Null si nunca se fijó.</summary>
+    double? Latitud,
+    double? Longitud,
     bool Activo,
     /// <summary>"Pwa" o "Caja". Ver Cliente.OrigenRegistro.</summary>
     string OrigenRegistro,
@@ -44,11 +47,18 @@ public record CrearClienteRequest(
     string? EmailFacturacion = null
 );
 
+/// <summary>
+/// Latitud/Longitud son opcionales (selector de mapa en "Mi cuenta" de la PWA, ver
+/// MapaDireccion): si no se envían (ej. el panel admin, que edita solo texto), ClienteService
+/// conserva las coordenadas que el cliente ya tuviera guardadas en vez de borrarlas.
+/// </summary>
 public record ActualizarClienteRequest(
     string Nombre,
     string Email,
     string Telefono,
-    string Direccion
+    string Direccion,
+    double? Latitud = null,
+    double? Longitud = null
 );
 
 /// <summary>

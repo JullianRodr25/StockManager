@@ -53,6 +53,8 @@ public class ClienteService : IClienteService
                 c.Email,
                 c.Telefono,
                 c.Direccion,
+                c.Latitud,
+                c.Longitud,
                 c.Activo,
                 c.OrigenRegistro,
                 c.TipoDocumentoFiscal,
@@ -77,6 +79,8 @@ public class ClienteService : IClienteService
                 c.Email,
                 c.Telefono,
                 c.Direccion,
+                c.Latitud,
+                c.Longitud,
                 c.Activo,
                 c.OrigenRegistro,
                 c.TipoDocumentoFiscal,
@@ -171,7 +175,20 @@ public class ClienteService : IClienteService
                 throw new UsuarioDuplicadoPorEmailException(emailNormalizado);
         }
 
-        cliente.ActualizarInformacion(request.Nombre, emailNormalizado, request.Telefono, request.Direccion);
+        // Si el llamador no envía coordenadas (ej. el panel admin, que no tiene selector de
+        // mapa en su formulario de edición), se conservan las que el cliente ya hubiera fijado
+        // desde "Mi cuenta" en la PWA, en vez de borrarlas en cada edición de nombre/teléfono.
+        // Si envía ambas (la PWA siempre lo hace, aunque sea con null porque el cliente borró
+        // el pin a mano), se usan tal cual — Cliente.ActualizarInformacion valida el par.
+        var latitud = request.Latitud;
+        var longitud = request.Longitud;
+        if (!latitud.HasValue && !longitud.HasValue)
+        {
+            latitud = cliente.Latitud;
+            longitud = cliente.Longitud;
+        }
+
+        cliente.ActualizarInformacion(request.Nombre, emailNormalizado, request.Telefono, request.Direccion, latitud, longitud);
         await _dbContext.SaveChangesAsync();
 
         return MapearResponse(cliente);
@@ -229,6 +246,8 @@ public class ClienteService : IClienteService
         cliente.Email,
         cliente.Telefono,
         cliente.Direccion,
+        cliente.Latitud,
+        cliente.Longitud,
         cliente.Activo,
         cliente.OrigenRegistro,
         cliente.TipoDocumentoFiscal,
