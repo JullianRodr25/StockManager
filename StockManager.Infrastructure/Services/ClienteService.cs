@@ -60,7 +60,8 @@ public class ClienteService : IClienteService
                 c.RazonSocialFiscal,
                 c.DireccionFiscal,
                 c.EmailFacturacion,
-                c.TieneDatosFacturacionElectronicaCompletos))
+                c.TieneDatosFacturacionElectronicaCompletos,
+                c.FotoUrl))
             .ToListAsync();
     }
 
@@ -83,7 +84,8 @@ public class ClienteService : IClienteService
                 c.RazonSocialFiscal,
                 c.DireccionFiscal,
                 c.EmailFacturacion,
-                c.TieneDatosFacturacionElectronicaCompletos))
+                c.TieneDatosFacturacionElectronicaCompletos,
+                c.FotoUrl))
             .FirstOrDefaultAsync();
     }
 
@@ -234,7 +236,8 @@ public class ClienteService : IClienteService
         cliente.RazonSocialFiscal,
         cliente.DireccionFiscal,
         cliente.EmailFacturacion,
-        cliente.TieneDatosFacturacionElectronicaCompletos);
+        cliente.TieneDatosFacturacionElectronicaCompletos,
+        cliente.FotoUrl);
 
     /// <summary>
     /// Genera una contraseña temporal aleatoria de 12 caracteres (mayúsculas, minúsculas,

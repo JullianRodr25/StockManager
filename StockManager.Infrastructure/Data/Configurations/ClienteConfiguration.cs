@@ -65,6 +65,9 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.Property(c => c.EmailFacturacion)
             .HasMaxLength(200);
 
+        builder.Property(c => c.FotoUrl)
+            .HasMaxLength(2048);
+
         // Propiedad calculada en memoria (igual que Venta.Cambio), no una columna.
         builder.Ignore(c => c.TieneDatosFacturacionElectronicaCompletos);
 

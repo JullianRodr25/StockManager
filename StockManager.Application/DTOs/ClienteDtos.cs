@@ -17,7 +17,8 @@ public record ClienteResponse(
     string? RazonSocialFiscal,
     string? DireccionFiscal,
     string? EmailFacturacion,
-    bool TieneDatosFacturacionElectronicaCompletos
+    bool TieneDatosFacturacionElectronicaCompletos,
+    string? FotoUrl
 );
 
 /// <summary>

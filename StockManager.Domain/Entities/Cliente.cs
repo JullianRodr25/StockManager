@@ -39,6 +39,12 @@ public class Cliente
     public string? EmailFacturacion { get; private set; }
 
     /// <summary>
+    /// URL pública (Azure Blob Storage) de la foto de perfil del cliente. Null cuando no ha
+    /// subido ninguna — la PWA muestra un avatar con sus iniciales en ese caso.
+    /// </summary>
+    public string? FotoUrl { get; private set; }
+
+    /// <summary>
     /// true cuando hay lo mínimo que exige la DIAN para expedir una factura electrónica
     /// (tipo + número de documento y razón social); dirección y correo son recomendados pero
     /// no bloquean. Lo usa el frontend para decidir si puede ofrecer "Solicitar factura
@@ -148,6 +154,22 @@ public class Cliente
 
     public void Desactivar() => Activo = false;
     public void Activar() => Activo = true;
+
+    /// <summary>
+    /// Reemplaza la foto de perfil. Quien llama es responsable de haber subido el archivo a
+    /// Azure Blob Storage antes y de borrar (mejor esfuerzo) el blob anterior — esta entidad
+    /// solo guarda la URL resultante, igual que ProductoFoto.Url.
+    /// </summary>
+    public void ActualizarFoto(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new ArgumentException("La URL de la foto no puede estar vacía.", nameof(url));
+
+        FotoUrl = url;
+    }
+
+    /// <summary>Quita la foto de perfil (vuelve al avatar con iniciales en la PWA).</summary>
+    public void EliminarFoto() => FotoUrl = null;
 
     /// <summary>
     /// Reemplaza el hash de contraseña del cliente. Usado por el flujo de recuperación por
