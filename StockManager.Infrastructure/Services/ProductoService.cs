@@ -109,7 +109,9 @@ public class ProductoService : IProductoService
                     CategoriaNombre = categoria.Nombre,
                     producto.Precio,
                     producto.StockActual,
-                    producto.CategoriaId
+                    producto.CategoriaId,
+                    producto.CalificacionPromedio,
+                    producto.TotalResenas
                 });
 
         if (categoriaId.HasValue)
@@ -135,7 +137,9 @@ public class ProductoService : IProductoService
                 p.CategoriaNombre,
                 p.Precio,
                 p.StockActual > 0,
-                fotosPorProducto.GetValueOrDefault(p.Id) ?? new List<ProductoFotoResponse>()))
+                fotosPorProducto.GetValueOrDefault(p.Id) ?? new List<ProductoFotoResponse>(),
+                p.CalificacionPromedio,
+                p.TotalResenas))
             .ToList();
 
         return (items, total);

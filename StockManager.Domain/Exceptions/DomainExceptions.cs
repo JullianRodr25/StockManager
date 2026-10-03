@@ -375,3 +375,36 @@ public class NotificacionInternaNoEncontradaException : DomainException
         NotificacionId = notificacionId;
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra una reseña con el ID especificado, o existe pero
+/// no pertenece al cliente que intenta editarla/borrarla — se usa el mismo mensaje genérico
+/// para los dos casos a propósito, para no filtrarle a un cliente si una reseña ajena existe.
+/// </summary>
+public class ResenaNoEncontradaException : DomainException
+{
+    public int ResenaId { get; }
+
+    public ResenaNoEncontradaException(int resenaId)
+        : base("La reseña no existe.")
+    {
+        ResenaId = resenaId;
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar crear una reseña para un producto que el cliente ya reseñó
+/// (regla de negocio: una reseña por cliente por producto, ver ResenaProductoConfiguration).
+/// </summary>
+public class ResenaDuplicadaException : DomainException
+{
+    public int ProductoId { get; }
+    public int ClienteId { get; }
+
+    public ResenaDuplicadaException(int productoId, int clienteId)
+        : base("Ya dejaste una reseña para este producto. Edítala en vez de crear una nueva.")
+    {
+        ProductoId = productoId;
+        ClienteId = clienteId;
+    }
+}

@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<CuentaPorPagar> CuentasPorPagar { get; set; } = null!;
     public DbSet<AbonoCuentaPorPagar> AbonosCuentaPorPagar { get; set; } = null!;
     public DbSet<NotificacionInterna> NotificacionesInternas { get; set; } = null!;
+    public DbSet<ResenaProducto> ResenasProducto { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,5 +63,6 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new CuentaPorPagarConfiguration());
         modelBuilder.ApplyConfiguration(new AbonoCuentaPorPagarConfiguration());
         modelBuilder.ApplyConfiguration(new NotificacionInternaConfiguration());
+        modelBuilder.ApplyConfiguration(new ResenaProductoConfiguration());
     }
 }

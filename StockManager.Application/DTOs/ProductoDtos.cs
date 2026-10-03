@@ -44,7 +44,9 @@ public record ProductoCatalogoResponse(
     string CategoriaNombre,
     decimal Precio,
     bool Disponible,
-    IReadOnlyList<ProductoFotoResponse> Fotos
+    IReadOnlyList<ProductoFotoResponse> Fotos,
+    decimal? CalificacionPromedio,
+    int TotalResenas
 );
 
 /// <summary>

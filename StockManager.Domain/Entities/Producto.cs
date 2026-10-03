@@ -50,6 +50,20 @@ public class Producto
     public decimal Costo { get; private set; }
 
     public bool Activo { get; private set; }
+
+    /// <summary>
+    /// Promedio de calificaciones (1-5) de las reseñas del producto, denormalizado para no
+    /// recalcularlo en cada carga del catálogo. Null mientras el producto no tiene ninguna
+    /// reseña (distinto de 0: "sin calificar" no es lo mismo que "calificado con 0"). Se
+    /// recalcula en ResenaService a partir de ResenasProducto, nunca se asigna a mano aquí.
+    /// </summary>
+    public decimal? CalificacionPromedio { get; private set; }
+
+    /// <summary>
+    /// Cantidad total de reseñas del producto, denormalizado junto con CalificacionPromedio.
+    /// </summary>
+    public int TotalResenas { get; private set; }
+
     public string? CodigoBarras { get; private set; }
     public bool EsCodigoGenerado { get; private set; }
     public DateTime? FechaImpresionEtiqueta { get; private set; }
@@ -321,5 +335,29 @@ public class Producto
     public void LimpiarNotificacionStockBajo()
     {
         NotificacionStockBajoActiva = false;
+    }
+
+    /// <summary>
+    /// Reemplaza CalificacionPromedio/TotalResenas con los valores recién recalculados desde
+    /// ResenasProducto (ver ResenaService.RecalcularAgregadosAsync). No se expone forma de
+    /// "sumar" o ajustar a mano: siempre se recalcula completo desde la fuente de verdad
+    /// (las reseñas), para que nunca quede desincronizado por un cálculo incremental con error
+    /// acumulado.
+    /// </summary>
+    public void ActualizarCalificacion(decimal? calificacionPromedio, int totalResenas)
+    {
+        if (totalResenas < 0)
+            throw new ArgumentException("TotalResenas no puede ser negativo.", nameof(totalResenas));
+
+        if (totalResenas == 0 && calificacionPromedio != null)
+            throw new ArgumentException(
+                "No puede haber un promedio de calificación sin reseñas.", nameof(calificacionPromedio));
+
+        if (calificacionPromedio is < 1 or > 5)
+            throw new ArgumentException(
+                "El promedio de calificación debe estar entre 1 y 5.", nameof(calificacionPromedio));
+
+        CalificacionPromedio = calificacionPromedio;
+        TotalResenas = totalResenas;
     }
 }

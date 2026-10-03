@@ -73,6 +73,14 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(p => p.CalificacionPromedio)
+            .HasColumnType("decimal(3, 2)")
+            .IsRequired(false);
+
+        builder.Property(p => p.TotalResenas)
+            .IsRequired()
+            .HasDefaultValue(0);
+
         // RowVersion para concurrencia optimista — CRÍTICO
         builder.Property(p => p.RowVersion)
             .IsRowVersion();
