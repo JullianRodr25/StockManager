@@ -47,7 +47,7 @@ public class PedidosController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al crear el pedido" });
         }
@@ -173,7 +173,7 @@ public class PedidosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al marcar el pedido como entregado" });
         }
@@ -214,7 +214,7 @@ public class PedidosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = $"Error al {descripcionError}" });
         }

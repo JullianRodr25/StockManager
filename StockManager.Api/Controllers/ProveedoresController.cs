@@ -33,7 +33,7 @@ public class ProveedoresController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al crear el proveedor" });
         }
@@ -92,7 +92,7 @@ public class ProveedoresController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al actualizar el proveedor" });
         }
@@ -114,7 +114,7 @@ public class ProveedoresController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al desactivar el proveedor" });
         }
@@ -135,7 +135,7 @@ public class ProveedoresController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al activar el proveedor" });
         }

@@ -10,10 +10,12 @@ namespace StockManager.Api.Controllers;
 public class ProductosController : ControllerBase
 {
     private readonly IProductoService _productoService;
+    private readonly ILogger<ProductosController> _logger;
 
-    public ProductosController(IProductoService productoService)
+    public ProductosController(IProductoService productoService, ILogger<ProductosController> logger)
     {
         _productoService = productoService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -101,9 +103,11 @@ public class ProductosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
-            // TODO: loguear ex con ILogger cuando se agregue logging
+            // Sin este log la causa real quedaba oculta tras el mensaje genérico: ahora aparece
+            // completa en el Log stream de Azure.
+            _logger.LogError(ex, "Error inesperado al crear el producto '{Nombre}'", request.Nombre);
             return StatusCode(500, new { message = "Error al crear el producto" });
         }
     }
@@ -136,7 +140,7 @@ public class ProductosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Error al importar productos" });
@@ -181,7 +185,7 @@ public class ProductosController : ControllerBase
                 etiquetas
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TEMPORAL: Loguear excepción completa a consola para debugging
             Console.WriteLine($"ERROR en GenerarEtiquetas: {ex.GetType().FullName}");
@@ -230,7 +234,7 @@ public class ProductosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Error al actualizar el producto" });
@@ -255,7 +259,7 @@ public class ProductosController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Error al desactivar el producto" });
@@ -279,7 +283,7 @@ public class ProductosController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Error al reactivar el producto" });
@@ -317,7 +321,7 @@ public class ProductosController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Error al ajustar el stock" });

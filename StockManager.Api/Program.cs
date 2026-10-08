@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.Channels;
 using Scalar.AspNetCore;
+using StockManager.Api.Middleware;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -232,6 +233,10 @@ app.UseHttpsRedirection();
 
 // Agregar CORS antes de autenticación y autorización
 app.UseCors("FrontendDev");
+
+// Convierte las excepciones sin atrapar en { message } con su código HTTP. Debe ir después de CORS
+// (para que el error conserve las cabeceras y el navegador lo deje leer) y antes de los controladores.
+app.UseMiddleware<ManejadorExcepcionesMiddleware>();
 
 // Agregar middleware de autenticación y autorización
 app.UseAuthentication();

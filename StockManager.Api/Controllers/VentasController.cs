@@ -47,7 +47,7 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al registrar la venta" });
         }
@@ -124,7 +124,7 @@ public class VentasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al abrir la cuenta fiada" });
         }
@@ -166,7 +166,7 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al agregar la línea a la cuenta fiada" });
         }
@@ -196,7 +196,7 @@ public class VentasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al cerrar la cuenta fiada" });
         }
@@ -228,7 +228,7 @@ public class VentasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al registrar el abono" });
         }
@@ -285,7 +285,7 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al editar la línea" });
         }
@@ -323,7 +323,7 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al quitar la línea" });
         }
@@ -362,7 +362,7 @@ public class VentasController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al cancelar la cuenta" });
         }

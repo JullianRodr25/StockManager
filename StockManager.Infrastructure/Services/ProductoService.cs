@@ -184,6 +184,18 @@ public class ProductoService : IProductoService
         if (existeProducto)
             throw new Domain.Exceptions.ProductoDuplicadoException(nombreNormalizado);
 
+        // Validar código de barras duplicado ANTES de insertar: el índice único de la BD ya lo
+        // impide, pero violarlo lanza un DbUpdateException que el controlador convertía en un
+        // 500 sin explicación. Así el usuario recibe un 400 con el motivo exacto (igual que al editar).
+        var codigoBarrasNormalizado = string.IsNullOrWhiteSpace(request.CodigoBarras) ? null : request.CodigoBarras.Trim();
+        if (codigoBarrasNormalizado != null)
+        {
+            var existeCodigoBarras = await _dbContext.Productos
+                .AnyAsync(p => p.CodigoBarras == codigoBarrasNormalizado);
+            if (existeCodigoBarras)
+                throw new ArgumentException($"Ya existe un producto con el código de barras '{codigoBarrasNormalizado}'.");
+        }
+
         var tarifaIva = request.TarifaIva
             ?? (await _configuracionService.ObtenerAsync()).TarifaIvaPorDefecto;
 

@@ -61,7 +61,7 @@ public class CategoriasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Ocurrió un error al crear la categoría" });

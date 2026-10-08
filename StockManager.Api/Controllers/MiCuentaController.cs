@@ -88,7 +88,7 @@ public class MiCuentaController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al actualizar tus datos" });
         }
@@ -113,7 +113,7 @@ public class MiCuentaController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al cambiar la contraseña" });
         }

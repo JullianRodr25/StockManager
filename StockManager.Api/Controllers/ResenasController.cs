@@ -60,7 +60,7 @@ public class ResenasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al crear la reseña" });
         }
@@ -85,7 +85,7 @@ public class ResenasController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al editar la reseña" });
         }
@@ -106,7 +106,7 @@ public class ResenasController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             return StatusCode(500, new { message = "Error al eliminar la reseña" });
         }

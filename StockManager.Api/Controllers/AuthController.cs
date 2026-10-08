@@ -70,7 +70,7 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // Log aquí si es necesario
             return StatusCode(StatusCodes.Status500InternalServerError, 
@@ -107,7 +107,7 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
         {
             // Log aquí si es necesario
             return StatusCode(StatusCodes.Status500InternalServerError,
