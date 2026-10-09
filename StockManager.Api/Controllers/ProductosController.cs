@@ -56,6 +56,18 @@ public class ProductosController : ControllerBase
     }
 
     /// <summary>
+    /// Productos activos con stock igual o por debajo del mínimo (agotados primero), para el
+    /// resumen de alertas del inventario. Debe declararse antes de "{id}" para que la ruta
+    /// literal no se confunda con un id.
+    /// </summary>
+    [HttpGet("alertas-stock")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerAlertasStock()
+    {
+        return Ok(await _productoService.ObtenerAlertasStockAsync());
+    }
+
+    /// <summary>
     /// Obtiene un producto por su ID.
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>

@@ -53,6 +53,21 @@ public class ProductoService : IProductoService
         return MapearAResponse(producto, await ObtenerFotosAsync(producto.Id));
     }
 
+    public async Task<List<ProductoResponse>> ObtenerAlertasStockAsync()
+    {
+        var productos = await _dbContext.Productos
+            .AsNoTracking()
+            .Where(p => p.Activo && p.StockActual <= p.StockMinimo)
+            .OrderBy(p => p.StockActual)
+            .ThenBy(p => p.Nombre)
+            .ToListAsync();
+
+        var fotosPorProducto = await ObtenerFotosPorProductoIdsAsync(productos.Select(p => p.Id));
+        return productos
+            .Select(p => MapearAResponse(p, fotosPorProducto.GetValueOrDefault(p.Id)))
+            .ToList();
+    }
+
     public async Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(
         int pagina,
         int tamanoPagina,

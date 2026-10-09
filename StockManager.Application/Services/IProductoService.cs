@@ -27,6 +27,14 @@ public interface IProductoService
     Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId = null);
 
     /// <summary>
+    /// Productos activos que necesitan reposición: stock actual igual o por debajo del mínimo
+    /// (mismo criterio que <see cref="StockBajoEvaluador"/>). Los más urgentes primero: los
+    /// agotados y luego los de menor stock. La lista es acotada por naturaleza (solo los que
+    /// tienen problema), por eso no se pagina.
+    /// </summary>
+    Task<List<ProductoResponse>> ObtenerAlertasStockAsync();
+
+    /// <summary>
     /// Obtiene el catálogo público paginado de productos activos para clientes.
     /// </summary>
     Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId);
