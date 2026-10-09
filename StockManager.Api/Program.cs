@@ -88,7 +88,6 @@ builder.Services.AddScoped<IProductoService>(sp =>
     new ProductoService(
         sp.GetRequiredService<AppDbContext>(),
         sp.GetRequiredService<IBarcodeService>(),
-        sp.GetRequiredService<ICategoriaService>(),
         sp.GetRequiredService<IConfiguracionService>(),
         sp.GetRequiredService<IStockNotificador>()));
 

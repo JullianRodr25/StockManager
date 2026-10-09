@@ -15,20 +15,17 @@ public class ProductoService : IProductoService
 {
     private readonly AppDbContext _dbContext;
     private readonly IBarcodeService _barcodeService;
-    private readonly ICategoriaService _categoriaService;
     private readonly IConfiguracionService _configuracionService;
     private readonly IStockNotificador _stockNotificador;
 
     public ProductoService(
         AppDbContext dbContext,
         IBarcodeService barcodeService,
-        ICategoriaService categoriaService,
         IConfiguracionService configuracionService,
         IStockNotificador stockNotificador)
     {
         _dbContext = dbContext;
         _barcodeService = barcodeService;
-        _categoriaService = categoriaService;
         _configuracionService = configuracionService;
         _stockNotificador = stockNotificador;
     }
@@ -296,7 +293,47 @@ public class ProductoService : IProductoService
                 if (worksheet == null)
                     throw new InvalidOperationException("El archivo no contiene hojas de cálculo.");
 
-                var filas = worksheet.RangeUsed().RowsUsed().Skip(1); // Saltar encabezado
+                var filas = worksheet.RangeUsed().RowsUsed().Skip(1).ToList(); // Saltar encabezado
+
+                // El maestro de categorías (Configuración → Categorías) es la única fuente de verdad:
+                // el Excel NO crea categorías. Se carga una sola vez, sin distinguir mayúsculas.
+                var categoriasPorNombre = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                var categoriasMaestro = await _dbContext.Categorias.AsNoTracking()
+                    .Select(c => new { c.Id, c.Nombre })
+                    .ToListAsync();
+                foreach (var c in categoriasMaestro)
+                    categoriasPorNombre.TryAdd(c.Nombre.Trim(), c.Id);
+
+                // Validación previa de TODO el archivo: si alguna fila usa una categoría que no está
+                // en el maestro, se rechaza el archivo completo y no se crea ningún producto. Así el
+                // usuario corrige el Excel (o crea la categoría) y lo sube una sola vez, sin quedar
+                // con la mitad de las filas importadas y la otra mitad pendiente.
+                var filasConCategoriaInexistente = new List<ErrorImportacion>();
+                foreach (var fila in filas)
+                {
+                    var categoriaFila = fila.Cell(2).GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(categoriaFila) && !categoriasPorNombre.ContainsKey(categoriaFila))
+                    {
+                        filasConCategoriaInexistente.Add(new ErrorImportacion
+                        {
+                            Fila = fila.RowNumber(),
+                            Mensaje = $"La categoría '{categoriaFila}' no existe en el maestro de categorías."
+                        });
+                    }
+                }
+
+                if (filasConCategoriaInexistente.Count > 0)
+                {
+                    respuesta.TotalFilas = filas.Count;
+                    respuesta.Errores.Add(new ErrorImportacion
+                    {
+                        Fila = 0,
+                        Mensaje = "No se importó ningún producto: el archivo tiene categorías que no existen en el maestro. " +
+                                  "Créalas en Configuración → Categorías (o corrige el nombre en el Excel) y vuelve a subirlo."
+                    });
+                    respuesta.Errores.AddRange(filasConCategoriaInexistente);
+                    return respuesta;
+                }
 
                 foreach (var fila in filas)
                 {
@@ -342,8 +379,8 @@ public class ProductoService : IProductoService
                                 throw new InvalidOperationException("El costo debe ser un número válido.");
                         }
 
-                        // Buscar o crear categoría usando el servicio de categorías (case-insensitive)
-                        var categoria = await _categoriaService.ObtenerOCrearPorNombreAsync(categoriaNombre);
+                        // Ya validada contra el maestro antes de empezar (ver validación previa arriba).
+                        var categoriaId = categoriasPorNombre[categoriaNombre];
 
                         // Validar nombre duplicado (case-insensitive)
                         var nombreNormalizado = nombre.Trim();
@@ -361,7 +398,7 @@ public class ProductoService : IProductoService
                         // Crear producto
                         var producto = Producto.Crear(
                             nombre,
-                            categoria.Id,
+                            categoriaId,
                             precio,
                             stockInicial,
                             stockMinimo,

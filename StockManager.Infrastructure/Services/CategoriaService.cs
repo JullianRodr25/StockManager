@@ -29,7 +29,8 @@ public class CategoriaService : ICategoriaService
             .Select(c => new CategoriaResponse
             {
                 Id = c.Id,
-                Nombre = c.Nombre
+                Nombre = c.Nombre,
+                CantidadProductos = _dbContext.Productos.Count(p => p.CategoriaId == c.Id)
             })
             .ToListAsync();
     }
@@ -61,33 +62,8 @@ public class CategoriaService : ICategoriaService
         return new CategoriaResponse
         {
             Id = categoria.Id,
-            Nombre = categoria.Nombre
+            Nombre = categoria.Nombre,
+            CantidadProductos = 0
         };
-    }
-
-    /// <summary>
-    /// Obtiene una categoría por nombre (case-insensitive), o la crea si no existe.
-    /// Devuelve la entidad Categoria (no DTO) para uso interno en servicios como ProductoService.
-    /// </summary>
-    public async Task<Categoria> ObtenerOCrearPorNombreAsync(string nombre)
-    {
-        // Normalizar el nombre
-        var nombreNormalizado = nombre.Trim();
-
-        // Buscar case-insensitive
-        var categoriaExistente = await _dbContext.Categorias
-            .FirstOrDefaultAsync(c => c.Nombre.ToUpper() == nombreNormalizado.ToUpper());
-
-        if (categoriaExistente != null)
-            return categoriaExistente;
-
-        // Si no existe, crear la categoría usando el factory method del dominio
-        var nuevaCategoria = Categoria.Crear(nombreNormalizado);
-
-        // Guardar en la base de datos
-        _dbContext.Categorias.Add(nuevaCategoria);
-        await _dbContext.SaveChangesAsync();
-
-        return nuevaCategoria;
     }
 }

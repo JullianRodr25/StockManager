@@ -9,6 +9,12 @@ public class CategoriaResponse
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = null!;
+
+    /// <summary>
+    /// Cantidad de productos ligados a la categoría. Permite que la pantalla del maestro muestre
+    /// cuáles están en uso sin tener que consultar los productos uno por uno.
+    /// </summary>
+    public int CantidadProductos { get; set; }
 }
 
 /// <summary>
