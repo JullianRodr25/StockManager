@@ -10,17 +10,22 @@ namespace StockManager.Api.Controllers;
 [Route("api/productos")]
 public class ProductosController : ControllerBase
 {
+    private const int MaxBytesArchivoExcel = 5 * 1024 * 1024;
+
     private readonly IProductoService _productoService;
     private readonly IProductoExcelService _productoExcelService;
+    private readonly IProductoExcelImportador _productoExcelImportador;
     private readonly ILogger<ProductosController> _logger;
 
     public ProductosController(
         IProductoService productoService,
         IProductoExcelService productoExcelService,
+        IProductoExcelImportador productoExcelImportador,
         ILogger<ProductosController> logger)
     {
         _productoService = productoService;
         _productoExcelService = productoExcelService;
+        _productoExcelImportador = productoExcelImportador;
         _logger = logger;
     }
 
@@ -144,37 +149,34 @@ public class ProductosController : ControllerBase
     }
 
     /// <summary>
-    /// Importa productos masivamente desde un archivo Excel.
-    /// Columnas esperadas: Nombre, Categoria, Precio, StockInicial, StockMinimo, CodigoBarras (opcional).
-    /// Continúa con las siguientes filas incluso si algunas fallan.
+    /// Importa (crea y edita) productos desde un archivo .xlsx generado por la plantilla o la exportación.
+    /// Con <c>soloValidar=true</c> devuelve la vista previa sin guardar nada; con <c>false</c> aplica los
+    /// cambios, pero solo si TODAS las filas son válidas (todo o nada).
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpPost("importar")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> ImportarProductos([FromForm] IFormFile archivo)
+    [RequestSizeLimit(MaxBytesArchivoExcel)]
+    public async Task<IActionResult> ImportarProductos([FromForm] IFormFile archivo, [FromQuery] bool soloValidar = false)
     {
         if (archivo == null || archivo.Length == 0)
             return BadRequest(new { message = "El archivo no puede estar vacío" });
 
-        if (!archivo.FileName.EndsWith(".xlsx") && !archivo.FileName.EndsWith(".csv"))
-            return BadRequest(new { message = "El archivo debe ser .xlsx o .csv" });
+        if (!archivo.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "El archivo debe ser .xlsx (descarga la plantilla o exporta el inventario)" });
+
+        if (archivo.Length > MaxBytesArchivoExcel)
+            return BadRequest(new { message = "El archivo supera el tamaño máximo permitido (5 MB)" });
 
         try
         {
-            using (var stream = archivo.OpenReadStream())
-            {
-                var resultado = await _productoService.ImportarProductosDesdeExcelAsync(stream);
-                return Ok(resultado);
-            }
+            using var stream = archivo.OpenReadStream();
+            var resultado = await _productoExcelImportador.ProcesarAsync(stream, aplicarCambios: !soloValidar);
+            return Ok(resultado);
         }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex) when (ex is not StockManager.Domain.Exceptions.DomainException and not ArgumentException)
-        {
-            // TODO: loguear ex con ILogger cuando se agregue logging
-            return StatusCode(500, new { message = "Error al importar productos" });
         }
     }
 

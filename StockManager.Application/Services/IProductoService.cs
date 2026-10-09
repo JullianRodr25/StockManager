@@ -71,13 +71,6 @@ public interface IProductoService
     Task<ProductoResponse> AjustarStockAsync(int id, int delta);
 
     /// <summary>
-    /// Importa productos masivamente desde un archivo Excel.
-    /// Continúa con las siguientes filas incluso si algunas fallan.
-    /// </summary>
-    /// <param name="archivo">El archivo Excel a importar</param>
-    Task<ImportarProductosResponse> ImportarProductosDesdeExcelAsync(Stream archivoStream);
-
-    /// <summary>
     /// Obtiene todos los productos que tienen etiquetas pendientes de imprimir.
     /// Filtra por EsCodigoGenerado = true AND FechaImpresionEtiqueta IS NULL.
     /// </summary>

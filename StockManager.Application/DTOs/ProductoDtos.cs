@@ -101,13 +101,18 @@ public class AjustarStockRequest
 }
 
 /// <summary>
-/// DTO para la respuesta de importación masiva desde Excel/CSV.
-/// Incluye un resumen de la operación y lista de errores (si los hay).
+/// DTO para la respuesta de importación masiva desde Excel (vista previa o aplicación).
+/// La importación es "todo o nada": si hay errores no se aplica ningún cambio.
 /// </summary>
 public class ImportarProductosResponse
 {
     public int TotalFilas { get; set; }
     public int Creados { get; set; }
+    public int Modificados { get; set; }
+    public int SinCambios { get; set; }
+
+    /// <summary>True solo si los cambios se guardaron en la base de datos (false en vista previa o con errores).</summary>
+    public bool Aplicado { get; set; }
     public List<ErrorImportacion> Errores { get; set; } = new();
 }
 
