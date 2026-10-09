@@ -109,7 +109,14 @@ public class ProductoService : IProductoService
                     producto.StockActual,
                     producto.CategoriaId,
                     producto.CalificacionPromedio,
-                    producto.TotalResenas
+                    producto.TotalResenas,
+                    // Unidades vendidas (ventas reales: sin cotizaciones ni canceladas; incluye las
+                    // generadas por pedidos de la PWA al entregarse). Se calcula en la misma consulta
+                    // para poder ordenar y paginar en SQL, sin traer todo el catálogo a memoria.
+                    UnidadesVendidas = _dbContext.DetallesVenta
+                        .Where(d => d.ProductoId == producto.Id
+                                    && _dbContext.Ventas.Any(v => v.Id == d.VentaId && !v.EsCotizacion && v.Estado != "Cancelada"))
+                        .Sum(d => (int?)d.Cantidad) ?? 0
                 });
 
         if (categoriaId.HasValue)
@@ -118,8 +125,15 @@ public class ProductoService : IProductoService
         var total = await query.CountAsync();
         var skip = (pagina - 1) * tamanoPagina;
 
+        // Orden "populares primero": lo que hay en stock antes que lo agotado, luego lo más
+        // comprado y, a igual cantidad, lo mejor calificado. El Id al final hace el orden estable
+        // entre páginas (sin él, productos empatados podrían repetirse o saltarse al paginar).
         var productosPagina = await query
-            .OrderBy(p => p.Id)
+            .OrderByDescending(p => p.StockActual > 0)
+            .ThenByDescending(p => p.UnidadesVendidas)
+            .ThenByDescending(p => p.CalificacionPromedio ?? 0m)
+            .ThenByDescending(p => p.TotalResenas)
+            .ThenBy(p => p.Id)
             .Skip(skip)
             .Take(tamanoPagina)
             .ToListAsync();
@@ -145,17 +159,30 @@ public class ProductoService : IProductoService
 
     public async Task<List<CategoriaResponse>> ObtenerCategoriasCatalogoAsync()
     {
-        return await _dbContext.Productos.AsNoTracking()
+        // Solo categorías con al menos un producto activo: así aparecen en la PWA a medida que se
+        // les cargan productos, y no hay filtros que devuelvan una lista vacía.
+        var conteos = await _dbContext.Productos.AsNoTracking()
             .Where(p => p.Activo)
-            .Select(p => p.CategoriaId)
-            .Distinct()
-            .Join(
-                _dbContext.Categorias.AsNoTracking(),
-                categoriaId => categoriaId,
-                categoria => categoria.Id,
-                (categoriaId, categoria) => new CategoriaResponse { Id = categoria.Id, Nombre = categoria.Nombre })
+            .GroupBy(p => p.CategoriaId)
+            .Select(g => new { CategoriaId = g.Key, Cantidad = g.Count() })
+            .ToListAsync();
+
+        var ids = conteos.Select(c => c.CategoriaId).ToList();
+        var cantidadPorCategoria = conteos.ToDictionary(c => c.CategoriaId, c => c.Cantidad);
+
+        var categorias = await _dbContext.Categorias.AsNoTracking()
+            .Where(c => ids.Contains(c.Id))
             .OrderBy(c => c.Nombre)
             .ToListAsync();
+
+        return categorias
+            .Select(c => new CategoriaResponse
+            {
+                Id = c.Id,
+                Nombre = c.Nombre,
+                CantidadProductos = cantidadPorCategoria[c.Id]
+            })
+            .ToList();
     }
 
     public async Task<ProductoResponse> CrearProductoAsync(CrearProductoRequest request)
