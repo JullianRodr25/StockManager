@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Constants;
 using StockManager.Domain.Exceptions;
 
 namespace StockManager.Api.Controllers;
@@ -11,11 +12,15 @@ namespace StockManager.Api.Controllers;
 [Authorize(Roles = "Admin,Empleado")]
 public class ClientesController : ControllerBase
 {
-    private readonly IClienteService _clienteService;
+    private const int MaxBytesArchivoExcel = 5 * 1024 * 1024;
 
-    public ClientesController(IClienteService clienteService)
+    private readonly IClienteService _clienteService;
+    private readonly IClienteExcelImportador _clienteExcelImportador;
+
+    public ClientesController(IClienteService clienteService, IClienteExcelImportador clienteExcelImportador)
     {
         _clienteService = clienteService;
+        _clienteExcelImportador = clienteExcelImportador;
     }
 
     /// <summary>
@@ -27,6 +32,39 @@ public class ClientesController : ControllerBase
     {
         var clientes = await _clienteService.BuscarClientesAsync(busqueda, activo);
         return Ok(clientes);
+    }
+
+    /// <summary>
+    /// Importa clientes desde el Excel de terceros del programa contable anterior (migración).
+    /// Con <c>soloValidar=true</c> devuelve la vista previa sin guardar nada; con <c>false</c> crea los
+    /// clientes, pero solo si TODAS las filas son válidas (todo o nada). Los clientes que ya existen
+    /// (misma identificación) no se modifican.
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpPost("importar")]
+    [Authorize(Roles = Roles.Admin)]
+    [RequestSizeLimit(MaxBytesArchivoExcel)]
+    public async Task<IActionResult> ImportarClientes([FromForm] IFormFile archivo, [FromQuery] bool soloValidar = false)
+    {
+        if (archivo == null || archivo.Length == 0)
+            return BadRequest(new { message = "El archivo no puede estar vacío" });
+
+        if (!archivo.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "El archivo debe ser .xlsx" });
+
+        if (archivo.Length > MaxBytesArchivoExcel)
+            return BadRequest(new { message = "El archivo supera el tamaño máximo permitido (5 MB)" });
+
+        try
+        {
+            using var stream = archivo.OpenReadStream();
+            var resultado = await _clienteExcelImportador.ProcesarAsync(stream, aplicarCambios: !soloValidar);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>

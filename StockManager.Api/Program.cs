@@ -79,6 +79,7 @@ builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IClienteExcelImportador, ClienteExcelImportador>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<ICuentaPorPagarService, CuentaPorPagarService>();
 builder.Services.AddScoped<INotificacionInternaService, NotificacionInternaService>();
