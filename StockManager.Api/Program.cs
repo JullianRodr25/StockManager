@@ -84,6 +84,7 @@ builder.Services.AddScoped<ICuentaPorPagarService, CuentaPorPagarService>();
 builder.Services.AddScoped<INotificacionInternaService, NotificacionInternaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IResenaService, ResenaService>();
+builder.Services.AddScoped<IProductoExcelService, ProductoExcelService>();
 builder.Services.AddScoped<IProductoService>(sp =>
     new ProductoService(
         sp.GetRequiredService<AppDbContext>(),

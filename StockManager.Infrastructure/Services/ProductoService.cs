@@ -1,3 +1,4 @@
+using StockManager.Application.Excel;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
 using StockManager.Domain.Entities;
@@ -304,6 +305,16 @@ public class ProductoService : IProductoService
                 foreach (var c in categoriasMaestro)
                     categoriasPorNombre.TryAdd(c.Nombre.Trim(), c.Id);
 
+                // Proveedores vigentes por nombre (sin distinguir mayúsculas) para la columna opcional
+                // "Proveedor". Un nombre que no esté en esta lista es un error de la fila.
+                var proveedoresPorNombre = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                var proveedoresVigentes = await _dbContext.Proveedores.AsNoTracking()
+                    .Where(p => p.Activo)
+                    .Select(p => new { p.Id, p.Nombre })
+                    .ToListAsync();
+                foreach (var p in proveedoresVigentes)
+                    proveedoresPorNombre.TryAdd(p.Nombre.Trim(), p.Id);
+
                 // Validación previa de TODO el archivo: si alguna fila usa una categoría que no está
                 // en el maestro, se rechaza el archivo completo y no se crea ningún producto. Así el
                 // usuario corrige el Excel (o crea la categoría) y lo sube una sola vez, sin quedar
@@ -346,6 +357,7 @@ public class ProductoService : IProductoService
                     var codigoBarras = fila.Cell(6).GetString()?.Trim();
                     var tarifaIvaStr = fila.Cell(7).GetString()?.Trim();
                     var costoStr = fila.Cell(8).GetString()?.Trim();
+                    var proveedorNombre = fila.Cell(ProductoExcelFormato.ColProveedor).GetString()?.Trim();
 
                     try
                     {
@@ -360,8 +372,18 @@ public class ProductoService : IProductoService
                             throw new InvalidOperationException("El precio debe ser un número válido.");
                         if (!int.TryParse(stockInicialStr, out var stockInicial))
                             throw new InvalidOperationException("El stock inicial debe ser un número entero válido.");
+                        if (stockInicial <= 0)
+                            throw new InvalidOperationException("El stock inicial debe ser mayor a 0: no se crean productos con stock cero.");
                         if (!int.TryParse(stockMinimoStr, out var stockMinimo))
                             throw new InvalidOperationException("El stock mínimo debe ser un número entero válido.");
+
+                        int? proveedorId = null;
+                        if (!string.IsNullOrEmpty(proveedorNombre))
+                        {
+                            if (!proveedoresPorNombre.TryGetValue(proveedorNombre, out var idProveedor))
+                                throw new InvalidOperationException($"El proveedor '{proveedorNombre}' no existe o está inactivo.");
+                            proveedorId = idProveedor;
+                        }
 
                         decimal? tarifaIva = null;
                         if (!string.IsNullOrWhiteSpace(tarifaIvaStr))
@@ -405,7 +427,8 @@ public class ProductoService : IProductoService
                             aplicaIva,
                             tarifaIva.Value,
                             costo,
-                            string.IsNullOrEmpty(codigoBarras) ? null : codigoBarras);
+                            string.IsNullOrEmpty(codigoBarras) ? null : codigoBarras,
+                            proveedorId);
 
                         _dbContext.Productos.Add(producto);
                         await _dbContext.SaveChangesAsync();

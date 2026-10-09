@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using StockManager.Application.Services;
 using StockManager.Application.DTOs;
+using StockManager.Application.Excel;
 
 namespace StockManager.Api.Controllers;
 
@@ -10,11 +11,16 @@ namespace StockManager.Api.Controllers;
 public class ProductosController : ControllerBase
 {
     private readonly IProductoService _productoService;
+    private readonly IProductoExcelService _productoExcelService;
     private readonly ILogger<ProductosController> _logger;
 
-    public ProductosController(IProductoService productoService, ILogger<ProductosController> logger)
+    public ProductosController(
+        IProductoService productoService,
+        IProductoExcelService productoExcelService,
+        ILogger<ProductosController> logger)
     {
         _productoService = productoService;
+        _productoExcelService = productoExcelService;
         _logger = logger;
     }
 
@@ -110,6 +116,31 @@ public class ProductosController : ControllerBase
             _logger.LogError(ex, "Error inesperado al crear el producto '{Nombre}'", request.Nombre);
             return StatusCode(500, new { message = "Error al crear el producto" });
         }
+    }
+
+    /// <summary>
+    /// Descarga la plantilla vacía para crear productos nuevos (con listas desplegables de
+    /// categorías y proveedores, límites de validación e instrucciones).
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpGet("plantilla-excel")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DescargarPlantillaExcel()
+    {
+        var archivo = await _productoExcelService.GenerarPlantillaAsync();
+        return File(archivo, ProductoExcelFormato.TipoContenidoExcel, "plantilla-productos.xlsx");
+    }
+
+    /// <summary>
+    /// Exporta el inventario actual (productos activos) a Excel.
+    /// Requiere autenticación con rol Admin.
+    /// </summary>
+    [HttpGet("exportar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ExportarInventario()
+    {
+        var archivo = await _productoExcelService.ExportarInventarioAsync();
+        return File(archivo, ProductoExcelFormato.TipoContenidoExcel, "inventario-productos.xlsx");
     }
 
     /// <summary>
