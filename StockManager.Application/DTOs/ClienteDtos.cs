@@ -6,7 +6,8 @@ public record ClienteResponse(
     int Id,
     string NumeroIdentificacion,
     string Nombre,
-    string Email,
+    /// <summary>Opcional para clientes de caja; obligatorio en los de la PWA.</summary>
+    string? Email,
     string Telefono,
     string Direccion,
     /// <summary>Coordenadas del pin guardado desde "Mi cuenta" (ver Cliente.Latitud/Longitud). Null si nunca se fijó.</summary>
@@ -36,7 +37,7 @@ public record ClienteResponse(
 public record CrearClienteRequest(
     string NumeroIdentificacion,
     string Nombre,
-    string Email,
+    string? Email,
     string Telefono,
     string Direccion,
     string? Password,
@@ -54,7 +55,7 @@ public record CrearClienteRequest(
 /// </summary>
 public record ActualizarClienteRequest(
     string Nombre,
-    string Email,
+    string? Email,
     string Telefono,
     string Direccion,
     double? Latitud = null,
@@ -98,3 +99,25 @@ public record CambiarPasswordPropioRequest(
     [MinLength(8, ErrorMessage = "La nueva contraseña debe tener al menos 8 caracteres")]
     string PasswordNueva
 );
+
+/// <summary>
+/// Resultado de importar el Excel de clientes (o de su vista previa). Los "avisos" no frenan la
+/// importación (cliente ya existente, otra categoría, correo repetido, dato faltante); los
+/// "errores" sí: con uno solo no se guarda nada (todo o nada).
+/// </summary>
+public class ImportarClientesResponse
+{
+    public int TotalFilas { get; set; }
+    public int Creados { get; set; }
+
+    /// <summary>Cédulas/NIT que ya existían en el sistema: se dejan como están.</summary>
+    public int YaExistentes { get; set; }
+
+    /// <summary>Terceros de otra categoría (nómina, contabilidad...) que no son clientes.</summary>
+    public int OtraCategoria { get; set; }
+
+    /// <summary>True solo si los clientes se guardaron (false en vista previa o con errores).</summary>
+    public bool Aplicado { get; set; }
+    public List<ErrorImportacion> Avisos { get; set; } = new();
+    public List<ErrorImportacion> Errores { get; set; } = new();
+}

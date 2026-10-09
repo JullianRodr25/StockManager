@@ -27,7 +27,6 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
             .HasMaxLength(150);
 
         builder.Property(c => c.Email)
-            .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(c => c.PasswordHash)
@@ -75,9 +74,12 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.HasIndex(c => c.NumeroIdentificacion)
             .IsUnique();
 
-        // Índice en Email para búsquedas de login
+        // Índice único en Email para login y recuperación. Filtrado: el correo es opcional y
+        // SQL Server solo admite un NULL en un índice único normal, lo que impediría tener dos
+        // clientes sin correo.
         builder.HasIndex(c => c.Email)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Email] IS NOT NULL");
 
         // Índice en Telefono para búsquedas de WhatsApp
         builder.HasIndex(c => c.Telefono);

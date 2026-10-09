@@ -19,7 +19,11 @@ public class Cliente
     public int Id { get; private set; }
     public string NumeroIdentificacion { get; private set; } = null!;  // Cédula, Pasaporte, etc.
     public string Nombre { get; private set; } = null!;
-    public string Email { get; private set; } = null!;
+    /// <summary>
+    /// Opcional para clientes de caja (mostrador); obligatorio para los de la PWA, que lo usan
+    /// para recuperar la contraseña. Único cuando existe (índice filtrado, ver ClienteConfiguration).
+    /// </summary>
+    public string? Email { get; private set; }
     public string PasswordHash { get; private set; } = null!;
     public string Telefono { get; private set; } = null!;  // Usado para WhatsApp
     public string Direccion { get; private set; } = null!;
@@ -68,10 +72,21 @@ public class Cliente
 
     private Cliente() { }
 
+    // Regla: el correo solo es obligatorio para quien se registra en la PWA (lo necesita para
+    // recuperar la contraseña); un cliente de caja puede no tenerlo.
+    private static void ValidarEmailSegunOrigen(string? email, string origenRegistro)
+    {
+        if (origenRegistro == "Pwa" && string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("El email no puede estar vacío.", nameof(email));
+    }
+
+    private static string? NormalizarEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLower();
+
     public static Cliente Crear(
         string numeroIdentificacion,
         string nombre,
-        string email,
+        string? email,
         string passwordHash,
         string telefono,
         string direccion,
@@ -86,8 +101,7 @@ public class Cliente
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del cliente no puede estar vacío.", nameof(nombre));
 
-        if (string.IsNullOrWhiteSpace(email))
-            throw new ArgumentException("El email no puede estar vacío.", nameof(email));
+        ValidarEmailSegunOrigen(email, origenRegistro);
 
         if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("El hash de contraseña no puede estar vacío.", nameof(passwordHash));
@@ -105,7 +119,7 @@ public class Cliente
         {
             NumeroIdentificacion = numeroIdentificacion.Trim(),
             Nombre = nombre.Trim(),
-            Email = email.Trim().ToLower(),
+            Email = NormalizarEmail(email),
             PasswordHash = passwordHash,
             Telefono = telefono.Trim(),
             Direccion = direccion.Trim(),
@@ -145,7 +159,7 @@ public class Cliente
     /// </summary>
     public void ActualizarInformacion(
         string nombre,
-        string email,
+        string? email,
         string telefono,
         string direccion,
         double? latitud = null,
@@ -154,8 +168,7 @@ public class Cliente
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del cliente no puede estar vacío.", nameof(nombre));
 
-        if (string.IsNullOrWhiteSpace(email))
-            throw new ArgumentException("El email no puede estar vacío.", nameof(email));
+        ValidarEmailSegunOrigen(email, OrigenRegistro);
 
         if (string.IsNullOrWhiteSpace(telefono))
             throw new ArgumentException("El teléfono no puede estar vacío.", nameof(telefono));
@@ -175,7 +188,7 @@ public class Cliente
             throw new ArgumentException("La longitud debe estar entre -180 y 180.", nameof(longitud));
 
         Nombre = nombre.Trim();
-        Email = email.Trim().ToLower();
+        Email = NormalizarEmail(email);
         Telefono = telefono.Trim();
         Direccion = direccion.Trim();
         Latitud = latitud;

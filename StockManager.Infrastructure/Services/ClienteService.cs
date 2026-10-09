@@ -93,6 +93,23 @@ public class ClienteService : IClienteService
             .FirstOrDefaultAsync();
     }
 
+    // El correo es opcional: vacío se guarda como NULL (no como cadena vacía, que chocaría con el
+    // índice único en cuanto hubiera dos clientes sin correo).
+    private static string? NormalizarEmailOpcional(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLower();
+
+    // El correo es único entre clientes y empleados (recuperación de contraseña sin indicar tipo).
+    private async Task ValidarEmailDisponibleAsync(string? emailNormalizado, int? clienteIdActual)
+    {
+        if (emailNormalizado is null)
+            return;
+
+        var existeEmailCliente = await _dbContext.Clientes.AnyAsync(c => c.Id != clienteIdActual && c.Email == emailNormalizado);
+        var existeEmailEmpleado = await _dbContext.Empleados.AnyAsync(e => e.Email == emailNormalizado);
+        if (existeEmailCliente || existeEmailEmpleado)
+            throw new UsuarioDuplicadoPorEmailException(emailNormalizado);
+    }
+
     public async Task<ClienteCreadoResponse> CrearClienteAsync(CrearClienteRequest request)
     {
         var numeroNormalizado = request.NumeroIdentificacion.Trim();
@@ -100,11 +117,8 @@ public class ClienteService : IClienteService
         if (existeNumero)
             throw new UsuarioDuplicadoPorIdentificacionException(numeroNormalizado);
 
-        var emailNormalizado = request.Email.Trim().ToLower();
-        var existeEmailCliente = await _dbContext.Clientes.AnyAsync(c => c.Email == emailNormalizado);
-        var existeEmailEmpleado = await _dbContext.Empleados.AnyAsync(e => e.Email == emailNormalizado);
-        if (existeEmailCliente || existeEmailEmpleado)
-            throw new UsuarioDuplicadoPorEmailException(emailNormalizado);
+        var emailNormalizado = NormalizarEmailOpcional(request.Email);
+        await ValidarEmailDisponibleAsync(emailNormalizado, clienteIdActual: null);
 
         // Si el empleado no especifica una contraseña (caso típico: cliente de mostrador que
         // no va a usar la PWA de inmediato), se genera una temporal y se devuelve una sola vez.
@@ -166,14 +180,9 @@ public class ClienteService : IClienteService
         if (cliente == null)
             throw new ClienteNoEncontradoException(id);
 
-        var emailNormalizado = request.Email.Trim().ToLower();
+        var emailNormalizado = NormalizarEmailOpcional(request.Email);
         if (emailNormalizado != cliente.Email)
-        {
-            var existeEmailCliente = await _dbContext.Clientes.AnyAsync(c => c.Id != id && c.Email == emailNormalizado);
-            var existeEmailEmpleado = await _dbContext.Empleados.AnyAsync(e => e.Email == emailNormalizado);
-            if (existeEmailCliente || existeEmailEmpleado)
-                throw new UsuarioDuplicadoPorEmailException(emailNormalizado);
-        }
+            await ValidarEmailDisponibleAsync(emailNormalizado, clienteIdActual: id);
 
         // Si el llamador no envía coordenadas (ej. el panel admin, que no tiene selector de
         // mapa en su formulario de edición), se conservan las que el cliente ya hubiera fijado

@@ -245,7 +245,7 @@ namespace StockManager.Infrastructure.Services
                 tipoUsuario = "Cliente";
                 usuarioId = cliente!.Id;
                 nombre = cliente.Nombre;
-                destinatario = cliente.Email;
+                destinatario = cliente.Email!; // se encontró buscando por ese correo
                 urlBase = _emailOpciones.FrontendBaseUrlPwa;
             }
 
