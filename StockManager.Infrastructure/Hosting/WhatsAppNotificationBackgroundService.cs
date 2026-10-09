@@ -201,7 +201,8 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         var db = sp.GetRequiredService<AppDbContext>();
         var sender = sp.GetRequiredService<IWhatsAppSender>();
 
-        if (!IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidAlertaStockBajoAdmin, out var contentSid))
+        var hayPlantilla = IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidAlertaStockBajoAdmin, out var contentSid);
+        if (!hayPlantilla && !_opciones.Value.PermitirTextoLibrePruebas)
         {
             await RegistrarPlantillaNoConfiguradaAsync(db, telefonoAdmin, "StockBajoAdmin", evento.ProductoId, "alerta_stock_bajo_admin", ct);
             return;
@@ -216,8 +217,15 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
         if (producto is null || producto.StockActual > producto.StockMinimo)
             return;
 
-        var variables = PlantillasMensajesWhatsApp.StockBajoAdmin(producto.Nombre, producto.StockActual, producto.StockMinimo);
-        var resultado = await sender.EnviarPlantillaAsync(telefonoAdmin, contentSid, variables);
+        // Sin plantilla (solo posible con PermitirTextoLibrePruebas, sandbox de pruebas): texto libre.
+        var resultado = hayPlantilla
+            ? await sender.EnviarPlantillaAsync(
+                telefonoAdmin,
+                contentSid,
+                PlantillasMensajesWhatsApp.StockBajoAdmin(producto.Nombre, producto.StockActual, producto.StockMinimo))
+            : await sender.EnviarTextoLibreAsync(
+                telefonoAdmin,
+                $"Ferretería Gold\n📉 Stock bajo: {producto.Nombre}\nQuedan {producto.StockActual} unidad(es) (mínimo {producto.StockMinimo}).");
         await RegistrarLogAsync(db, telefonoAdmin, "StockBajoAdmin", evento.ProductoId, resultado, ct);
     }
 

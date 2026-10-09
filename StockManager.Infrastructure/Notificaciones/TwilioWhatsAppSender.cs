@@ -31,10 +31,33 @@ public class TwilioWhatsAppSender : IWhatsAppSender
         _logger = logger;
     }
 
-    public async Task<ResultadoEnvioWhatsApp> EnviarPlantillaAsync(
+    public Task<ResultadoEnvioWhatsApp> EnviarPlantillaAsync(
         string telefonoDestino,
         string contentSid,
         IReadOnlyDictionary<string, string> variables)
+    {
+        // Twilio identifica la plantilla por ContentSid y llena sus placeholders "{{n}}"
+        // (de encabezado y cuerpo por igual) a partir de un único JSON plano en
+        // ContentVariables — a diferencia del envío de texto libre, acá no hay "Body".
+        var campos = new List<KeyValuePair<string, string>>
+        {
+            new("ContentSid", contentSid),
+            new("ContentVariables", JsonSerializer.Serialize(variables))
+        };
+
+        return EnviarAsync(telefonoDestino, campos, $"plantilla {contentSid}");
+    }
+
+    public Task<ResultadoEnvioWhatsApp> EnviarTextoLibreAsync(string telefonoDestino, string texto)
+    {
+        var campos = new List<KeyValuePair<string, string>> { new("Body", texto) };
+        return EnviarAsync(telefonoDestino, campos, "texto libre");
+    }
+
+    private async Task<ResultadoEnvioWhatsApp> EnviarAsync(
+        string telefonoDestino,
+        List<KeyValuePair<string, string>> camposMensaje,
+        string descripcion)
     {
         if (string.IsNullOrWhiteSpace(_opciones.AccountSid) || string.IsNullOrWhiteSpace(_opciones.AuthToken))
             return new ResultadoEnvioWhatsApp(false, "Credenciales de Twilio no configuradas.");
@@ -46,16 +69,12 @@ public class TwilioWhatsAppSender : IWhatsAppSender
             var credenciales = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{_opciones.AccountSid}:{_opciones.AuthToken}"));
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credenciales);
 
-            // Twilio identifica la plantilla por ContentSid y llena sus placeholders "{{n}}"
-            // (de encabezado y cuerpo por igual) a partir de un único JSON plano en
-            // ContentVariables — a diferencia del envío de texto libre, acá no hay "Body".
             var campos = new List<KeyValuePair<string, string>>
             {
                 new("To", ConPrefijoWhatsApp(telefonoDestino)),
-                new("From", ConPrefijoWhatsApp(_opciones.FromWhatsAppNumber)),
-                new("ContentSid", contentSid),
-                new("ContentVariables", JsonSerializer.Serialize(variables))
+                new("From", ConPrefijoWhatsApp(_opciones.FromWhatsAppNumber))
             };
+            campos.AddRange(camposMensaje);
 
             request.Content = new FormUrlEncodedContent(campos);
 
@@ -65,13 +84,13 @@ public class TwilioWhatsAppSender : IWhatsAppSender
                 return new ResultadoEnvioWhatsApp(true, null);
 
             var cuerpo = await response.Content.ReadAsStringAsync();
-            _logger.LogWarning("Twilio respondió {StatusCode} al enviar plantilla {ContentSid} a {Telefono}: {Cuerpo}",
-                (int)response.StatusCode, contentSid, telefonoDestino, cuerpo);
+            _logger.LogWarning("Twilio respondió {StatusCode} al enviar {Descripcion} a {Telefono}: {Cuerpo}",
+                (int)response.StatusCode, descripcion, telefonoDestino, cuerpo);
             return new ResultadoEnvioWhatsApp(false, $"Twilio respondió {(int)response.StatusCode}: {cuerpo}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error enviando plantilla {ContentSid} de WhatsApp a {Telefono}", contentSid, telefonoDestino);
+            _logger.LogError(ex, "Error enviando {Descripcion} de WhatsApp a {Telefono}", descripcion, telefonoDestino);
             return new ResultadoEnvioWhatsApp(false, ex.Message);
         }
     }

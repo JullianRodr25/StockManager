@@ -31,4 +31,12 @@ public interface IWhatsAppSender
         string telefonoDestino,
         string contentSid,
         IReadOnlyDictionary<string, string> variables);
+
+    /// <summary>
+    /// SOLO PARA PRUEBAS en el sandbox de Twilio: envía texto libre (Body). Funciona únicamente
+    /// dentro de las 24 horas posteriores a que el destinatario le escribió al número remitente;
+    /// en producción WhatsApp lo rechaza, por eso el sistema solo lo usa cuando
+    /// WhatsAppOptions.PermitirTextoLibrePruebas está activo y la plantilla no está configurada.
+    /// </summary>
+    Task<ResultadoEnvioWhatsApp> EnviarTextoLibreAsync(string telefonoDestino, string texto);
 }

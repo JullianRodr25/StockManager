@@ -19,6 +19,15 @@ public class WhatsAppOptions
     public bool Habilitado { get; set; } = false;
 
     /// <summary>
+    /// SOLO PARA PRUEBAS en el sandbox de Twilio, donde no se pueden crear plantillas propias:
+    /// si la plantilla del aviso de stock bajo al admin no está configurada, se envía el aviso
+    /// como texto libre. WhatsApp solo lo entrega dentro de las 24 h posteriores a que el
+    /// destinatario le escribió al número del sandbox; en producción debe quedar en false y usarse
+    /// la plantilla aprobada.
+    /// </summary>
+    public bool PermitirTextoLibrePruebas { get; set; } = false;
+
+    /// <summary>
     /// URL pública base de la API (ej. "https://api.miferreteria.com"), usada para construir
     /// el link que Twilio descarga al enviar el PDF de una factura. Debe ser alcanzable desde
     /// internet, no localhost.
