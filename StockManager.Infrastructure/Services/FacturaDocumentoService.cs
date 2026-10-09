@@ -127,9 +127,20 @@ public class FacturaDocumentoService : IFacturaDocumentoService
                 FaltaDireccion: direccion is null);
         }
 
-        // Sin cliente registrado: "Cliente final", sin cédula y sin guardar nada del comprador.
+        // Sin cliente registrado: no se guarda nada del comprador y no hay cédula. Si el cajero
+        // escribió un nombre en la venta, la factura sale a ese nombre; solo cuando no se
+        // escribió ninguno aparece "CLIENTE FINAL".
         if (cliente is null)
-            return ClienteFinal();
+        {
+            var nombreEscrito = Limpiar(venta.NombreComprador);
+            if (nombreEscrito is null)
+                return ClienteFinal();
+
+            return new FacturaCompradorDto(
+                null, nombreEscrito, null, null, null,
+                Limpiar(venta.TelefonoComprador), null,
+                EsClienteFinal: false, FaltaDocumento: false, FaltaDireccion: false);
+        }
 
         return ConstruirCompradorRegistrado(cliente, venta.ClienteId, direccionEntrega: null);
     }
