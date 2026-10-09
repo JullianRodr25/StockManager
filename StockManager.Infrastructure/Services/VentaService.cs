@@ -276,6 +276,23 @@ public class VentaService : IVentaService
                 .ToList();
         }
 
+        // Total abonado por cuenta, en una sola consulta agrupada para toda la página (el listado de
+        // cuentas abiertas muestra el avance de pago y el saldo sin pedir los abonos uno por uno).
+        var idsVentas = items.Select(i => i.Id).ToList();
+        if (idsVentas.Count > 0)
+        {
+            var abonadoPorVenta = await _dbContext.AbonosCuenta
+                .AsNoTracking()
+                .Where(a => idsVentas.Contains(a.VentaId))
+                .GroupBy(a => a.VentaId)
+                .Select(g => new { VentaId = g.Key, Total = g.Sum(a => a.Monto) })
+                .ToDictionaryAsync(x => x.VentaId, x => x.Total);
+
+            items = items
+                .Select(i => abonadoPorVenta.TryGetValue(i.Id, out var abonado) ? i with { TotalAbonado = abonado } : i)
+                .ToList();
+        }
+
         return (items, total);
     }
 
