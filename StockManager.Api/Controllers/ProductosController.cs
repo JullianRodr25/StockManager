@@ -36,14 +36,16 @@ public class ProductosController : ControllerBase
     /// <param name="pagina">Número de página (1-based), default 1</param>
     /// <param name="tamanoPagina">Cantidad de items por página, default 50</param>
     /// <param name="categoriaId">ID de categoría opcional para filtrar</param>
+    /// <param name="busqueda">Texto opcional para buscar por nombre en todo el inventario</param>
     [HttpGet]
     [Authorize(Roles = "Admin,Empleado")]
     public async Task<IActionResult> ObtenerProductos(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 50,
-        [FromQuery] int? categoriaId = null)
+        [FromQuery] int? categoriaId = null,
+        [FromQuery] string? busqueda = null)
     {
-        var (items, total) = await _productoService.ObtenerProductosPaginadoAsync(pagina, tamanoPagina, categoriaId);
+        var (items, total) = await _productoService.ObtenerProductosPaginadoAsync(pagina, tamanoPagina, categoriaId, busqueda);
 
         return Ok(new
         {

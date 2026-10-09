@@ -24,7 +24,8 @@ public interface IProductoService
     /// <param name="pagina">Número de página (1-based)</param>
     /// <param name="tamanoPagina">Cantidad de items por página</param>
     /// <param name="categoriaId">ID de categoría opcional para filtrar</param>
-    Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId = null);
+    /// <param name="busqueda">Texto opcional: filtra por nombre (contiene) sobre todo el inventario</param>
+    Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId = null, string? busqueda = null);
 
     /// <summary>
     /// Productos activos que necesitan reposición: stock actual igual o por debajo del mínimo

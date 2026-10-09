@@ -71,7 +71,8 @@ public class ProductoService : IProductoService
     public async Task<(List<ProductoResponse> Items, int Total)> ObtenerProductosPaginadoAsync(
         int pagina,
         int tamanoPagina,
-        int? categoriaId = null)
+        int? categoriaId = null,
+        string? busqueda = null)
     {
         if (pagina < 1)
             pagina = 1;
@@ -83,11 +84,21 @@ public class ProductoService : IProductoService
         if (categoriaId.HasValue)
             query = query.Where(p => p.CategoriaId == categoriaId.Value);
 
+        var termino = busqueda?.Trim();
+        var hayBusqueda = !string.IsNullOrEmpty(termino);
+        if (hayBusqueda)
+            query = query.Where(p => p.Nombre.Contains(termino!));
+
         var total = await query.CountAsync();
         var skip = (pagina - 1) * tamanoPagina;
 
-        var productos = await query
-            .OrderBy(p => p.Id)
+        // Con búsqueda, los nombres que empiezan por el texto van primero ("Ad" → "Adaptador"
+        // antes que "Cerradura"); sin búsqueda se mantiene el orden por Id de siempre.
+        var ordenada = hayBusqueda
+            ? query.OrderBy(p => p.Nombre.StartsWith(termino!) ? 0 : 1).ThenBy(p => p.Id)
+            : query.OrderBy(p => p.Id);
+
+        var productos = await ordenada
             .Skip(skip)
             .Take(tamanoPagina)
             .ToListAsync();
