@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using StockManager.Domain.Constants;
 
 namespace StockManager.Infrastructure.RealTime;
 
@@ -14,7 +15,7 @@ namespace StockManager.Infrastructure.RealTime;
 /// de la PWA: el stock de un producto ya es información pública ahí (se muestra sin login
 /// especial en el catálogo), así que no hay nada que proteger de más al dejarlos conectarse.
 /// </summary>
-[Authorize(Roles = "Admin,Empleado,Cliente")]
+[Authorize(Roles = Roles.LecturaInventario + ",Cliente")]
 public class StockHub : Hub
 {
 }

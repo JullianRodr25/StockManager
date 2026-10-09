@@ -1,3 +1,5 @@
+using StockManager.Domain.Constants;
+
 namespace StockManager.Domain.Entities;
 
 /// <summary>
@@ -11,7 +13,7 @@ public class Empleado
     public string Nombre { get; private set; } = null!;
     public string Email { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
-    public string Rol { get; private set; } = null!;  // 'Admin' | 'Empleado'
+    public string Rol { get; private set; } = null!;  // 'Admin' | 'Empleado' | 'ConsultaInventario' (ver Roles)
     public bool Activo { get; private set; }
 
     private Empleado() { }
@@ -33,8 +35,8 @@ public class Empleado
         if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("El hash de contraseña no puede estar vacío.", nameof(passwordHash));
 
-        if (rol != "Admin" && rol != "Empleado")
-            throw new ArgumentException("El rol debe ser 'Admin' o 'Empleado'.", nameof(rol));
+        if (!Roles.EsRolDeEmpleado(rol))
+            throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'ConsultaInventario'.", nameof(rol));
 
         return new Empleado
         {

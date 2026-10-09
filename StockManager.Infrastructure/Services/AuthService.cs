@@ -7,6 +7,7 @@ using StockManager.Application.Services;
 using StockManager.Application.DTOs;
 using StockManager.Infrastructure.Data;
 using StockManager.Infrastructure.Notificaciones;
+using StockManager.Domain.Constants;
 using StockManager.Domain.Entities;
 using StockManager.Domain.Exceptions;
 
@@ -120,8 +121,8 @@ namespace StockManager.Infrastructure.Services
                 throw new ArgumentNullException(nameof(request));
 
             // Validar que el rol sea válido
-            if (request.Rol != "Admin" && request.Rol != "Empleado")
-                throw new ArgumentException("El rol debe ser 'Admin' o 'Empleado'", nameof(request.Rol));
+            if (!Roles.EsRolDeEmpleado(request.Rol))
+                throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'ConsultaInventario'", nameof(request.Rol));
 
             // Validar que no exista otro empleado con el mismo NumeroIdentificacion
             var numeroNormalizado = request.NumeroIdentificacion.Trim();

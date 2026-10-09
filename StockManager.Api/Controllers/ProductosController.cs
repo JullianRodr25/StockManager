@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using StockManager.Application.Services;
 using StockManager.Application.DTOs;
 using StockManager.Application.Excel;
+using StockManager.Domain.Constants;
 
 namespace StockManager.Api.Controllers;
 
@@ -30,6 +31,20 @@ public class ProductosController : ControllerBase
     }
 
     /// <summary>
+    /// Al rol de solo consulta no se le entregan datos comerciales internos (costo y proveedor).
+    /// Se quitan aquí, en el servidor, y no solo en la pantalla: ocultarlos en la web no impediría
+    /// leerlos llamando a la API directamente.
+    /// </summary>
+    private void OcultarDatosInternosSiCorresponde(ProductoResponse producto)
+    {
+        if (!User.IsInRole(Roles.ConsultaInventario))
+            return;
+
+        producto.Costo = 0;
+        producto.ProveedorId = null;
+    }
+
+    /// <summary>
     /// Obtiene una lista paginada de productos.
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
@@ -38,7 +53,7 @@ public class ProductosController : ControllerBase
     /// <param name="categoriaId">ID de categoría opcional para filtrar</param>
     /// <param name="busqueda">Texto opcional para buscar por nombre en todo el inventario</param>
     [HttpGet]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.LecturaInventario)]
     public async Task<IActionResult> ObtenerProductos(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 50,
@@ -46,6 +61,7 @@ public class ProductosController : ControllerBase
         [FromQuery] string? busqueda = null)
     {
         var (items, total) = await _productoService.ObtenerProductosPaginadoAsync(pagina, tamanoPagina, categoriaId, busqueda);
+        items.ForEach(OcultarDatosInternosSiCorresponde);
 
         return Ok(new
         {
@@ -63,10 +79,12 @@ public class ProductosController : ControllerBase
     /// literal no se confunda con un id.
     /// </summary>
     [HttpGet("alertas-stock")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.LecturaInventario)]
     public async Task<IActionResult> ObtenerAlertasStock()
     {
-        return Ok(await _productoService.ObtenerAlertasStockAsync());
+        var alertas = await _productoService.ObtenerAlertasStockAsync();
+        alertas.ForEach(OcultarDatosInternosSiCorresponde);
+        return Ok(alertas);
     }
 
     /// <summary>
@@ -74,13 +92,14 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.LecturaInventario)]
     public async Task<IActionResult> ObtenerProductoPorId(int id)
     {
         var producto = await _productoService.ObtenerProductoPorIdAsync(id);
         if (producto == null)
             return NotFound(new { message = "Producto no encontrado" });
 
+        OcultarDatosInternosSiCorresponde(producto);
         return Ok(producto);
     }
 
@@ -90,7 +109,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
     [HttpGet("buscar-codigo-barras/{codigo}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.LecturaInventario)]
     public async Task<IActionResult> BuscarPorCodigoBarras(string codigo)
     {
         if (string.IsNullOrWhiteSpace(codigo))
@@ -100,6 +119,7 @@ public class ProductosController : ControllerBase
         if (producto == null)
             return NotFound(new { message = "Producto con ese código de barras no encontrado" });
 
+        OcultarDatosInternosSiCorresponde(producto);
         return Ok(producto);
     }
 

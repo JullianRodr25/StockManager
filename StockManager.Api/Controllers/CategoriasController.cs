@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Constants;
 using StockManager.Domain.Exceptions;
 
 namespace StockManager.Api.Controllers;
@@ -21,12 +22,12 @@ public class CategoriasController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene todas las categorías (acceso: Admin y Empleado).
+    /// Obtiene todas las categorías (acceso: Admin, Empleado y ConsultaInventario).
     /// </summary>
     /// <response code="200">Lista de categorías obtenida correctamente</response>
     /// <response code="401">No autorizado (token inválido o expirado)</response>
     [HttpGet]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.LecturaInventario)]
     public async Task<ActionResult<List<CategoriaResponse>>> ObtenerTodas()
     {
         var categorias = await _categoriaService.ObtenerTodasAsync();
