@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StockManager.Application.Services;
+using StockManager.Domain.Events;
 using StockManager.Infrastructure.Data;
 
 namespace StockManager.Infrastructure.Hosting;
@@ -63,6 +64,7 @@ public class NotificacionesStockBajoCheckService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var notificaciones = scope.ServiceProvider.GetRequiredService<INotificacionInternaService>();
+        var eventoPublisher = scope.ServiceProvider.GetRequiredService<IEventoNotificacionPublisher>();
 
         // Solo los productos cuyo estado de alerta puede necesitar cambiar: los que están en
         // stock bajo ahora mismo, o los que ya tenían la bandera activa (para poder limpiarla
@@ -92,6 +94,8 @@ public class NotificacionesStockBajoCheckService : BackgroundService
                     $"Quedan {producto.StockActual} unidad(es) (mínimo {producto.StockMinimo}).",
                     "Producto",
                     producto.Id);
+
+                eventoPublisher.Publicar(new StockBajoAdminEvent(producto.Id));
             }
             else if (resultado.DebeLimpiarBandera)
             {

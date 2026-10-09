@@ -38,5 +38,6 @@ public class TwilioOptions
     public string? ContentSidPedidoNuevoAdmin { get; set; }
     public string? ContentSidAlertaCuentaPorPagar { get; set; }
     public string? ContentSidAlertaStockBajoProveedor { get; set; }
+    public string? ContentSidAlertaStockBajoAdmin { get; set; }
     public string? ContentSidFacturaCliente { get; set; }
 }

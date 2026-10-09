@@ -120,4 +120,16 @@ public static class PlantillasMensajesWhatsApp
             ["2"] = lista
         };
     }
+
+    /// <summary>
+    /// Variables para la plantilla "alerta_stock_bajo_admin":
+    /// "📉 Stock bajo: {{1}}. Quedan {{2}} unidad(es) (mínimo {{3}})."
+    /// </summary>
+    public static Dictionary<string, string> StockBajoAdmin(string nombreProducto, int stockActual, int stockMinimo) =>
+        new()
+        {
+            ["1"] = nombreProducto,
+            ["2"] = stockActual.ToString(),
+            ["3"] = stockMinimo.ToString()
+        };
 }

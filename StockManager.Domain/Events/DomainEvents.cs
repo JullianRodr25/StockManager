@@ -109,3 +109,20 @@ public class StockBajoProveedorEvent : DomainEvent
         ProveedorId = proveedorId;
     }
 }
+
+/// <summary>
+/// Evento disparado cuando un producto entra en stock bajo (StockActual &lt;= StockMinimo) y se
+/// genera su aviso interno de la campana, es decir, una sola vez por "episodio" de stock
+/// bajo. Lo consume WhatsAppNotificationBackgroundService para avisar por WhatsApp al teléfono
+/// de administración configurado. No lleva datos del producto: el consumidor los vuelve a
+/// leer para enviar el stock vigente.
+/// </summary>
+public class StockBajoAdminEvent : DomainEvent
+{
+    public int ProductoId { get; }
+
+    public StockBajoAdminEvent(int productoId)
+    {
+        ProductoId = productoId;
+    }
+}

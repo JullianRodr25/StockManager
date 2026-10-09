@@ -131,6 +131,7 @@ builder.Services.AddScoped<IStockNotificador>(sp =>
         sp.GetRequiredService<SignalRStockNotificador>(),
         sp.GetRequiredService<AppDbContext>(),
         sp.GetRequiredService<INotificacionInternaService>(),
+        sp.GetRequiredService<IEventoNotificacionPublisher>(),
         sp.GetRequiredService<ILogger<StockBajoInstantaneoStockNotificador>>()));
 
 builder.Services.AddHttpClient<IWhatsAppSender, TwilioWhatsAppSender>(client =>

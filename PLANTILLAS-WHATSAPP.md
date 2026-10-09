@@ -6,7 +6,7 @@ factura) — ninguno es una respuesta dentro de una conversación que el destina
 eso Meta exige que cada uno use una **plantilla pre-aprobada**, no texto libre: fuera de la
 ventana de 24h de una conversación, un mensaje de texto libre (`Body`) es rechazado.
 
-Este documento tiene el texto exacto de las 5 plantillas que el código espera (una por
+Este documento tiene el texto exacto de las 6 plantillas que el código espera (una por
 "familia" de mensaje). Van en la consola de Twilio: **Messaging → Content Template Builder →
 Create new**. Después de que Meta apruebe cada una (usualmente unas horas, a veces 1-2 días
 hábiles), copiá su `ContentSid` (empieza con `HX...`) a `appsettings.json`, sección
@@ -94,9 +94,25 @@ hay fallback a texto libre, para no arriesgar que Meta rechace el mensaje o pena
   > `headerVariableKey` en esa función.
 - **Configurar en:** `WhatsApp:Twilio:ContentSidFacturaCliente`
 
+## 6. `alerta_stock_bajo_admin`
+
+- **Categoría sugerida:** Utility.
+- **Idioma:** Español.
+- **Cuerpo:**
+  ```
+  📉 Stock bajo: {{1}}. Quedan {{2}} unidad(es) (mínimo {{3}}).
+  ```
+- **Variables (ejemplo para que Meta las revise):**
+  - `{{1}}` = Cemento gris 50kg
+  - `{{2}}` = 3
+  - `{{3}}` = 10
+- **Destino:** el teléfono de notificaciones de administración (Configuración).
+- **Se envía:** una sola vez por episodio de stock bajo (hasta que el producto se repone por encima del mínimo).
+- **Configurar en:** `WhatsApp:Twilio:ContentSidAlertaStockBajoAdmin`
+
 ## Notas generales
 
-- Las 5 son plantillas de tipo **Utility** (no Marketing), porque todas son notificaciones
+- Las 6 son plantillas de tipo **Utility** (no Marketing), porque todas son notificaciones
   operativas ligadas a una acción que el cliente/proveedor ya inició (un pedido, una compra,
   una relación comercial existente) — eso normalmente agiliza la aprobación de Meta frente a
   Marketing.

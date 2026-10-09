@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Events;
 using StockManager.Infrastructure.Data;
 
 namespace StockManager.Infrastructure.RealTime;
@@ -17,26 +18,29 @@ namespace StockManager.Infrastructure.RealTime;
 /// alerta se siente "en vivo" (como el resto del sistema) sin depender de que alguien se
 /// acuerde de llamarla desde cada operación nueva que toque stock a futuro.
 ///
-/// No hay costo externo: a diferencia de los avisos por WhatsApp (StockBajoProveedorCheckService),
-/// esto solo crea un registro en NotificacionesInternas para la campana interna — nunca llama
-/// a Twilio ni a ningún servicio de terceros.
+/// Esta clase nunca llama a Twilio: crea el registro en NotificacionesInternas (campana) y
+/// publica un StockBajoAdminEvent, que WhatsAppNotificationBackgroundService convierte en un
+/// WhatsApp al admin solo si WhatsApp:Habilitado está activo.
 /// </summary>
 public class StockBajoInstantaneoStockNotificador : IStockNotificador
 {
     private readonly IStockNotificador _interno;
     private readonly AppDbContext _dbContext;
     private readonly INotificacionInternaService _notificaciones;
+    private readonly IEventoNotificacionPublisher _eventoPublisher;
     private readonly ILogger<StockBajoInstantaneoStockNotificador> _logger;
 
     public StockBajoInstantaneoStockNotificador(
         IStockNotificador interno,
         AppDbContext dbContext,
         INotificacionInternaService notificaciones,
+        IEventoNotificacionPublisher eventoPublisher,
         ILogger<StockBajoInstantaneoStockNotificador> logger)
     {
         _interno = interno;
         _dbContext = dbContext;
         _notificaciones = notificaciones;
+        _eventoPublisher = eventoPublisher;
         _logger = logger;
     }
 
@@ -90,6 +94,9 @@ public class StockBajoInstantaneoStockNotificador : IStockNotificador
                     $"Quedan {producto.StockActual} unidad(es) (mínimo {producto.StockMinimo}).",
                     "Producto",
                     producto.Id);
+
+                // Mismo momento (una vez por episodio): aviso por WhatsApp al admin, si está habilitado.
+                _eventoPublisher.Publicar(new StockBajoAdminEvent(producto.Id));
             }
             else if (resultado.DebeLimpiarBandera)
             {

@@ -87,6 +87,10 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
                 await ProcesarCuentaPorPagarProximaAVencerAsync(cuentaEvento, scope.ServiceProvider, ct);
                 break;
 
+            case StockBajoAdminEvent stockBajoAdminEvento:
+                await ProcesarStockBajoAdminAsync(stockBajoAdminEvento, scope.ServiceProvider, ct);
+                break;
+
             case StockBajoProveedorEvent stockBajoEvento:
                 await ProcesarStockBajoProveedorAsync(stockBajoEvento, scope.ServiceProvider, ct);
                 break;
@@ -184,6 +188,39 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
     /// reutilizar la que vio el chequeo periódico, porque entre que se publicó el evento y se
     /// procesa puede haber pasado algo de tiempo (y el volumen de eventos es bajo).
     /// </summary>
+    /// <summary>
+    /// Avisa por WhatsApp al teléfono de administración (Configuración) que un producto llegó
+    /// a su stock mínimo. El evento se publica una sola vez por episodio de stock bajo.
+    /// </summary>
+    private async Task ProcesarStockBajoAdminAsync(StockBajoAdminEvent evento, IServiceProvider sp, CancellationToken ct)
+    {
+        var telefonoAdmin = await ObtenerTelefonoAdminAsync(sp);
+        if (string.IsNullOrWhiteSpace(telefonoAdmin))
+            return;
+
+        var db = sp.GetRequiredService<AppDbContext>();
+        var sender = sp.GetRequiredService<IWhatsAppSender>();
+
+        if (!IntentarObtenerContentSid(_opcionesTwilio.Value.ContentSidAlertaStockBajoAdmin, out var contentSid))
+        {
+            await RegistrarPlantillaNoConfiguradaAsync(db, telefonoAdmin, "StockBajoAdmin", evento.ProductoId, "alerta_stock_bajo_admin", ct);
+            return;
+        }
+
+        var producto = await db.Productos.AsNoTracking()
+            .Where(p => p.Id == evento.ProductoId && p.Activo)
+            .Select(p => new { p.Nombre, p.StockActual, p.StockMinimo })
+            .FirstOrDefaultAsync(ct);
+
+        // Se repuso (o se desactivó) entre que se publicó el evento y se procesó.
+        if (producto is null || producto.StockActual > producto.StockMinimo)
+            return;
+
+        var variables = PlantillasMensajesWhatsApp.StockBajoAdmin(producto.Nombre, producto.StockActual, producto.StockMinimo);
+        var resultado = await sender.EnviarPlantillaAsync(telefonoAdmin, contentSid, variables);
+        await RegistrarLogAsync(db, telefonoAdmin, "StockBajoAdmin", evento.ProductoId, resultado, ct);
+    }
+
     private async Task ProcesarStockBajoProveedorAsync(StockBajoProveedorEvent evento, IServiceProvider sp, CancellationToken ct)
     {
         var db = sp.GetRequiredService<AppDbContext>();
