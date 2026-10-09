@@ -30,6 +30,20 @@ public class ConfiguracionResponse
     public string? DireccionEmpresa { get; set; }
     public string? TelefonoEmpresa { get; set; }
     public string? EmailEmpresa { get; set; }
+
+    // Datos de facturación (impresos en el tiquete y la factura). Todos opcionales.
+    public string? CiudadEmpresa { get; set; }
+    public string? BarrioEmpresa { get; set; }
+    public string? ResponsabilidadIvaEmpresa { get; set; }
+    public string? ActividadEconomicaEmpresa { get; set; }
+    public string? ResolucionDianNumero { get; set; }
+    public DateTime? ResolucionDianFecha { get; set; }
+    public string? ResolucionDianPrefijo { get; set; }
+    public int? ResolucionDianRangoDesde { get; set; }
+    public int? ResolucionDianRangoHasta { get; set; }
+    public int? ResolucionDianVigenciaMeses { get; set; }
+    public string? TextoLegalFactura { get; set; }
+    public string? PoliticaCambiosFactura { get; set; }
 }
 
 public class ActualizarConfiguracionRequest
@@ -49,4 +63,17 @@ public class ActualizarConfiguracionRequest
     public string? DireccionEmpresa { get; set; }
     public string? TelefonoEmpresa { get; set; }
     public string? EmailEmpresa { get; set; }
+
+    [MaxLength(100)] public string? CiudadEmpresa { get; set; }
+    [MaxLength(100)] public string? BarrioEmpresa { get; set; }
+    [MaxLength(100)] public string? ResponsabilidadIvaEmpresa { get; set; }
+    [MaxLength(50)] public string? ActividadEconomicaEmpresa { get; set; }
+    [MaxLength(50)] public string? ResolucionDianNumero { get; set; }
+    public DateTime? ResolucionDianFecha { get; set; }
+    [MaxLength(10)] public string? ResolucionDianPrefijo { get; set; }
+    [Range(1, int.MaxValue)] public int? ResolucionDianRangoDesde { get; set; }
+    [Range(1, int.MaxValue)] public int? ResolucionDianRangoHasta { get; set; }
+    [Range(1, 120)] public int? ResolucionDianVigenciaMeses { get; set; }
+    [MaxLength(600)] public string? TextoLegalFactura { get; set; }
+    [MaxLength(300)] public string? PoliticaCambiosFactura { get; set; }
 }

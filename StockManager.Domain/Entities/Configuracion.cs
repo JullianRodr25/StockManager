@@ -37,6 +37,31 @@ public class Configuracion
     public string? TelefonoEmpresa { get; private set; }
     public string? EmailEmpresa { get; private set; }
 
+    // --- Datos de facturación que se imprimen en el tiquete y en la factura (todos opcionales y
+    // editables desde Configuración). Las líneas de la resolución solo salen impresas si el negocio
+    // las configura; el sistema no inventa ni asume datos tributarios.
+    public string? CiudadEmpresa { get; private set; }
+    public string? BarrioEmpresa { get; private set; }
+
+    /// <summary>Ej. "Responsable de IVA" o "No responsable de IVA".</summary>
+    public string? ResponsabilidadIvaEmpresa { get; private set; }
+
+    /// <summary>Código de actividad económica (CIIU), ej. "4752".</summary>
+    public string? ActividadEconomicaEmpresa { get; private set; }
+
+    public string? ResolucionDianNumero { get; private set; }
+    public DateTime? ResolucionDianFecha { get; private set; }
+    public string? ResolucionDianPrefijo { get; private set; }
+    public int? ResolucionDianRangoDesde { get; private set; }
+    public int? ResolucionDianRangoHasta { get; private set; }
+    public int? ResolucionDianVigenciaMeses { get; private set; }
+
+    /// <summary>Texto legal al pie de la factura (ej. mención de la letra de cambio, Ley 1231 de 2008).</summary>
+    public string? TextoLegalFactura { get; private set; }
+
+    /// <summary>Política de cambios y devoluciones al pie de la factura.</summary>
+    public string? PoliticaCambiosFactura { get; private set; }
+
     private Configuracion() { }
 
     public static Configuracion Crear(
@@ -101,4 +126,48 @@ public class Configuracion
         TelefonoEmpresa = string.IsNullOrWhiteSpace(telefonoEmpresa) ? null : telefonoEmpresa.Trim();
         EmailEmpresa = string.IsNullOrWhiteSpace(emailEmpresa) ? null : emailEmpresa.Trim();
     }
+
+    /// <summary>
+    /// Actualiza los datos de facturación (ciudad, régimen, resolución y textos al pie). Todos son
+    /// opcionales; lo único que se valida es la coherencia interna: el rango autorizado debe
+    /// tener ambos extremos y "desde" no puede superar a "hasta", y la vigencia debe ser positiva.
+    /// </summary>
+    public void ActualizarDatosFacturacion(
+        string? ciudad,
+        string? barrio,
+        string? responsabilidadIva,
+        string? actividadEconomica,
+        string? resolucionNumero,
+        DateTime? resolucionFecha,
+        string? resolucionPrefijo,
+        int? rangoDesde,
+        int? rangoHasta,
+        int? vigenciaMeses,
+        string? textoLegal,
+        string? politicaCambios)
+    {
+        if (rangoDesde.HasValue != rangoHasta.HasValue)
+            throw new ArgumentException("El rango autorizado debe tener el número inicial y el final.");
+
+        if (rangoDesde.HasValue && (rangoDesde.Value < 1 || rangoHasta!.Value < rangoDesde.Value))
+            throw new ArgumentException("El rango autorizado no es válido: el inicial debe ser mayor a 0 y no puede superar al final.");
+
+        if (vigenciaMeses.HasValue && (vigenciaMeses.Value < 1 || vigenciaMeses.Value > 120))
+            throw new ArgumentException("La vigencia de la resolución debe estar entre 1 y 120 meses.");
+
+        CiudadEmpresa = Limpiar(ciudad);
+        BarrioEmpresa = Limpiar(barrio);
+        ResponsabilidadIvaEmpresa = Limpiar(responsabilidadIva);
+        ActividadEconomicaEmpresa = Limpiar(actividadEconomica);
+        ResolucionDianNumero = Limpiar(resolucionNumero);
+        ResolucionDianFecha = resolucionFecha?.Date;
+        ResolucionDianPrefijo = Limpiar(resolucionPrefijo);
+        ResolucionDianRangoDesde = rangoDesde;
+        ResolucionDianRangoHasta = rangoHasta;
+        ResolucionDianVigenciaMeses = vigenciaMeses;
+        TextoLegalFactura = Limpiar(textoLegal);
+        PoliticaCambiosFactura = Limpiar(politicaCambios);
+    }
+
+    private static string? Limpiar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 }

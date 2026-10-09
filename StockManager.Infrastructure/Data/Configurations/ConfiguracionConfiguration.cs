@@ -40,6 +40,16 @@ public class ConfiguracionConfiguration : IEntityTypeConfiguration<Configuracion
         builder.Property(c => c.EmailEmpresa)
             .HasMaxLength(200);
 
+        builder.Property(c => c.CiudadEmpresa).HasMaxLength(100);
+        builder.Property(c => c.BarrioEmpresa).HasMaxLength(100);
+        builder.Property(c => c.ResponsabilidadIvaEmpresa).HasMaxLength(100);
+        builder.Property(c => c.ActividadEconomicaEmpresa).HasMaxLength(50);
+        builder.Property(c => c.ResolucionDianNumero).HasMaxLength(50);
+        builder.Property(c => c.ResolucionDianFecha).HasColumnType("date");
+        builder.Property(c => c.ResolucionDianPrefijo).HasMaxLength(10);
+        builder.Property(c => c.TextoLegalFactura).HasMaxLength(600);
+        builder.Property(c => c.PoliticaCambiosFactura).HasMaxLength(300);
+
         builder.HasData(new
         {
             Id = 1,

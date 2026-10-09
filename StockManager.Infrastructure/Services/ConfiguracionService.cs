@@ -34,6 +34,19 @@ public class ConfiguracionService : IConfiguracionService
             request.DireccionEmpresa,
             request.TelefonoEmpresa,
             request.EmailEmpresa);
+        configuracion.ActualizarDatosFacturacion(
+            request.CiudadEmpresa,
+            request.BarrioEmpresa,
+            request.ResponsabilidadIvaEmpresa,
+            request.ActividadEconomicaEmpresa,
+            request.ResolucionDianNumero,
+            request.ResolucionDianFecha,
+            request.ResolucionDianPrefijo,
+            request.ResolucionDianRangoDesde,
+            request.ResolucionDianRangoHasta,
+            request.ResolucionDianVigenciaMeses,
+            request.TextoLegalFactura,
+            request.PoliticaCambiosFactura);
 
         await _dbContext.SaveChangesAsync();
 
@@ -51,7 +64,19 @@ public class ConfiguracionService : IConfiguracionService
             NitEmpresa = configuracion.NitEmpresa,
             DireccionEmpresa = configuracion.DireccionEmpresa,
             TelefonoEmpresa = configuracion.TelefonoEmpresa,
-            EmailEmpresa = configuracion.EmailEmpresa
+            EmailEmpresa = configuracion.EmailEmpresa,
+            CiudadEmpresa = configuracion.CiudadEmpresa,
+            BarrioEmpresa = configuracion.BarrioEmpresa,
+            ResponsabilidadIvaEmpresa = configuracion.ResponsabilidadIvaEmpresa,
+            ActividadEconomicaEmpresa = configuracion.ActividadEconomicaEmpresa,
+            ResolucionDianNumero = configuracion.ResolucionDianNumero,
+            ResolucionDianFecha = configuracion.ResolucionDianFecha,
+            ResolucionDianPrefijo = configuracion.ResolucionDianPrefijo,
+            ResolucionDianRangoDesde = configuracion.ResolucionDianRangoDesde,
+            ResolucionDianRangoHasta = configuracion.ResolucionDianRangoHasta,
+            ResolucionDianVigenciaMeses = configuracion.ResolucionDianVigenciaMeses,
+            TextoLegalFactura = configuracion.TextoLegalFactura,
+            PoliticaCambiosFactura = configuracion.PoliticaCambiosFactura
         };
     }
 }

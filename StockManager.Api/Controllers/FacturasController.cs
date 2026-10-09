@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.Services;
 
@@ -9,11 +10,32 @@ public class FacturasController : ControllerBase
 {
     private readonly IFacturaPdfService _facturaPdfService;
     private readonly IFacturaLinkTokenService _tokenService;
+    private readonly IFacturaDocumentoService _documentoService;
 
-    public FacturasController(IFacturaPdfService facturaPdfService, IFacturaLinkTokenService tokenService)
+    public FacturasController(
+        IFacturaPdfService facturaPdfService,
+        IFacturaLinkTokenService tokenService,
+        IFacturaDocumentoService documentoService)
     {
         _facturaPdfService = facturaPdfService;
         _tokenService = tokenService;
+        _documentoService = documentoService;
+    }
+
+    /// <summary>
+    /// Datos completos para presentar la factura de una venta (tiquete térmico y vista
+    /// digital): empresa, vendedor, comprador, IVA por tarifa, pagos y textos legales.
+    /// Requiere sesión de personal, a diferencia del PDF que se abre con token firmado.
+    /// </summary>
+    [HttpGet("venta/{ventaId:int}/documento")]
+    [Authorize(Roles = "Admin,Empleado")]
+    public async Task<IActionResult> ObtenerDocumentoDeVenta(int ventaId)
+    {
+        var documento = await _documentoService.ObtenerPorVentaIdAsync(ventaId);
+        if (documento is null)
+            return NotFound(new { message = "Factura no encontrada" });
+
+        return Ok(documento);
     }
 
     /// <summary>

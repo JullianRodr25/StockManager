@@ -109,6 +109,7 @@ builder.Services.Configure<TwilioOptions>(builder.Configuration.GetSection("What
 builder.Services.AddSingleton(Channel.CreateUnbounded<DomainEvent>());
 builder.Services.AddSingleton<IEventoNotificacionPublisher, ChannelEventoNotificacionPublisher>();
 
+builder.Services.AddScoped<IFacturaDocumentoService, FacturaDocumentoService>();
 builder.Services.AddScoped<IFacturaPdfService, QuestPdfFacturaService>();
 builder.Services.AddScoped<IFacturaLinkTokenService, HmacFacturaLinkTokenService>();
 
