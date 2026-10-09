@@ -122,7 +122,7 @@ namespace StockManager.Infrastructure.Services
 
             // Validar que el rol sea válido
             if (!Roles.EsRolDeEmpleado(request.Rol))
-                throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'ConsultaInventario'", nameof(request.Rol));
+                throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'Inventario'", nameof(request.Rol));
 
             // Validar que no exista otro empleado con el mismo NumeroIdentificacion
             var numeroNormalizado = request.NumeroIdentificacion.Trim();

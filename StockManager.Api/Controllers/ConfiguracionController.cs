@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StockManager.Domain.Constants;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
 
@@ -21,7 +22,7 @@ public class ConfiguracionController : ControllerBase
     /// administrativas por WhatsApp).
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<ActionResult<ConfiguracionResponse>> Obtener()
     {
         var configuracion = await _configuracionService.ObtenerAsync();

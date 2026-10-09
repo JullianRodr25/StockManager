@@ -31,20 +31,6 @@ public class ProductosController : ControllerBase
     }
 
     /// <summary>
-    /// Al rol de solo consulta no se le entregan datos comerciales internos (costo y proveedor).
-    /// Se quitan aquí, en el servidor, y no solo en la pantalla: ocultarlos en la web no impediría
-    /// leerlos llamando a la API directamente.
-    /// </summary>
-    private void OcultarDatosInternosSiCorresponde(ProductoResponse producto)
-    {
-        if (!User.IsInRole(Roles.ConsultaInventario))
-            return;
-
-        producto.Costo = 0;
-        producto.ProveedorId = null;
-    }
-
-    /// <summary>
     /// Obtiene una lista paginada de productos.
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
@@ -53,7 +39,7 @@ public class ProductosController : ControllerBase
     /// <param name="categoriaId">ID de categoría opcional para filtrar</param>
     /// <param name="busqueda">Texto opcional para buscar por nombre en todo el inventario</param>
     [HttpGet]
-    [Authorize(Roles = Roles.LecturaInventario)]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<IActionResult> ObtenerProductos(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 50,
@@ -61,7 +47,6 @@ public class ProductosController : ControllerBase
         [FromQuery] string? busqueda = null)
     {
         var (items, total) = await _productoService.ObtenerProductosPaginadoAsync(pagina, tamanoPagina, categoriaId, busqueda);
-        items.ForEach(OcultarDatosInternosSiCorresponde);
 
         return Ok(new
         {
@@ -79,12 +64,10 @@ public class ProductosController : ControllerBase
     /// literal no se confunda con un id.
     /// </summary>
     [HttpGet("alertas-stock")]
-    [Authorize(Roles = Roles.LecturaInventario)]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<IActionResult> ObtenerAlertasStock()
     {
-        var alertas = await _productoService.ObtenerAlertasStockAsync();
-        alertas.ForEach(OcultarDatosInternosSiCorresponde);
-        return Ok(alertas);
+        return Ok(await _productoService.ObtenerAlertasStockAsync());
     }
 
     /// <summary>
@@ -92,14 +75,13 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = Roles.LecturaInventario)]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<IActionResult> ObtenerProductoPorId(int id)
     {
         var producto = await _productoService.ObtenerProductoPorIdAsync(id);
         if (producto == null)
             return NotFound(new { message = "Producto no encontrado" });
 
-        OcultarDatosInternosSiCorresponde(producto);
         return Ok(producto);
     }
 
@@ -109,7 +91,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin o Empleado.
     /// </summary>
     [HttpGet("buscar-codigo-barras/{codigo}")]
-    [Authorize(Roles = Roles.LecturaInventario)]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<IActionResult> BuscarPorCodigoBarras(string codigo)
     {
         if (string.IsNullOrWhiteSpace(codigo))
@@ -119,7 +101,6 @@ public class ProductosController : ControllerBase
         if (producto == null)
             return NotFound(new { message = "Producto con ese código de barras no encontrado" });
 
-        OcultarDatosInternosSiCorresponde(producto);
         return Ok(producto);
     }
 
@@ -129,7 +110,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.AltaInventario)]
     public async Task<IActionResult> CrearProducto([FromBody] CrearProductoRequest request)
     {
         if (!ModelState.IsValid)
@@ -163,7 +144,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpGet("plantilla-excel")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> DescargarPlantillaExcel()
     {
         var archivo = await _productoExcelService.GenerarPlantillaAsync();
@@ -175,7 +156,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpGet("exportar")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> ExportarInventario()
     {
         var archivo = await _productoExcelService.ExportarInventarioAsync();
@@ -189,7 +170,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpPost("importar")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     [RequestSizeLimit(MaxBytesArchivoExcel)]
     public async Task<IActionResult> ImportarProductos([FromForm] IFormFile archivo, [FromQuery] bool soloValidar = false)
     {
@@ -274,7 +255,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> ActualizarProducto(int id, [FromBody] ActualizarProductoRequest request)
     {
         if (!ModelState.IsValid)
@@ -361,12 +342,20 @@ public class ProductosController : ControllerBase
     /// Ajusta manualmente el stock de un producto (ej. llegó mercancía, corrección de un
     /// conteo físico), fuera del flujo de ventas/pedidos. Delta puede ser positivo o negativo;
     /// no puede dejar el stock en negativo.
-    /// Requiere autenticación con rol Admin.
+    /// Requiere rol Admin (suma o resta) o Inventario (solo suma).
     /// </summary>
     [HttpPatch("{id}/ajustar-stock")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.AltaInventario)]
     public async Task<IActionResult> AjustarStock(int id, [FromBody] AjustarStockRequest request)
     {
+        // El encargado de inventario solo puede SUMAR stock (llegó mercancía). Restar o corregir
+        // conteos a la baja queda para el Admin: una resta puede ocultar una pérdida o un faltante.
+        if (request.Delta <= 0 && !User.IsInRole(Roles.Admin))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { message = "Solo un administrador puede restar stock; con tu rol solo se puede sumar." });
+        }
+
         try
         {
             var productoResponse = await _productoService.AjustarStockAsync(id, request.Delta);

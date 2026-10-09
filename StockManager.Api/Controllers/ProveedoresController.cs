@@ -2,13 +2,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Constants;
 using StockManager.Domain.Exceptions;
 
 namespace StockManager.Api.Controllers;
 
 [ApiController]
 [Route("api/proveedores")]
-[Authorize(Roles = "Admin,Empleado")]
+// Nivel de clase = el más amplio (lo mínimo para entrar). Cada acción que no sea la lista lo
+// endurece con su propio [Authorize] (se combinan: hay que cumplir los dos), así que si alguien
+// agrega un endpoint y olvida el atributo queda de solo lectura, nunca abierto a escritura sin
+// querer ni anónimo. El encargado de inventario solo necesita ver la lista para elegir proveedor.
+[Authorize(Roles = Roles.PersonalConInventario)]
 public class ProveedoresController : ControllerBase
 {
     private readonly IProveedorService _proveedorService;
@@ -22,6 +27,7 @@ public class ProveedoresController : ControllerBase
     /// Registra un nuevo proveedor.
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = Roles.AdminYEmpleado)]
     public async Task<IActionResult> Crear([FromBody] CrearProveedorRequest request)
     {
         try
@@ -64,6 +70,7 @@ public class ProveedoresController : ControllerBase
     /// Obtiene un proveedor por su ID.
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Roles = Roles.AdminYEmpleado)]
     public async Task<IActionResult> ObtenerPorId(int id)
     {
         var proveedor = await _proveedorService.ObtenerPorIdAsync(id);
@@ -77,6 +84,7 @@ public class ProveedoresController : ControllerBase
     /// Actualiza los datos de contacto de un proveedor.
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Roles = Roles.AdminYEmpleado)]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarProveedorRequest request)
     {
         try
@@ -103,6 +111,7 @@ public class ProveedoresController : ControllerBase
     /// cuentas por pagar asociadas).
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = Roles.AdminYEmpleado)]
     public async Task<IActionResult> Desactivar(int id)
     {
         try
@@ -124,6 +133,7 @@ public class ProveedoresController : ControllerBase
     /// Reactiva un proveedor previamente desactivado.
     /// </summary>
     [HttpPost("{id}/activar")]
+    [Authorize(Roles = Roles.AdminYEmpleado)]
     public async Task<IActionResult> Activar(int id)
     {
         try

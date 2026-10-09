@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StockManager.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
@@ -25,7 +26,7 @@ namespace StockManager.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/productos/{productoId}/fotos")]
-[Authorize(Roles = "Admin,Empleado")]
+[Authorize(Roles = Roles.PersonalConInventario)]
 public class ProductoFotosController : ControllerBase
 {
     private static readonly string[] TiposPermitidos = { "image/jpeg", "image/png", "image/webp" };

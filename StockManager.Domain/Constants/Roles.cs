@@ -7,25 +7,29 @@ namespace StockManager.Domain.Constants;
 /// </summary>
 public static class Roles
 {
-    /// <summary>Acceso completo, incluida la configuración y la edición del inventario.</summary>
+    /// <summary>Acceso completo, incluida la configuración y la eliminación de productos.</summary>
     public const string Admin = "Admin";
 
     /// <summary>Opera el negocio (ventas, pedidos, clientes, proveedores) y consulta el inventario.</summary>
     public const string Empleado = "Empleado";
 
     /// <summary>
-    /// Solo consulta el inventario: no vende, no ve costos ni proveedores y no modifica nada.
-    /// Cualquier endpoint que no lo nombre explícitamente le queda cerrado (lista blanca).
+    /// Encargado de inventario: ve y crea productos y solo puede sumar stock (no edita, no resta,
+    /// no usa Excel). No vende ni entra a ningún otro módulo. Cualquier endpoint que no lo nombre explícitamente le
+    /// queda cerrado (lista blanca).
     /// </summary>
-    public const string ConsultaInventario = "ConsultaInventario";
+    public const string Inventario = "Inventario";
 
-    /// <summary>Quienes operan el negocio (excluye al rol de solo consulta).</summary>
+    /// <summary>Quienes operan el negocio (excluye al encargado de inventario).</summary>
     public const string AdminYEmpleado = Admin + "," + Empleado;
 
-    /// <summary>Quienes pueden leer el inventario (productos y categorías).</summary>
-    public const string LecturaInventario = Admin + "," + Empleado + "," + ConsultaInventario;
+    /// <summary>Quienes pueden consultar el inventario: productos, categorías y datos de apoyo.</summary>
+    public const string PersonalConInventario = Admin + "," + Empleado + "," + Inventario;
+
+    /// <summary>Quienes pueden dar de alta productos y sumar stock (restar o editar es solo Admin).</summary>
+    public const string AltaInventario = Admin + "," + Inventario;
 
     /// <summary>Un rol es válido para un empleado si es uno de los de personal.</summary>
     public static bool EsRolDeEmpleado(string? rol) =>
-        rol is Admin or Empleado or ConsultaInventario;
+        rol is Admin or Empleado or Inventario;
 }

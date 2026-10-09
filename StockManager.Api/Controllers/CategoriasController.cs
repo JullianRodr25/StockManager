@@ -22,12 +22,12 @@ public class CategoriasController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene todas las categorías (acceso: Admin, Empleado y ConsultaInventario).
+    /// Obtiene todas las categorías (acceso: Admin, Empleado e Inventario).
     /// </summary>
     /// <response code="200">Lista de categorías obtenida correctamente</response>
     /// <response code="401">No autorizado (token inválido o expirado)</response>
     [HttpGet]
-    [Authorize(Roles = Roles.LecturaInventario)]
+    [Authorize(Roles = Roles.PersonalConInventario)]
     public async Task<ActionResult<List<CategoriaResponse>>> ObtenerTodas()
     {
         var categorias = await _categoriaService.ObtenerTodasAsync();

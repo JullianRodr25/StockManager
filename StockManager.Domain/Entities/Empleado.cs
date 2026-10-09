@@ -13,7 +13,7 @@ public class Empleado
     public string Nombre { get; private set; } = null!;
     public string Email { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
-    public string Rol { get; private set; } = null!;  // 'Admin' | 'Empleado' | 'ConsultaInventario' (ver Roles)
+    public string Rol { get; private set; } = null!;  // 'Admin' | 'Empleado' | 'Inventario' (ver Roles)
     public bool Activo { get; private set; }
 
     private Empleado() { }
@@ -36,7 +36,7 @@ public class Empleado
             throw new ArgumentException("El hash de contraseña no puede estar vacío.", nameof(passwordHash));
 
         if (!Roles.EsRolDeEmpleado(rol))
-            throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'ConsultaInventario'.", nameof(rol));
+            throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'Inventario'.", nameof(rol));
 
         return new Empleado
         {

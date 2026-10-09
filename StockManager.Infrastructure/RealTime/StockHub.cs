@@ -15,7 +15,7 @@ namespace StockManager.Infrastructure.RealTime;
 /// de la PWA: el stock de un producto ya es información pública ahí (se muestra sin login
 /// especial en el catálogo), así que no hay nada que proteger de más al dejarlos conectarse.
 /// </summary>
-[Authorize(Roles = Roles.LecturaInventario + ",Cliente")]
+[Authorize(Roles = Roles.PersonalConInventario + ",Cliente")]
 public class StockHub : Hub
 {
 }
