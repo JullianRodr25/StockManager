@@ -181,7 +181,8 @@ public class VentasController : ControllerBase
     {
         try
         {
-            var venta = await _ventaService.CerrarFiadoAsync(id, request.MetodoPago, request.MontoRecibido, request.DetallesPago);
+            var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var venta = await _ventaService.CerrarFiadoAsync(id, request.MetodoPago, empleadoId, request.MontoRecibido, request.DetallesPago);
             return Ok(venta);
         }
         catch (VentaNoEncontradaException ex)

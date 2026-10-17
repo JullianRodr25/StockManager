@@ -47,6 +47,11 @@ public class ConfiguracionResponse
 }
 
 public class ActualizarConfiguracionRequest
+    /// <summary>Si el cierre de caja se cuenta a ciegas (sin mostrar el esperado antes de contar).</summary>
+    public bool ConteoCiegoCaja { get; set; }
+}
+
+public class ActualizarConfiguracionRequest
 {
     [Range(0, 100)]
     public decimal TarifaIvaPorDefecto { get; set; }
@@ -76,4 +81,7 @@ public class ActualizarConfiguracionRequest
     [Range(1, 120)] public int? ResolucionDianVigenciaMeses { get; set; }
     [MaxLength(600)] public string? TextoLegalFactura { get; set; }
     [MaxLength(300)] public string? PoliticaCambiosFactura { get; set; }
+
+    /// <summary>Si es null se conserva el valor actual (clientes antiguos que no lo envían).</summary>
+    public bool? ConteoCiegoCaja { get; set; }
 }

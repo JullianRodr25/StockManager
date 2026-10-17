@@ -44,12 +44,17 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<decimal>("Monto")
                         .HasColumnType("decimal(12, 2)");
 
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
                     b.Property<int>("VentaId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("TurnoCajaId");
 
                     b.HasIndex("VentaId");
 
@@ -81,11 +86,16 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<decimal>("Monto")
                         .HasColumnType("decimal(12, 2)");
 
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CuentaPorPagarId");
 
                     b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("TurnoCajaId");
 
                     b.ToTable("AbonosCuentaPorPagar", (string)null);
                 });
@@ -268,6 +278,11 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<string>("CiudadEmpresa")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("ConteoCiegoCaja")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("DireccionEmpresa")
                         .HasMaxLength(300)
@@ -989,6 +1004,80 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.TurnoCaja", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("BaseInicial")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int?>("CerradoPorEmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DetalleConteo")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal?>("Diferencia")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("EfectivoContado")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("EfectivoEsperado")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaApertura")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NotaCierre")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal?>("TotalAbonosFiadoEfectivo")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("TotalPagosProveedorEfectivo")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("TotalTarjeta")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("TotalTransferencias")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("TotalVentasEfectivo")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CerradoPorEmpleadoId");
+
+                    b.HasIndex("EmpleadoId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_TurnosCaja_EmpleadoId_Abierto")
+                        .HasFilter("[Estado] = 'Abierto'");
+
+                    b.HasIndex("FechaApertura");
+
+                    b.ToTable("TurnosCaja", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Venta", b =>
                 {
                     b.Property<int>("Id")
@@ -1061,6 +1150,9 @@ namespace StockManager.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
                     b.Property<string>("TelefonoComprador")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -1079,6 +1171,8 @@ namespace StockManager.Infrastructure.Migrations
                     b.HasIndex("EmpleadoId");
 
                     b.HasIndex("Fecha");
+
+                    b.HasIndex("TurnoCajaId");
 
                     b.HasIndex(new[] { "ClienteId" }, "IX_Ventas_ClienteId_CuentaFiadoAbierta")
                         .IsUnique()
@@ -1100,6 +1194,11 @@ namespace StockManager.Infrastructure.Migrations
                         .HasForeignKey("VentaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.AbonoCuentaPorPagar", b =>
@@ -1115,6 +1214,11 @@ namespace StockManager.Infrastructure.Migrations
                         .HasForeignKey("EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.CuentaPorPagar", b =>
@@ -1244,6 +1348,20 @@ namespace StockManager.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.TurnoCaja", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("CerradoPorEmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Venta", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Cliente", null)
@@ -1256,6 +1374,11 @@ namespace StockManager.Infrastructure.Migrations
                         .HasForeignKey("EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.ResenaProducto", b =>

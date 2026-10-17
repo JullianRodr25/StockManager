@@ -38,6 +38,7 @@ public class AppDbContext : DbContext
     public DbSet<AbonoCuentaPorPagar> AbonosCuentaPorPagar { get; set; } = null!;
     public DbSet<NotificacionInterna> NotificacionesInternas { get; set; } = null!;
     public DbSet<ResenaProducto> ResenasProducto { get; set; } = null!;
+    public DbSet<TurnoCaja> TurnosCaja { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +66,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AbonoCuentaPorPagarConfiguration());
         modelBuilder.ApplyConfiguration(new NotificacionInternaConfiguration());
         modelBuilder.ApplyConfiguration(new ResenaProductoConfiguration());
+        modelBuilder.ApplyConfiguration(new TurnoCajaConfiguration());
 
         MarcarInstantesComoUtc(modelBuilder);
     }

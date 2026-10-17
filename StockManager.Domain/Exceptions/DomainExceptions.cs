@@ -408,3 +408,58 @@ public class ResenaDuplicadaException : DomainException
         ClienteId = clienteId;
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando no se encuentra un turno de caja con el ID especificado.
+/// </summary>
+public class TurnoCajaNoEncontradoException : DomainException
+{
+    public TurnoCajaNoEncontradoException(int turnoId)
+        : base($"No se encontró el turno de caja con ID {turnoId}.")
+    {
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar abrir un turno cuando el empleado ya tiene uno abierto.
+/// </summary>
+public class TurnoCajaYaAbiertoException : DomainException
+{
+    public TurnoCajaYaAbiertoException()
+        : base("Ya tienes un turno de caja abierto. Ciérralo antes de abrir uno nuevo.")
+    {
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar recibir dinero en efectivo sin tener un turno de caja abierto:
+/// el efectivo siempre debe quedar asociado a un turno para poder cuadrar la caja al cierre.
+/// </summary>
+public class TurnoCajaNoAbiertoException : DomainException
+{
+    public TurnoCajaNoAbiertoException()
+        : base("Para registrar pagos en efectivo primero debes abrir tu caja.")
+    {
+    }
+}
+
+/// <summary>
+/// Excepción lanzada al intentar operar sobre un turno que no está en el estado requerido
+/// (por ejemplo, cerrar dos veces el mismo turno: un turno cerrado es inmutable).
+/// </summary>
+public class TurnoCajaEstadoInvalidoException : DomainException
+{
+    public TurnoCajaEstadoInvalidoException(int turnoId, string estadoActual, string estadoEsperado)
+        : base($"El turno de caja {turnoId} está '{estadoActual}', se esperaba '{estadoEsperado}'.")
+    {
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando una operación de caja incumple una regla de negocio (por ejemplo,
+/// cerrar con diferencia sin explicarla en una nota).
+/// </summary>
+public class OperacionInvalidaCajaException : DomainException
+{
+    public OperacionInvalidaCajaException(string message) : base(message) { }
+}

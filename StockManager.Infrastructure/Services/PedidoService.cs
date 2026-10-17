@@ -13,15 +13,18 @@ public class PedidoService : IPedidoService
     private readonly AppDbContext _dbContext;
     private readonly IEventoNotificacionPublisher _eventoPublisher;
     private readonly IStockNotificador _stockNotificador;
+    private readonly ITurnoCajaService _turnoCajaService;
 
     public PedidoService(
         AppDbContext dbContext,
         IEventoNotificacionPublisher eventoPublisher,
-        IStockNotificador stockNotificador)
+        IStockNotificador stockNotificador,
+        ITurnoCajaService turnoCajaService)
     {
         _dbContext = dbContext;
         _eventoPublisher = eventoPublisher;
         _stockNotificador = stockNotificador;
+        _turnoCajaService = turnoCajaService;
     }
 
     /// <summary>Ver VentaService.NotificarCambioStockAsync — mismo criterio de "mejor esfuerzo".</summary>
@@ -228,6 +231,9 @@ public class PedidoService : IPedidoService
     /// </summary>
     public async Task<PedidoResponse> MarcarEntregadoAsync(int pedidoId, string metodoPago, int empleadoId)
     {
+        // El cobro en efectivo al entregar entra a la caja de quien entrega.
+        var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(empleadoId, metodoPago == "Efectivo");
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         var pedido = await _dbContext.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId);
@@ -252,6 +258,9 @@ public class PedidoService : IPedidoService
             pedido.Total,
             esCotizacion: false,
             estado: "Pagada");
+
+        if (turnoCajaId.HasValue)
+            venta.AsignarTurnoCaja(turnoCajaId.Value);
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();

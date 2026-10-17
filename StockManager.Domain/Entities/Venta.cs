@@ -59,10 +59,28 @@ public class Venta
     /// </summary>
     public decimal? MontoRecibido { get; private set; }
 
+    /// <summary>
+    /// Turno de caja en el que se recibió/pagó este dinero. Null en lo histórico (anterior al
+    /// módulo de Caja) y en lo que no movió efectivo ni se asignó a un turno.
+    /// </summary>
+    public int? TurnoCajaId { get; private set; }
+
     /// <summary>Cambio a devolver cuando el pago fue en efectivo; null en cualquier otro método.</summary>
     public decimal? Cambio => MontoRecibido.HasValue ? MontoRecibido.Value - Total : null;
 
     private Venta() { }
+
+    /// <summary>Asocia este movimiento al turno de caja abierto; una vez asignado no cambia.</summary>
+    public void AsignarTurnoCaja(int turnoCajaId)
+    {
+        if (turnoCajaId <= 0)
+            throw new ArgumentException("TurnoCajaId debe ser mayor a 0.", nameof(turnoCajaId));
+
+        if (TurnoCajaId.HasValue && TurnoCajaId.Value != turnoCajaId)
+            throw new InvalidOperationException("Este movimiento ya pertenece a otro turno de caja.");
+
+        TurnoCajaId = turnoCajaId;
+    }
 
     public static Venta Crear(
         int empleadoId,

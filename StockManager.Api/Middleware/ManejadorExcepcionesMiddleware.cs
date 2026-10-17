@@ -63,7 +63,8 @@ public sealed class ManejadorExcepcionesMiddleware
             or ClienteNoEncontradoException
             or ProductoFotoNoEncontradaException
             or NotificacionInternaNoEncontradaException
-            or ResenaNoEncontradaException => (StatusCodes.Status404NotFound, ex.Message),
+            or ResenaNoEncontradaException
+            or TurnoCajaNoEncontradoException => (StatusCodes.Status404NotFound, ex.Message),
 
         // Choque con el estado actual: duplicados, estados inválidos o edición concurrente
         ConcurrencyException
@@ -77,7 +78,10 @@ public sealed class ManejadorExcepcionesMiddleware
             or VentaEstadoInvalidoException
             or PedidoEstadoInvalidoException
             or CuentaPorPagarEstadoInvalidoException
-            or ClienteConPedidosActivosException => (StatusCodes.Status409Conflict, ex.Message),
+            or ClienteConPedidosActivosException
+            or TurnoCajaYaAbiertoException
+            or TurnoCajaNoAbiertoException
+            or TurnoCajaEstadoInvalidoException => (StatusCodes.Status409Conflict, ex.Message),
 
         // Cualquier otra regla de negocio incumplida (stock insuficiente, operación inválida, etc.)
         DomainException => (StatusCodes.Status400BadRequest, ex.Message),

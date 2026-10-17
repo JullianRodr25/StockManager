@@ -50,6 +50,10 @@ public class ConfiguracionConfiguration : IEntityTypeConfiguration<Configuracion
         builder.Property(c => c.TextoLegalFactura).HasMaxLength(600);
         builder.Property(c => c.PoliticaCambiosFactura).HasMaxLength(300);
 
+        builder.Property(c => c.ConteoCiegoCaja)
+            .HasDefaultValue(true)
+            .IsRequired();
+
         builder.HasData(new
         {
             Id = 1,

@@ -50,5 +50,14 @@ public class AbonoCuentaPorPagarConfiguration : IEntityTypeConfiguration<AbonoCu
             .IsRequired();
 
         builder.HasIndex(a => a.CuentaPorPagarId);
+
+        // Turno de caja al que pertenece (opcional: lo histórico no tiene turno)
+        builder.HasOne<TurnoCaja>()
+            .WithMany()
+            .HasForeignKey(a => a.TurnoCajaId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        builder.HasIndex(a => a.TurnoCajaId);
     }
 }

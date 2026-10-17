@@ -62,6 +62,12 @@ public class Configuracion
     /// <summary>Política de cambios y devoluciones al pie de la factura.</summary>
     public string? PoliticaCambiosFactura { get; private set; }
 
+    /// <summary>
+    /// Conteo a ciegas al cerrar caja: si es true, el empleado cuenta el efectivo sin ver el
+    /// "esperado" (así no puede ajustar el conteo para que cuadre). Por defecto activo.
+    /// </summary>
+    public bool ConteoCiegoCaja { get; private set; } = true;
+
     private Configuracion() { }
 
     public static Configuracion Crear(
@@ -167,6 +173,11 @@ public class Configuracion
         ResolucionDianVigenciaMeses = vigenciaMeses;
         TextoLegalFactura = Limpiar(textoLegal);
         PoliticaCambiosFactura = Limpiar(politicaCambios);
+    }
+
+    public void ActualizarConteoCiegoCaja(bool conteoCiego)
+    {
+        ConteoCiegoCaja = conteoCiego;
     }
 
     private static string? Limpiar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();

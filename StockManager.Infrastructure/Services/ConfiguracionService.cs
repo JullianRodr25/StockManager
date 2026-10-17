@@ -48,6 +48,9 @@ public class ConfiguracionService : IConfiguracionService
             request.TextoLegalFactura,
             request.PoliticaCambiosFactura);
 
+        if (request.ConteoCiegoCaja.HasValue)
+            configuracion.ActualizarConteoCiegoCaja(request.ConteoCiegoCaja.Value);
+
         await _dbContext.SaveChangesAsync();
 
         return MapearAResponse(configuracion);
@@ -76,7 +79,8 @@ public class ConfiguracionService : IConfiguracionService
             ResolucionDianRangoHasta = configuracion.ResolucionDianRangoHasta,
             ResolucionDianVigenciaMeses = configuracion.ResolucionDianVigenciaMeses,
             TextoLegalFactura = configuracion.TextoLegalFactura,
-            PoliticaCambiosFactura = configuracion.PoliticaCambiosFactura
+            PoliticaCambiosFactura = configuracion.PoliticaCambiosFactura,
+            ConteoCiegoCaja = configuracion.ConteoCiegoCaja
         };
     }
 }

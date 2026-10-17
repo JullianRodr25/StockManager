@@ -100,10 +100,19 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
             .HasForeignKey(v => v.ClienteId)
             .OnDelete(DeleteBehavior.Restrict);
 
+
+        // Turno de caja al que pertenece (opcional: lo histórico no tiene turno)
+        builder.HasOne<TurnoCaja>()
+            .WithMany()
+            .HasForeignKey(v => v.TurnoCajaId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
         // Índices para búsquedas comunes
         builder.HasIndex(v => v.Fecha);
         builder.HasIndex(v => v.EmpleadoId);
         builder.HasIndex(v => v.ClienteId);
+        builder.HasIndex(v => v.TurnoCajaId);
 
         // Un cliente no puede tener dos cuentas fiadas (Estado = 'Pendiente') abiertas a la vez.
         // Se usa el overload por nombres de propiedad + nombre explícito: HasIndex(Expression) con la

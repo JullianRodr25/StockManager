@@ -13,16 +13,27 @@ public class VentaService : IVentaService
     private readonly AppDbContext _dbContext;
     private readonly IEventoNotificacionPublisher _eventoPublisher;
     private readonly IStockNotificador _stockNotificador;
+    private readonly ITurnoCajaService _turnoCajaService;
 
     public VentaService(
         AppDbContext dbContext,
         IEventoNotificacionPublisher eventoPublisher,
-        IStockNotificador stockNotificador)
+        IStockNotificador stockNotificador,
+        ITurnoCajaService turnoCajaService)
     {
         _dbContext = dbContext;
         _eventoPublisher = eventoPublisher;
         _stockNotificador = stockNotificador;
+        _turnoCajaService = turnoCajaService;
     }
+
+    /// <summary>
+    /// Indica si un pago mueve efectivo: método "Efectivo", o "Mixto" con alguna línea en
+    /// efectivo. Esos pagos exigen un turno de caja abierto.
+    /// </summary>
+    private static bool IncluyeEfectivo(string? metodoPago, IEnumerable<DetallePagoRequest>? detallesPago) =>
+        metodoPago == "Efectivo"
+        || (metodoPago == "Mixto" && detallesPago?.Any(d => d.MetodoPago == "Efectivo") == true);
 
     /// <summary>
     /// Avisa a las pantallas conectadas que el stock de estos productos cambió, después de
@@ -71,6 +82,10 @@ public class VentaService : IVentaService
         var razonSocialFiscal = request.RazonSocialFiscal ?? cliente?.RazonSocialFiscal;
         var direccionFiscal = request.DireccionFiscal ?? cliente?.DireccionFiscal;
         var emailFacturacionFiscal = request.EmailFacturacion ?? cliente?.EmailFacturacion;
+
+        // El efectivo siempre debe quedar en un turno de caja: se valida antes de tocar nada.
+        var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(
+            empleadoId, IncluyeEfectivo(request.MetodoPago, request.DetallesPago));
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
@@ -131,6 +146,9 @@ public class VentaService : IVentaService
             razonSocialFacturada: razonSocialFiscal,
             direccionFacturada: direccionFiscal,
             emailFacturacion: emailFacturacionFiscal);
+
+        if (turnoCajaId.HasValue)
+            venta.AsignarTurnoCaja(turnoCajaId.Value);
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
@@ -457,8 +475,16 @@ public class VentaService : IVentaService
             EmailFacturacion: venta.EmailFacturacion);
     }
 
-    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null)
+    public async Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, int empleadoId, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null)
     {
+        // Si la cuenta se paga completa de una vez (sin abonos previos), ese dinero entra a la
+        // caja de quien la cierra. Si ya tenía abonos, esos ya quedaron en el turno donde se
+        // recibieron.
+        var tieneAbonos = await _dbContext.AbonosCuenta.AnyAsync(a => a.VentaId == ventaId);
+        var turnoCajaId = tieneAbonos
+            ? null
+            : await _turnoCajaService.ResolverTurnoParaPagoAsync(empleadoId, IncluyeEfectivo(metodoPago, detallesPago));
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
@@ -470,6 +496,9 @@ public class VentaService : IVentaService
                 "No se puede cerrar una cuenta fiada sin productos agregados.");
 
         venta.CerrarFiado(metodoPago, montoRecibido, AConTuplasDetallesPago(detallesPago));
+
+        if (turnoCajaId.HasValue)
+            venta.AsignarTurnoCaja(turnoCajaId.Value);
 
         // El desglose ya fue validado por Venta.CerrarFiado (suma == total); acá solo se persiste.
         if (venta.MetodoPago == "Mixto")
@@ -517,6 +546,8 @@ public class VentaService : IVentaService
         if (monto <= 0)
             throw new ArgumentException("El monto debe ser mayor a 0.");
 
+        var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(empleadoId, metodoPago == "Efectivo");
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
@@ -537,6 +568,8 @@ public class VentaService : IVentaService
                 $"El monto ({monto:F2}) no puede ser mayor al saldo pendiente ({saldoPendiente:F2}).");
 
         var abono = AbonoCuenta.Crear(ventaId, monto, metodoPago, empleadoId);
+        if (turnoCajaId.HasValue)
+            abono.AsignarTurnoCaja(turnoCajaId.Value);
         _dbContext.AbonosCuenta.Add(abono);
         await _dbContext.SaveChangesAsync();
 

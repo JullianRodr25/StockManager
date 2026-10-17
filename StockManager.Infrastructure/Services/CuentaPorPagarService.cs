@@ -11,10 +11,12 @@ namespace StockManager.Infrastructure.Services;
 public class CuentaPorPagarService : ICuentaPorPagarService
 {
     private readonly AppDbContext _dbContext;
+    private readonly ITurnoCajaService _turnoCajaService;
 
-    public CuentaPorPagarService(AppDbContext dbContext)
+    public CuentaPorPagarService(AppDbContext dbContext, ITurnoCajaService turnoCajaService)
     {
         _dbContext = dbContext;
+        _turnoCajaService = turnoCajaService;
     }
 
     public async Task<CuentaPorPagarResponse> CrearAsync(CrearCuentaPorPagarRequest request)
@@ -36,6 +38,9 @@ public class CuentaPorPagarService : ICuentaPorPagarService
         if (request.Monto <= 0)
             throw new ArgumentException("El monto debe ser mayor a 0.");
 
+        // Un pago a proveedor en efectivo sale del cajón, así que debe quedar en el turno abierto.
+        var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(empleadoId, request.MetodoPago == "Efectivo");
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         var cuenta = await _dbContext.CuentasPorPagar.FirstOrDefaultAsync(c => c.Id == cuentaId);
@@ -56,6 +61,8 @@ public class CuentaPorPagarService : ICuentaPorPagarService
                 $"El monto ({request.Monto:F2}) no puede ser mayor al saldo pendiente ({saldoPendiente:F2}).");
 
         var abono = AbonoCuentaPorPagar.Crear(cuentaId, request.Monto, request.MetodoPago, empleadoId);
+        if (turnoCajaId.HasValue)
+            abono.AsignarTurnoCaja(turnoCajaId.Value);
         _dbContext.AbonosCuentaPorPagar.Add(abono);
 
         var nuevoSaldo = saldoPendiente - request.Monto;
