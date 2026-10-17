@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StockManager.Domain.Entities;
 using StockManager.Infrastructure.Data.Configurations;
 
@@ -64,5 +65,45 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AbonoCuentaPorPagarConfiguration());
         modelBuilder.ApplyConfiguration(new NotificacionInternaConfiguration());
         modelBuilder.ApplyConfiguration(new ResenaProductoConfiguration());
+
+        MarcarInstantesComoUtc(modelBuilder);
+    }
+
+    // Campos que son un DÍA de calendario (no un instante): no se marcan como UTC, porque
+    // "2026-10-20T00:00:00Z" se vería como el 19 en Colombia.
+    private static readonly HashSet<string> CamposSoloFecha =
+    [
+        nameof(CuentaPorPagar.FechaVencimiento),
+        nameof(Configuracion.ResolucionDianFecha),
+    ];
+
+    /// <summary>
+    /// SQL Server devuelve los datetime2 con Kind = Unspecified, y System.Text.Json los
+    /// serializa SIN la "Z" final; el navegador entonces los lee como hora local y la factura
+    /// aparece corrida 5 horas. Todas las fechas se guardan en UTC, así que al leerlas se
+    /// marcan como tales y la API las envía con "Z". No cambia el esquema (no hay migración).
+    /// </summary>
+    private static void MarcarInstantesComoUtc(ModelBuilder modelBuilder)
+    {
+        var instante = new ValueConverter<DateTime, DateTime>(
+            v => v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+        var instanteOpcional = new ValueConverter<DateTime?, DateTime?>(
+            v => v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+
+        foreach (var entidad in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var propiedad in entidad.GetProperties())
+            {
+                if (CamposSoloFecha.Contains(propiedad.Name) || propiedad.GetValueConverter() is not null)
+                    continue;
+
+                if (propiedad.ClrType == typeof(DateTime))
+                    propiedad.SetValueConverter(instante);
+                else if (propiedad.ClrType == typeof(DateTime?))
+                    propiedad.SetValueConverter(instanteOpcional);
+            }
+        }
     }
 }

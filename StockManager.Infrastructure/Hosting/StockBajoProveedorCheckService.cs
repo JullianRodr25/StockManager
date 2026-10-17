@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -67,7 +68,8 @@ public class StockBajoProveedorCheckService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var hoy = DateTime.UtcNow.Date;
+        // "Avisado hoy" se mide con el día colombiano (UtcNow.Date cambiaba de día a las 7 p. m.).
+        var inicioHoyUtc = HoraColombia.InicioDiaUtc();
 
         // IDs de los proveedores con al menos un producto activo en stock bajo.
         var proveedorIdsConStockBajo = await db.Productos
@@ -85,7 +87,7 @@ public class StockBajoProveedorCheckService : BackgroundService
             .Where(p => proveedorIdsConStockBajo.Contains(p.Id)
                         && p.Activo
                         && p.NumeroWhatsApp != null
-                        && (p.FechaUltimaAlertaStockBajo == null || p.FechaUltimaAlertaStockBajo.Value.Date < hoy))
+                        && (p.FechaUltimaAlertaStockBajo == null || p.FechaUltimaAlertaStockBajo.Value < inicioHoyUtc))
             .ToListAsync(ct);
 
         if (proveedores.Count == 0)

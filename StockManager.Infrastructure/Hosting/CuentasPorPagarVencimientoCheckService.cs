@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -74,7 +75,9 @@ public class CuentasPorPagarVencimientoCheckService : BackgroundService
         if (string.IsNullOrWhiteSpace(configuracion.TelefonoNotificacionesAdmin))
             return;
 
-        var hoy = DateTime.UtcNow.Date;
+        // Vencimiento = día de calendario colombiano; "avisada hoy" = instante UTC dentro del día colombiano.
+        var hoy = HoraColombia.Hoy();
+        var inicioHoyUtc = HoraColombia.InicioDiaUtc();
         var limite = hoy.AddDays(_opciones.Value.DiasAvisoVencimientoProveedores);
 
         // Pendiente + dentro de la ventana de aviso (o ya vencida, lo cual siempre cae acá
@@ -82,7 +85,7 @@ public class CuentasPorPagarVencimientoCheckService : BackgroundService
         var cuentas = await db.CuentasPorPagar
             .Where(c => c.Estado == "Pendiente"
                         && c.FechaVencimiento <= limite
-                        && (c.FechaUltimaAlerta == null || c.FechaUltimaAlerta.Value.Date < hoy))
+                        && (c.FechaUltimaAlerta == null || c.FechaUltimaAlerta.Value < inicioHoyUtc))
             .ToListAsync(ct);
 
         if (cuentas.Count == 0)

@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
@@ -154,7 +155,7 @@ public class CuentaPorPagarService : ICuentaPorPagarService
 
     public async Task<List<CuentaPorPagarResumenResponse>> ObtenerProximasAVencerAsync(int dias)
     {
-        var limite = DateTime.UtcNow.Date.AddDays(dias);
+        var limite = HoraColombia.Hoy().AddDays(dias);
 
         var cuentas = await _dbContext.CuentasPorPagar
             .AsNoTracking()
@@ -206,5 +207,5 @@ public class CuentaPorPagarService : ICuentaPorPagarService
     /// vencimiento ya pasó. Evita que un job tenga que mantener sincronizado un flag aparte.
     /// </summary>
     private static bool EsVencida(string estado, DateTime fechaVencimiento) =>
-        estado == "Pendiente" && fechaVencimiento.Date < DateTime.UtcNow.Date;
+        estado == "Pendiente" && fechaVencimiento.Date < HoraColombia.Hoy();
 }

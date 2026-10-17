@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using StockManager.Application.DTOs;
@@ -29,14 +30,17 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardResumenResponse> ObtenerResumenAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
-        var manana = hoy.AddDays(1);
+        // "Hoy" es el día en Colombia (no el UTC, que cambia a las 7 p. m.): las ventas son
+        // instantes UTC, así que se filtran por el rango UTC del día colombiano.
+        var inicioHoyUtc = HoraColombia.InicioDiaUtc();
+        var finHoyUtc = inicioHoyUtc.AddDays(1);
+        var hoy = HoraColombia.Hoy();
         // Misma ventana de "próxima a vencer" que ya usa CuentasPorPagarVencimientoCheckService,
         // para que esta tarjeta del Dashboard sea consistente con la notificación de la campana.
         var limiteVencimiento = hoy.AddDays(_opciones.Value.DiasAvisoVencimientoProveedores);
 
         var ventasHoyQuery = _dbContext.Ventas.AsNoTracking()
-            .Where(v => v.Fecha >= hoy && v.Fecha < manana && v.Estado != "Cancelada");
+            .Where(v => v.Fecha >= inicioHoyUtc && v.Fecha < finHoyUtc && v.Estado != "Cancelada");
         var ventasHoyTotal = await ventasHoyQuery.SumAsync(v => (decimal?)v.Total) ?? 0m;
         var ventasHoyCantidad = await ventasHoyQuery.CountAsync();
 

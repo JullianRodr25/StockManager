@@ -1,4 +1,5 @@
 using QuestPDF.Fluent;
+using StockManager.Domain.Common;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using StockManager.Application.DTOs;
@@ -52,21 +53,8 @@ public class QuestPdfFacturaService : IFacturaPdfService
         return pdf.GeneratePdf();
     }
 
-    // Las fechas se guardan en UTC; el servidor (Azure) también corre en UTC, así que
-    // ToLocalTime() no serviría: se convierte explícitamente a la hora del negocio.
-    private static DateTime AHoraColombia(DateTime utc)
-    {
-        try
-        {
-            return TimeZoneInfo.ConvertTimeFromUtc(
-                DateTime.SpecifyKind(utc, DateTimeKind.Utc),
-                TimeZoneInfo.FindSystemTimeZoneById("America/Bogota"));
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return utc.AddHours(-5); // Colombia no tiene horario de verano: UTC-5 fijo.
-        }
-    }
+    // Las fechas se guardan en UTC: se muestran en hora de Colombia (ver HoraColombia).
+    private static DateTime AHoraColombia(DateTime utc) => HoraColombia.ALocal(utc);
 
     private static void ComponerEncabezado(ColumnDescriptor col, FacturaDocumentoResponse doc)
     {

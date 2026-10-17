@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -135,7 +136,7 @@ public class WhatsAppNotificationBackgroundService : BackgroundService
                 if (cuenta is not null)
                 {
                     var proveedor = await db2.Proveedores.AsNoTracking().FirstOrDefaultAsync(p => p.Id == cuenta.ProveedorId, ct);
-                    var vencida = cuenta.FechaVencimiento.Date < DateTime.UtcNow.Date;
+                    var vencida = cuenta.FechaVencimiento.Date < HoraColombia.Hoy();
                     await notificaciones.CrearAsync(
                         "CuentaPorPagarProximaAVencer",
                         vencida ? "Cuenta por pagar vencida" : "Cuenta por pagar próxima a vencer",

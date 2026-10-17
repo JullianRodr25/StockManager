@@ -1,3 +1,4 @@
+using StockManager.Domain.Common;
 namespace StockManager.Infrastructure.Notificaciones;
 
 /// <summary>
@@ -84,7 +85,7 @@ public static class PlantillasMensajesWhatsApp
     public static Dictionary<string, string> CuentaPorPagarProximaAVencer(
         string nombreProveedor, string concepto, decimal montoTotal, decimal saldoPendiente, DateTime fechaVencimiento)
     {
-        var diasRestantes = (fechaVencimiento.Date - DateTime.UtcNow.Date).Days;
+        var diasRestantes = (fechaVencimiento.Date - HoraColombia.Hoy()).Days;
         var cuando = diasRestantes switch
         {
             < 0 => $"venció hace {Math.Abs(diasRestantes)} día(s) ({fechaVencimiento:dd/MM/yyyy})",
