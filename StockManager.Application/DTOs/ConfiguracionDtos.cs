@@ -44,9 +44,7 @@ public class ConfiguracionResponse
     public int? ResolucionDianVigenciaMeses { get; set; }
     public string? TextoLegalFactura { get; set; }
     public string? PoliticaCambiosFactura { get; set; }
-}
 
-public class ActualizarConfiguracionRequest
     /// <summary>Si el cierre de caja se cuenta a ciegas (sin mostrar el esperado antes de contar).</summary>
     public bool ConteoCiegoCaja { get; set; }
 }
