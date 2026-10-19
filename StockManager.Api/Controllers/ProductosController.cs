@@ -252,10 +252,10 @@ public class ProductosController : ControllerBase
     /// <summary>
     /// Actualiza un producto existente.
     /// No modifica StockActual, solo información general (nombre, categoría, precio, stock mínimo, código de barras).
-    /// Requiere autenticación con rol Admin.
+    /// Requiere rol Admin o Empleado.
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Roles = Roles.GestionProductos)]
     public async Task<IActionResult> ActualizarProducto(int id, [FromBody] ActualizarProductoRequest request)
     {
         if (!ModelState.IsValid)
@@ -292,10 +292,10 @@ public class ProductosController : ControllerBase
     /// <summary>
     /// Desactiva un producto (eliminación lógica, no borrado físico).
     /// El producto se marca como inactivo pero permanece en la base de datos.
-    /// Requiere autenticación con rol Admin.
+    /// Requiere rol Admin o Empleado.
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.GestionProductos)]
     public async Task<IActionResult> DesactivarProducto(int id)
     {
         try
@@ -319,7 +319,7 @@ public class ProductosController : ControllerBase
     /// Requiere autenticación con rol Admin.
     /// </summary>
     [HttpPatch("{id}/reactivar")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.GestionProductos)]
     public async Task<IActionResult> ReactivarProducto(int id)
     {
         try
@@ -342,18 +342,20 @@ public class ProductosController : ControllerBase
     /// Ajusta manualmente el stock de un producto (ej. llegó mercancía, corrección de un
     /// conteo físico), fuera del flujo de ventas/pedidos. Delta puede ser positivo o negativo;
     /// no puede dejar el stock en negativo.
-    /// Requiere rol Admin (suma o resta) o Inventario (solo suma).
+    /// Requiere rol Admin o Empleado (suma o resta) o Inventario (solo suma).
     /// </summary>
     [HttpPatch("{id}/ajustar-stock")]
     [Authorize(Roles = Roles.AltaInventario)]
     public async Task<IActionResult> AjustarStock(int id, [FromBody] AjustarStockRequest request)
     {
         // El encargado de inventario solo puede SUMAR stock (llegó mercancía). Restar o corregir
-        // conteos a la baja queda para el Admin: una resta puede ocultar una pérdida o un faltante.
-        if (request.Delta <= 0 && !User.IsInRole(Roles.Admin))
+        // conteos a la baja queda para quienes gestionan productos (Admin y Empleado): una resta
+        // puede ocultar una pérdida o un faltante.
+        var puedeRestar = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Empleado);
+        if (request.Delta <= 0 && !puedeRestar)
         {
             return StatusCode(StatusCodes.Status403Forbidden,
-                new { message = "Solo un administrador puede restar stock; con tu rol solo se puede sumar." });
+                new { message = "Con tu rol solo se puede sumar stock; restar lo hace un administrador o un empleado." });
         }
 
         try
