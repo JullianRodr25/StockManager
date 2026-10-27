@@ -120,6 +120,8 @@ public class Producto
         if (costo < 0)
             throw new ArgumentException("El costo no puede ser negativo.", nameof(costo));
 
+        ValidarPrecioNoMenorAlCosto(precio, costo);
+
         if (stockActual < 0)
             throw new ArgumentException("El stock actual no puede ser negativo.", nameof(stockActual));
 
@@ -276,6 +278,7 @@ public class Producto
             throw new ArgumentException("El precio no puede ser negativo.");
         if (costo < 0)
             throw new ArgumentException("El costo no puede ser negativo.");
+        ValidarPrecioNoMenorAlCosto(precio, costo);
         if (stockMinimo < 0)
             throw new ArgumentException("El stock mínimo no puede ser negativo.");
         if (tarifaIva < 0 || tarifaIva > 100)
@@ -292,6 +295,16 @@ public class Producto
         TarifaIva = aplicaIva ? tarifaIva : 0;
         CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
         ProveedorId = proveedorId;
+    }
+
+    /// <summary>
+    /// Regla de negocio: no se puede vender por debajo de lo que costó. Vender al costo
+    /// (precio igual al costo) sí se permite.
+    /// </summary>
+    private static void ValidarPrecioNoMenorAlCosto(decimal precio, decimal costo)
+    {
+        if (precio < costo)
+            throw new ArgumentException("El precio de venta no puede ser menor al costo del producto.");
     }
 
     /// <summary>
