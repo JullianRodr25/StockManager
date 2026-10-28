@@ -28,11 +28,13 @@ jobs:
       - run: dotnet build --configuration Release
       - name: Instalar dotnet-ef
         run: dotnet tool install --global dotnet-ef
-      - name: ¿Modelo y snapshot coinciden?
+      - name: Qué cambios faltan en el snapshot
         continue-on-error: true
         run: |
-          dotnet ef migrations has-pending-model-changes --project StockManager.Infrastructure --startup-project StockManager.Api --no-build --configuration Release > ef.log 2>&1 || true
-          echo "::error title=ef-pending::$(head -c 6000 ef.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          dotnet ef migrations add Sonda --project StockManager.Infrastructure --startup-project StockManager.Api --no-build --configuration Release > ef.log 2>&1 || true
+          f=$(ls StockManager.Infrastructure/Migrations/*_Sonda.cs | head -1)
+          echo "::error title=sonda::$(grep -v 'using \|^$' "$f" | head -c 9000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          echo "::error title=sonda-log::$(grep -v 'warning NU' ef.log | head -c 3000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=Diag;User Id=sa;Password=Diag_Pass_12345!;TrustServerCertificate=True"
       - name: Arrancar la API (aplica migraciones)
