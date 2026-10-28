@@ -13,7 +13,8 @@ public sealed record TotalesTurnoCaja(
     decimal AbonosFiadoEfectivo,
     decimal PagosProveedorEfectivo,
     decimal Transferencias,
-    decimal Tarjeta)
+    decimal Tarjeta,
+    decimal PagosNominaEfectivo = 0m)
 {
     public static readonly TotalesTurnoCaja Vacio = new(0m, 0m, 0m, 0m, 0m);
 
@@ -23,5 +24,5 @@ public sealed record TotalesTurnoCaja(
     /// devuelto al cliente nunca se queda en la caja.
     /// </summary>
     public decimal EfectivoEsperado(decimal baseInicial) =>
-        baseInicial + VentasEfectivo + AbonosFiadoEfectivo - PagosProveedorEfectivo;
+        baseInicial + VentasEfectivo + AbonosFiadoEfectivo - PagosProveedorEfectivo - PagosNominaEfectivo;
 }

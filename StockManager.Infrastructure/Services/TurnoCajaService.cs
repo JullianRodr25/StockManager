@@ -240,6 +240,11 @@ public class TurnoCajaService : ITurnoCajaService
             .Where(a => a.TurnoCajaId == turnoId && a.MetodoPago == Efectivo)
             .SumAsync(a => (decimal?)a.Monto) ?? 0m;
 
+        // Sueldos pagados en efectivo desde este turno (solo las liquidaciones en efectivo llevan turno).
+        var pagosNominaEfectivo = await _dbContext.LiquidacionesNomina
+            .Where(l => l.TurnoCajaId == turnoId)
+            .SumAsync(l => (decimal?)l.Neto) ?? 0m;
+
         var entradas = new List<(string? Metodo, decimal Monto)>();
         entradas.AddRange(ventasDirectas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
         entradas.AddRange(ventasMixtas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
@@ -256,7 +261,8 @@ public class TurnoCajaService : ITurnoCajaService
             AbonosFiadoEfectivo: Sumar(abonos, Efectivo),
             PagosProveedorEfectivo: pagosProveedorEfectivo,
             Transferencias: Sumar(entradas, Transferencia) + Sumar(abonos, Transferencia),
-            Tarjeta: Sumar(entradas, Tarjeta) + Sumar(abonos, Tarjeta));
+            Tarjeta: Sumar(entradas, Tarjeta) + Sumar(abonos, Tarjeta),
+            PagosNominaEfectivo: pagosNominaEfectivo);
     }
 
     private async Task<TurnoCajaResponse> MapearAsync(TurnoCaja turno, bool esperadoVisible)
@@ -279,14 +285,16 @@ public class TurnoCajaService : ITurnoCajaService
         {
             var t = turno.TotalesCierre!;
             totalesResponse = new TotalesCajaResponse(
-                t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta);
+                t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta,
+                t.PagosNominaEfectivo);
             esperado = turno.EfectivoEsperado;
         }
         else if (esperadoVisible)
         {
             var t = await CalcularTotalesAsync(turno.Id);
             totalesResponse = new TotalesCajaResponse(
-                t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta);
+                t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta,
+                t.PagosNominaEfectivo);
             esperado = t.EfectivoEsperado(turno.BaseInicial);
         }
 

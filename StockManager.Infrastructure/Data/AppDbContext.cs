@@ -39,6 +39,13 @@ public class AppDbContext : DbContext
     public DbSet<NotificacionInterna> NotificacionesInternas { get; set; } = null!;
     public DbSet<ResenaProducto> ResenasProducto { get; set; } = null!;
     public DbSet<TurnoCaja> TurnosCaja { get; set; } = null!;
+    public DbSet<Trabajador> Trabajadores { get; set; } = null!;
+    public DbSet<ParametrosNomina> ParametrosNomina { get; set; } = null!;
+    public DbSet<Prestamo> Prestamos { get; set; } = null!;
+    public DbSet<PeriodoNomina> PeriodosNomina { get; set; } = null!;
+    public DbSet<LiquidacionNomina> LiquidacionesNomina { get; set; } = null!;
+    public DbSet<NovedadNomina> NovedadesNomina { get; set; } = null!;
+    public DbSet<CuotaPrestamo> CuotasPrestamo { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,6 +74,13 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new NotificacionInternaConfiguration());
         modelBuilder.ApplyConfiguration(new ResenaProductoConfiguration());
         modelBuilder.ApplyConfiguration(new TurnoCajaConfiguration());
+        modelBuilder.ApplyConfiguration(new TrabajadorConfiguration());
+        modelBuilder.ApplyConfiguration(new ParametrosNominaConfiguration());
+        modelBuilder.ApplyConfiguration(new PrestamoConfiguration());
+        modelBuilder.ApplyConfiguration(new PeriodoNominaConfiguration());
+        modelBuilder.ApplyConfiguration(new LiquidacionNominaConfiguration());
+        modelBuilder.ApplyConfiguration(new NovedadNominaConfiguration());
+        modelBuilder.ApplyConfiguration(new CuotaPrestamoConfiguration());
 
         MarcarInstantesComoUtc(modelBuilder);
     }
@@ -77,6 +91,11 @@ public class AppDbContext : DbContext
     [
         nameof(CuentaPorPagar.FechaVencimiento),
         nameof(Configuracion.ResolucionDianFecha),
+        nameof(Trabajador.FechaIngreso),
+        nameof(Trabajador.FechaFinContrato),
+        nameof(Prestamo.PrimeraCuotaDesde),
+        nameof(PeriodoNomina.FechaInicio),
+        nameof(PeriodoNomina.FechaFin),
     ];
 
     /// <summary>
