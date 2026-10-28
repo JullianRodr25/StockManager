@@ -34,7 +34,8 @@ public record TotalesCajaResponse(
     decimal AbonosFiadoEfectivo,
     decimal PagosProveedorEfectivo,
     decimal Transferencias,
-    decimal Tarjeta);
+    decimal Tarjeta,
+    decimal PagosNominaEfectivo);
 
 public record ConteoDenominacionResponse(int Denominacion, int Cantidad, decimal Valor);
 

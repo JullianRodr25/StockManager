@@ -31,6 +31,9 @@ public class LiquidacionNomina
     public bool Pagada { get; private set; }
     public DateTime? PagadaEn { get; private set; }
 
+    /// <summary>Turno de caja del que salió el efectivo; solo las liquidaciones pagadas en efectivo lo llevan.</summary>
+    public int? TurnoCajaId { get; private set; }
+
     private LiquidacionNomina() { }
 
     public decimal SeguridadSocial => DescuentoSalud + DescuentoPension;
@@ -65,9 +68,10 @@ public class LiquidacionNomina
         Neto = resultado.Neto;
     }
 
-    public void MarcarPagada()
+    public void MarcarPagada(int? turnoCajaId)
     {
         Pagada = true;
         PagadaEn = DateTime.UtcNow;
+        TurnoCajaId = MetodoPago == Trabajador.PagoEfectivo ? turnoCajaId : null;
     }
 }

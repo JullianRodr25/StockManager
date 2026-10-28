@@ -10,8 +10,8 @@ public interface IPeriodoNominaService
     Task<PeriodoNominaResponse> AbrirAsync(AbrirPeriodoNominaRequest request);
     Task<PeriodoNominaResponse> RecalcularAsync(int id);
     Task<PeriodoNominaResponse> AprobarAsync(int id, int empleadoId);
-    Task<PeriodoNominaResponse> PagarLiquidacionAsync(int id, int liquidacionId);
-    Task<PeriodoNominaResponse> PagarTodasAsync(int id);
+    Task<PeriodoNominaResponse> PagarLiquidacionAsync(int id, int liquidacionId, int empleadoId);
+    Task<PeriodoNominaResponse> PagarTodasAsync(int id, int empleadoId);
     Task<PeriodoNominaResponse> CerrarAsync(int id);
     Task<PeriodoNominaResponse> AgregarNovedadAsync(int id, AgregarNovedadRequest request);
     Task<PeriodoNominaResponse> EliminarNovedadAsync(int id, int novedadId);

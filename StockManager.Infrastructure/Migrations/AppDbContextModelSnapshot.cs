@@ -1052,6 +1052,9 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<decimal?>("TotalAbonosFiadoEfectivo")
                         .HasColumnType("decimal(12, 2)");
 
+                    b.Property<decimal?>("TotalPagosNominaEfectivo")
+                        .HasColumnType("decimal(12, 2)");
+
                     b.Property<decimal?>("TotalPagosProveedorEfectivo")
                         .HasColumnType("decimal(12, 2)");
 
@@ -1331,6 +1334,9 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<decimal>("SalarioQuincena")
                         .HasColumnType("decimal(12, 2)");
 
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
                     b.Property<int>("TrabajadorId")
                         .HasColumnType("int");
 
@@ -1340,6 +1346,8 @@ namespace StockManager.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("TrabajadorId");
+
+                    b.HasIndex("TurnoCajaId");
 
                     b.ToTable("LiquidacionesNomina", (string)null);
                 });
@@ -1763,6 +1771,11 @@ namespace StockManager.Infrastructure.Migrations
                         .HasForeignKey("TrabajadorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.NovedadNomina", b =>

@@ -12,11 +12,19 @@ public class PeriodoNominaService : IPeriodoNominaService
 {
     private readonly AppDbContext _dbContext;
     private readonly IParametrosNominaService _parametrosService;
+    private readonly ITurnoCajaService _turnoCajaService;
 
-    public PeriodoNominaService(AppDbContext dbContext, IParametrosNominaService parametrosService)
+    // Proveedor que recibe las obligaciones de seguridad social en Cuentas por pagar.
+    private const string ProveedorSeguridadSocial = "Seguridad social (aportes)";
+
+    public PeriodoNominaService(
+        AppDbContext dbContext,
+        IParametrosNominaService parametrosService,
+        ITurnoCajaService turnoCajaService)
     {
         _dbContext = dbContext;
         _parametrosService = parametrosService;
+        _turnoCajaService = turnoCajaService;
     }
 
     // ---------- Consultas ----------
@@ -124,7 +132,7 @@ public class PeriodoNominaService : IPeriodoNominaService
         return await ConstruirRespuestaAsync(periodo);
     }
 
-    public async Task<PeriodoNominaResponse> PagarLiquidacionAsync(int id, int liquidacionId)
+    public async Task<PeriodoNominaResponse> PagarLiquidacionAsync(int id, int liquidacionId, int empleadoId)
     {
         var periodo = await BuscarAsync(id, rastrear: true);
         ExigirAprobada(periodo);
@@ -134,14 +142,19 @@ public class PeriodoNominaService : IPeriodoNominaService
             ?? throw new PeriodoNominaEstadoInvalidoException("La liquidación no pertenece a esta quincena.");
 
         if (!liquidacion.Pagada)
-            liquidacion.MarcarPagada();
+        {
+            // El sueldo en efectivo sale del cajón: debe quedar en el turno abierto de quien paga.
+            var turnoId = await _turnoCajaService.ResolverTurnoParaPagoAsync(
+                empleadoId, liquidacion.MetodoPago == Trabajador.PagoEfectivo);
+            liquidacion.MarcarPagada(turnoId);
+        }
 
         await _dbContext.SaveChangesAsync();
         await MarcarPagadaSiCompletaAsync(periodo);
         return await ConstruirRespuestaAsync(periodo);
     }
 
-    public async Task<PeriodoNominaResponse> PagarTodasAsync(int id)
+    public async Task<PeriodoNominaResponse> PagarTodasAsync(int id, int empleadoId)
     {
         var periodo = await BuscarAsync(id, rastrear: true);
         ExigirAprobada(periodo);
@@ -149,8 +162,10 @@ public class PeriodoNominaService : IPeriodoNominaService
         var pendientes = await _dbContext.LiquidacionesNomina
             .Where(l => l.PeriodoNominaId == id && !l.Pagada)
             .ToListAsync();
+        var turnoId = await _turnoCajaService.ResolverTurnoParaPagoAsync(
+            empleadoId, pendientes.Any(l => l.MetodoPago == Trabajador.PagoEfectivo));
         foreach (var liquidacion in pendientes)
-            liquidacion.MarcarPagada();
+            liquidacion.MarcarPagada(turnoId);
 
         await _dbContext.SaveChangesAsync();
         await MarcarPagadaSiCompletaAsync(periodo);
@@ -160,6 +175,10 @@ public class PeriodoNominaService : IPeriodoNominaService
     public async Task<PeriodoNominaResponse> CerrarAsync(int id)
     {
         var periodo = await BuscarAsync(id, rastrear: true);
+
+        // Cerrar toca varias tablas (préstamos, cuentas por pagar): todo o nada.
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
         periodo.Cerrar();
 
         // Recién ahora las cuotas se descuentan del saldo de cada préstamo.
@@ -177,7 +196,10 @@ public class PeriodoNominaService : IPeriodoNominaService
             cuota.MarcarAplicada();
         }
 
+        await RegistrarObligacionSeguridadSocialAsync(periodo);
+
         await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return await ConstruirRespuestaAsync(periodo);
     }
 
@@ -315,6 +337,39 @@ public class PeriodoNominaService : IPeriodoNominaService
         var consulta = rastrear ? _dbContext.PeriodosNomina : _dbContext.PeriodosNomina.AsNoTracking();
         return await consulta.FirstOrDefaultAsync(p => p.Id == id)
             ?? throw new PeriodoNominaNoEncontradoException(id);
+    }
+
+    /// <summary>
+    /// Deja en Cuentas por pagar lo retenido a los trabajadores por salud y pensión en la quincena,
+    /// para que se pague a las entidades. Vence el día 10 del mes siguiente (fecha de referencia).
+    /// No incluye los aportes a cargo del empleador, que la nómina todavía no calcula.
+    /// </summary>
+    private async Task RegistrarObligacionSeguridadSocialAsync(PeriodoNomina periodo)
+    {
+        var total = await _dbContext.LiquidacionesNomina
+            .Where(l => l.PeriodoNominaId == periodo.Id)
+            .SumAsync(l => (decimal?)(l.DescuentoSalud + l.DescuentoPension)) ?? 0m;
+        if (total <= 0)
+            return;
+
+        var proveedorId = await _dbContext.Proveedores
+            .Where(p => p.Nombre == ProveedorSeguridadSocial)
+            .Select(p => (int?)p.Id)
+            .FirstOrDefaultAsync();
+
+        if (proveedorId is null)
+        {
+            var proveedor = Proveedor.Crear(ProveedorSeguridadSocial, null, null, null, null);
+            _dbContext.Proveedores.Add(proveedor);
+            await _dbContext.SaveChangesAsync();
+            proveedorId = proveedor.Id;
+        }
+
+        // Día 10 del mes siguiente al fin de la quincena.
+        var vencimiento = new DateTime(periodo.FechaFin.Year, periodo.FechaFin.Month, 1).AddMonths(1).AddDays(9);
+
+        var concepto = $"Aportes de seguridad social retenidos, quincena {periodo.FechaInicio:dd/MM/yyyy} al {periodo.FechaFin:dd/MM/yyyy}";
+        _dbContext.CuentasPorPagar.Add(CuentaPorPagar.Crear(proveedorId.Value, concepto, total, vencimiento));
     }
 
     private static void ExigirAprobada(PeriodoNomina periodo)

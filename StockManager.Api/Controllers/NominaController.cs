@@ -126,13 +126,13 @@ public class NominaController : ControllerBase
     [HttpPost("periodos/{id:int}/aprobar")]
     public async Task<IActionResult> AprobarPeriodo(int id) => Ok(await _periodos.AprobarAsync(id, EmpleadoId));
 
-    /// <summary>Registra el pago de todos los trabajadores que aún no se han marcado como pagados.</summary>
+    /// <summary>Registra el pago de todos los trabajadores que aún no se han marcado como pagados. Los pagos en efectivo salen del turno de caja abierto de quien los registra.</summary>
     [HttpPost("periodos/{id:int}/pagar")]
-    public async Task<IActionResult> PagarPeriodo(int id) => Ok(await _periodos.PagarTodasAsync(id));
+    public async Task<IActionResult> PagarPeriodo(int id) => Ok(await _periodos.PagarTodasAsync(id, EmpleadoId));
 
     [HttpPost("periodos/{id:int}/liquidaciones/{liquidacionId:int}/pagar")]
     public async Task<IActionResult> PagarLiquidacion(int id, int liquidacionId) =>
-        Ok(await _periodos.PagarLiquidacionAsync(id, liquidacionId));
+        Ok(await _periodos.PagarLiquidacionAsync(id, liquidacionId, EmpleadoId));
 
     [HttpPost("periodos/{id:int}/cerrar")]
     public async Task<IActionResult> CerrarPeriodo(int id) => Ok(await _periodos.CerrarAsync(id));

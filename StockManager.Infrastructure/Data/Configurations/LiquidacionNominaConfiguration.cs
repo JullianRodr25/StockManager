@@ -42,6 +42,14 @@ public class LiquidacionNominaConfiguration : IEntityTypeConfiguration<Liquidaci
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
 
+        builder.HasOne<TurnoCaja>()
+            .WithMany()
+            .HasForeignKey(l => l.TurnoCajaId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        builder.HasIndex(l => l.TurnoCajaId);
+
         // Un trabajador aparece una sola vez por quincena.
         builder.HasIndex(l => new { l.PeriodoNominaId, l.TrabajadorId }).IsUnique();
     }

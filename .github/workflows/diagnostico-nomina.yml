@@ -48,6 +48,8 @@ jobs:
             if [ "$code" != "000" ]; then break; fi
             sleep 3
           done
-          echo "::error title=api-log::$(head -c 9000 api.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          sleep 5
+          echo "::error title=resumen::$(grep -E 'Applied migration|AddModuloNomina|AddPagoNomina|Now listening|Unhandled|Exception|fail:|HTTP' api.log | head -c 5000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          echo "::error title=http::codigo=$code"
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=Diag;User Id=sa;Password=Diag_Pass_12345!;TrustServerCertificate=True"
