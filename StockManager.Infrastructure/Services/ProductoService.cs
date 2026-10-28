@@ -92,11 +92,12 @@ public class ProductoService : IProductoService
         var total = await query.CountAsync();
         var skip = (pagina - 1) * tamanoPagina;
 
+        // Siempre alfabético por nombre (el Id desempata para que la paginación sea estable).
         // Con búsqueda, los nombres que empiezan por el texto van primero ("Ad" → "Adaptador"
-        // antes que "Cerradura"); sin búsqueda se mantiene el orden por Id de siempre.
+        // antes que "Cerradura") y dentro de cada grupo sigue el orden alfabético.
         var ordenada = hayBusqueda
-            ? query.OrderBy(p => p.Nombre.StartsWith(termino!) ? 0 : 1).ThenBy(p => p.Id)
-            : query.OrderBy(p => p.Id);
+            ? query.OrderBy(p => p.Nombre.StartsWith(termino!) ? 0 : 1).ThenBy(p => p.Nombre).ThenBy(p => p.Id)
+            : query.OrderBy(p => p.Nombre).ThenBy(p => p.Id);
 
         var productos = await ordenada
             .Skip(skip)
