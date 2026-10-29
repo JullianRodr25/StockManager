@@ -12,6 +12,7 @@ public class PeriodoNominaConfiguration : IEntityTypeConfiguration<PeriodoNomina
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).ValueGeneratedOnAdd();
 
+        builder.Property(p => p.Frecuencia).IsRequired().HasMaxLength(20);
         builder.Property(p => p.FechaInicio).HasColumnType("date").IsRequired();
         builder.Property(p => p.FechaFin).HasColumnType("date").IsRequired();
         builder.Property(p => p.Estado).IsRequired().HasMaxLength(20);
@@ -23,6 +24,6 @@ public class PeriodoNominaConfiguration : IEntityTypeConfiguration<PeriodoNomina
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
 
-        builder.HasIndex(p => p.FechaInicio).IsUnique();
+        builder.HasIndex(p => new { p.Frecuencia, p.FechaInicio }).IsUnique();
     }
 }

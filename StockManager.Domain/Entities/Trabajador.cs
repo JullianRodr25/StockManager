@@ -23,6 +23,12 @@ public class Trabajador
 
     public static readonly string[] MetodosPago = [PagoEfectivo, PagoTransferencia];
 
+    public const string FrecuenciaSemanal = "Semanal";
+    public const string FrecuenciaQuincenal = "Quincenal";
+    public const string FrecuenciaMensual = "Mensual";
+
+    public static readonly string[] Frecuencias = [FrecuenciaSemanal, FrecuenciaQuincenal, FrecuenciaMensual];
+
     public int Id { get; private set; }
     public string Nombre { get; private set; } = null!;
     public string NumeroIdentificacion { get; private set; } = null!;
@@ -44,6 +50,9 @@ public class Trabajador
     /// <summary>Cómo se le paga normalmente (Efectivo o Transferencia).</summary>
     public string MetodoPago { get; private set; } = PagoEfectivo;
 
+    /// <summary>Cada cuánto se le paga (Semanal, Quincenal o Mensual). Define en qué período entra.</summary>
+    public string FrecuenciaPago { get; private set; } = FrecuenciaQuincenal;
+
     public bool Activo { get; private set; }
     public DateTime FechaCreacion { get; private set; }
 
@@ -52,18 +61,20 @@ public class Trabajador
     public static Trabajador Crear(
         string nombre, string numeroIdentificacion, string? telefono, string cargo,
         string tipoContrato, DateTime fechaIngreso, DateTime? fechaFinContrato,
-        decimal salarioMensual, bool aplicaSeguridadSocial, string metodoPago)
+        decimal salarioMensual, bool aplicaSeguridadSocial, string metodoPago,
+        string frecuenciaPago = FrecuenciaQuincenal)
     {
         var trabajador = new Trabajador { Activo = true, FechaCreacion = DateTime.UtcNow };
         trabajador.Actualizar(nombre, numeroIdentificacion, telefono, cargo, tipoContrato,
-            fechaIngreso, fechaFinContrato, salarioMensual, aplicaSeguridadSocial, metodoPago);
+            fechaIngreso, fechaFinContrato, salarioMensual, aplicaSeguridadSocial, metodoPago, frecuenciaPago);
         return trabajador;
     }
 
     public void Actualizar(
         string nombre, string numeroIdentificacion, string? telefono, string cargo,
         string tipoContrato, DateTime fechaIngreso, DateTime? fechaFinContrato,
-        decimal salarioMensual, bool aplicaSeguridadSocial, string metodoPago)
+        decimal salarioMensual, bool aplicaSeguridadSocial, string metodoPago,
+        string frecuenciaPago = FrecuenciaQuincenal)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del trabajador no puede estar vacío.", nameof(nombre));
@@ -89,6 +100,9 @@ public class Trabajador
         if (!MetodosPago.Contains(metodoPago))
             throw new ArgumentException("El método de pago no es válido.", nameof(metodoPago));
 
+        if (!Frecuencias.Contains(frecuenciaPago))
+            throw new ArgumentException("La frecuencia de pago no es válida.", nameof(frecuenciaPago));
+
         if (salarioMensual <= 0)
             throw new ArgumentException("El salario debe ser mayor que cero.", nameof(salarioMensual));
 
@@ -111,6 +125,7 @@ public class Trabajador
         SalarioMensual = salarioMensual;
         AplicaSeguridadSocial = aplicaSeguridadSocial;
         MetodoPago = metodoPago;
+        FrecuenciaPago = frecuenciaPago;
     }
 
     public void Desactivar() => Activo = false;

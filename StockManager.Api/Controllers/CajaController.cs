@@ -36,6 +36,18 @@ public class CajaController : ControllerBase
         return Ok(turno);
     }
 
+    /// <summary>Base con la que arrancaría la caja y datos de la última caja cerrada.</summary>
+    [HttpGet("apertura")]
+    public async Task<IActionResult> ObtenerApertura() => Ok(await _turnoCajaService.ObtenerAperturaAsync());
+
+    /// <summary>Confirma la contraseña del usuario logueado antes de abrir el cajón físico.</summary>
+    [HttpPost("cajon/verificar")]
+    public async Task<IActionResult> VerificarCajon([FromBody] VerificarContrasenaRequest request)
+    {
+        await _turnoCajaService.VerificarContrasenaAsync(EmpleadoId, request.Contrasena);
+        return NoContent();
+    }
+
     /// <summary>Turno abierto del usuario; 204 si no tiene ninguno.</summary>
     [HttpGet("turno-actual")]
     public async Task<IActionResult> ObtenerTurnoActual()

@@ -29,7 +29,7 @@ public sealed record ResultadoLiquidacion(
 }
 
 /// <summary>
-/// Fórmula de la quincena. Es una función pura (sin base de datos) a propósito: es dinero, y así
+/// Fórmula del período. Es una función pura (sin base de datos) a propósito: es dinero, y así
 /// se puede revisar y probar sin infraestructura. Todo se redondea a pesos enteros.
 /// </summary>
 public static class CalculadoraNomina
@@ -38,9 +38,24 @@ public static class CalculadoraNomina
         Math.Round(valor, 0, MidpointRounding.AwayFromZero);
 
     /// <summary>
+    /// Parte de un valor mensual que corresponde al período: mensual = completo, quincenal = la
+    /// mitad y semanal = suma de sus 7 días, donde cada día vale el valor dividido entre los días
+    /// reales de SU mes (febrero 28, octubre 31). Así una semana que cruza dos meses queda exacta.
+    /// </summary>
+    public static decimal ValorDelPeriodo(decimal valorMensual, PeriodoNomina periodo) =>
+        periodo.Frecuencia switch
+        {
+            Trabajador.FrecuenciaMensual => valorMensual,
+            Trabajador.FrecuenciaSemanal => Enumerable.Range(0, 7)
+                .Select(i => periodo.FechaInicio.AddDays(i))
+                .Sum(dia => valorMensual / DateTime.DaysInMonth(dia.Year, dia.Month)),
+            _ => valorMensual / 2m
+        };
+
+    /// <summary>
     /// Calcula la quincena sin préstamos (el neto resultante es el disponible para descontarlos).
-    /// - Salario de la quincena = salario mensual / 2.
-    /// - Auxilio de transporte (también / 2) si gana hasta el límite de salarios mínimos y no es
+    /// - Salario del período según la frecuencia (ver ValorDelPeriodo).
+    /// - Auxilio de transporte (misma proporción) si gana hasta el límite de salarios mínimos y no es
     ///   prestación de servicios.
     /// - Salud y pensión del trabajador = porcentaje sobre el salario (no sobre el auxilio), solo
     ///   si el trabajador tiene activada la seguridad social.
@@ -49,14 +64,15 @@ public static class CalculadoraNomina
         Trabajador trabajador,
         ParametrosNomina parametros,
         decimal otrosDevengos,
-        decimal otrosDescuentos)
+        decimal otrosDescuentos,
+        PeriodoNomina periodo)
     {
-        var salario = Redondear(trabajador.SalarioMensual / 2m);
+        var salario = Redondear(ValorDelPeriodo(trabajador.SalarioMensual, periodo));
 
         var recibeAuxilio =
             trabajador.TipoContrato != Trabajador.ContratoPrestacionServicios
             && trabajador.SalarioMensual <= parametros.LimiteSalariosAuxilio * parametros.SalarioMinimo;
-        var auxilio = recibeAuxilio ? Redondear(parametros.AuxilioTransporte / 2m) : 0m;
+        var auxilio = recibeAuxilio ? Redondear(ValorDelPeriodo(parametros.AuxilioTransporte, periodo)) : 0m;
 
         var salud = trabajador.AplicaSeguridadSocial
             ? Redondear(salario * parametros.PorcentajeSaludTrabajador / 100m)

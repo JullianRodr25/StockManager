@@ -49,7 +49,8 @@ public class TrabajadorService : ITrabajadorService
         var trabajador = Trabajador.Crear(
             request.Nombre, request.NumeroIdentificacion, request.Telefono, request.Cargo,
             request.TipoContrato, request.FechaIngreso, request.FechaFinContrato,
-            request.SalarioMensual, request.AplicaSeguridadSocial, request.MetodoPago);
+            request.SalarioMensual, request.AplicaSeguridadSocial, request.MetodoPago,
+            request.FrecuenciaPago);
 
         await ExigirIdentificacionLibreAsync(trabajador.NumeroIdentificacion, null);
 
@@ -67,7 +68,8 @@ public class TrabajadorService : ITrabajadorService
         trabajador.Actualizar(
             request.Nombre, request.NumeroIdentificacion, request.Telefono, request.Cargo,
             request.TipoContrato, request.FechaIngreso, request.FechaFinContrato,
-            request.SalarioMensual, request.AplicaSeguridadSocial, request.MetodoPago);
+            request.SalarioMensual, request.AplicaSeguridadSocial, request.MetodoPago,
+            request.FrecuenciaPago);
 
         await ExigirIdentificacionLibreAsync(trabajador.NumeroIdentificacion, id);
         await GuardarAsync(trabajador.NumeroIdentificacion);
@@ -143,6 +145,7 @@ public class TrabajadorService : ITrabajadorService
         t.SalarioMensual,
         t.AplicaSeguridadSocial,
         t.MetodoPago,
+        t.FrecuenciaPago,
         t.Activo,
         saldoPrestamos,
         t.FechaFinContrato is { } fin ? (int)(fin.Date - hoy).TotalDays : null);

@@ -12,7 +12,9 @@ public record GuardarTrabajadorRequest(
     DateTime? FechaFinContrato,
     decimal SalarioMensual,
     bool AplicaSeguridadSocial,
-    string MetodoPago
+    string MetodoPago,
+    // Semanal | Quincenal | Mensual. Si no se envía, Quincenal.
+    string FrecuenciaPago = "Quincenal"
 );
 
 public record TrabajadorResponse(
@@ -27,6 +29,7 @@ public record TrabajadorResponse(
     decimal SalarioMensual,
     bool AplicaSeguridadSocial,
     string MetodoPago,
+    string FrecuenciaPago,
     bool Activo,
     // Lo que todavía debe de préstamos y adelantos activos.
     decimal SaldoPrestamos,
@@ -86,8 +89,10 @@ public record PrestamoResponse(
 // ---------- Quincenas ----------
 
 public record AbrirPeriodoNominaRequest(
-    // Si no se envía, se abre la quincena siguiente a la última (o la actual si no hay ninguna).
-    DateTime? FechaInicio
+    // Si no se envía, se abre el período siguiente al último de esa frecuencia (o el actual si no hay ninguno).
+    DateTime? FechaInicio,
+    // Semanal | Quincenal | Mensual. Si no se envía, Quincenal.
+    string? Frecuencia = null
 );
 
 public record AgregarNovedadRequest(
@@ -137,6 +142,7 @@ public record LiquidacionNominaResponse(
 
 public record PeriodoNominaResumenResponse(
     int Id,
+    string Frecuencia,
     DateTime FechaInicio,
     DateTime FechaFin,
     string Estado,

@@ -4,9 +4,26 @@ namespace StockManager.Application.DTOs;
 
 public class AbrirTurnoRequest
 {
-    /// <summary>Efectivo con el que arranca la caja (la "base"). Puede ser 0.</summary>
+    /// <summary>
+    /// Efectivo con el que arranca la caja (la "base"). Solo se usa cuando no hay ninguna caja
+    /// cerrada; si la hay, la base es el efectivo contado en el último cierre y este valor se ignora.
+    /// </summary>
     [Range(0, 1_000_000_000)]
     public decimal BaseInicial { get; set; }
+}
+
+/// <summary>Lo que necesita la pantalla para abrir caja: con qué base arranca y cuál fue el último cierre.</summary>
+public record AperturaCajaResponse(
+    // true cuando no hay ninguna caja cerrada: solo entonces la base se escribe a mano.
+    bool RequiereBaseManual,
+    // Efectivo contado en el último cierre (0 si no hay).
+    decimal BaseSugerida,
+    TurnoCajaResponse? UltimoCierre);
+
+public class VerificarContrasenaRequest
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    public string Contrasena { get; set; } = string.Empty;
 }
 
 public class ConteoDenominacionRequest

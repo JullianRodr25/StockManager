@@ -105,11 +105,11 @@ public class NominaController : ControllerBase
     [HttpGet("periodos")]
     public async Task<IActionResult> ListarPeriodos() => Ok(await _periodos.ListarAsync());
 
-    /// <summary>Quincena que contiene el día de hoy; 204 si aún no se abrió.</summary>
+    /// <summary>Período de la frecuencia (por defecto Quincenal) que contiene el día de hoy; 204 si aún no se abrió.</summary>
     [HttpGet("periodos/actual")]
-    public async Task<IActionResult> ObtenerPeriodoActual()
+    public async Task<IActionResult> ObtenerPeriodoActual([FromQuery] string frecuencia = "Quincenal")
     {
-        var periodo = await _periodos.ObtenerActualAsync();
+        var periodo = await _periodos.ObtenerActualAsync(frecuencia);
         return periodo is null ? NoContent() : Ok(periodo);
     }
 
@@ -118,7 +118,7 @@ public class NominaController : ControllerBase
 
     [HttpPost("periodos")]
     public async Task<IActionResult> AbrirPeriodo([FromBody] AbrirPeriodoNominaRequest? request) =>
-        Ok(await _periodos.AbrirAsync(request ?? new AbrirPeriodoNominaRequest(null)));
+        Ok(await _periodos.AbrirAsync(request ?? new AbrirPeriodoNominaRequest(null, null)));
 
     [HttpPost("periodos/{id:int}/recalcular")]
     public async Task<IActionResult> RecalcularPeriodo(int id) => Ok(await _periodos.RecalcularAsync(id));

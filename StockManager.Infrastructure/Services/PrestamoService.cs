@@ -45,7 +45,7 @@ public class PrestamoService : IPrestamoService
         if (!trabajador.Activo)
             throw new ArgumentException("No se puede dar un préstamo a un trabajador inactivo.");
 
-        var primeraCuota = await PrimeraQuincenaDescontableAsync(request.PrimeraCuotaDesde);
+        var primeraCuota = await PrimerPeriodoDescontableAsync(trabajador.FrecuenciaPago, request.PrimeraCuotaDesde);
 
         var prestamo = Prestamo.Crear(
             trabajador.Id, request.Tipo, request.Monto, request.NumeroCuotas, primeraCuota, request.Nota);
@@ -84,19 +84,20 @@ public class PrestamoService : IPrestamoService
     }
 
     /// <summary>
-    /// Primer día de la quincena indicada, pero nunca dentro de una quincena que ya no admite
-    /// cambios (aprobada, pagada o cerrada): en ese caso la primera cuota pasa a la siguiente.
+    /// Primer día del período (de la frecuencia del trabajador) que contiene el día indicado, pero
+    /// nunca dentro de un período que ya no admite cambios (aprobado, pagado o cerrado): en ese
+    /// caso la primera cuota pasa al siguiente.
     /// </summary>
-    private async Task<DateTime> PrimeraQuincenaDescontableAsync(DateTime dia)
+    private async Task<DateTime> PrimerPeriodoDescontableAsync(string frecuencia, DateTime dia)
     {
-        var inicio = PeriodoNomina.QuincenaDe(dia).Inicio;
+        var inicio = PeriodoNomina.PeriodoDe(frecuencia, dia).Inicio;
 
         var ultimaCongelada = await _dbContext.PeriodosNomina
-            .Where(p => p.Estado != PeriodoNomina.EstadoBorrador)
+            .Where(p => p.Frecuencia == frecuencia && p.Estado != PeriodoNomina.EstadoBorrador)
             .MaxAsync(p => (DateTime?)p.FechaFin);
 
         if (ultimaCongelada.HasValue && inicio <= ultimaCongelada.Value)
-            inicio = PeriodoNomina.QuincenaDe(ultimaCongelada.Value.AddDays(1)).Inicio;
+            inicio = PeriodoNomina.PeriodoDe(frecuencia, ultimaCongelada.Value.AddDays(1)).Inicio;
 
         return inicio;
     }

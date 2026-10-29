@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
@@ -32,7 +33,9 @@ public class TurnoCajaService : ITurnoCajaService
         if (yaTieneAbierto)
             throw new TurnoCajaYaAbiertoException();
 
-        var turno = TurnoCaja.Abrir(empleadoId, request.BaseInicial);
+        // La base es el efectivo con el que cerró la última caja; solo la primera vez se escribe a mano.
+        var ultimoContado = await UltimoContadoAsync();
+        var turno = TurnoCaja.Abrir(empleadoId, ultimoContado ?? request.BaseInicial);
         _dbContext.TurnosCaja.Add(turno);
 
         try
@@ -47,6 +50,38 @@ public class TurnoCajaService : ITurnoCajaService
 
         return await MapearAsync(turno, esperadoVisible: true);
     }
+
+    public async Task<AperturaCajaResponse> ObtenerAperturaAsync()
+    {
+        var ultimo = await UltimoTurnoCerradoAsync();
+        if (ultimo is null)
+            return new AperturaCajaResponse(true, 0m, null);
+
+        return new AperturaCajaResponse(
+            false, ultimo.EfectivoContado ?? 0m, await MapearAsync(ultimo, esperadoVisible: true));
+    }
+
+    public async Task VerificarContrasenaAsync(int empleadoId, string contrasena)
+    {
+        var empleado = await _dbContext.Empleados.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == empleadoId)
+            ?? throw new OperacionInvalidaCajaException("No se pudo verificar tu contraseña.");
+
+        var resultado = new PasswordHasher<Empleado>()
+            .VerifyHashedPassword(empleado, empleado.PasswordHash, contrasena ?? string.Empty);
+        if (resultado == PasswordVerificationResult.Failed)
+            throw new OperacionInvalidaCajaException("Contraseña incorrecta.");
+    }
+
+    private Task<TurnoCaja?> UltimoTurnoCerradoAsync() =>
+        _dbContext.TurnosCaja.AsNoTracking()
+            .Where(t => t.Estado == TurnoCaja.EstadoCerrado)
+            .OrderByDescending(t => t.FechaCierre)
+            .ThenByDescending(t => t.Id)
+            .FirstOrDefaultAsync();
+
+    private async Task<decimal?> UltimoContadoAsync() =>
+        (await UltimoTurnoCerradoAsync())?.EfectivoContado;
 
     public async Task<TurnoCajaResponse?> ObtenerTurnoActualAsync(int empleadoId, bool esAdmin)
     {

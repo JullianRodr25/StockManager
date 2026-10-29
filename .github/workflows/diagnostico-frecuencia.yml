@@ -1,0 +1,55 @@
+# Diagnóstico temporal: arranca la API contra un SQL Server de prueba para ver por qué falla el arranque.
+# Solo corre en la rama diagnostico-frecuencia; NO despliega nada.
+name: Diagnóstico arranque API
+
+on:
+  push:
+    branches:
+      - diagnostico-frecuencia
+
+jobs:
+  arranque:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Diag_Pass_12345!"
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+      - run: dotnet build --configuration Release
+      - name: Instalar dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+      - name: Qué cambios faltan en el snapshot
+        continue-on-error: true
+        run: |
+          dotnet ef migrations add Sonda --project StockManager.Infrastructure --startup-project StockManager.Api --no-build --configuration Release > ef.log 2>&1 || true
+          f=$(ls StockManager.Infrastructure/Migrations/*_Sonda.cs | head -1)
+          echo "::error title=sonda::$(grep -v 'using \|^$' "$f" | head -c 9000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          echo "::error title=sonda-log::$(grep -v 'warning NU' ef.log | head -c 3000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=Diag;User Id=sa;Password=Diag_Pass_12345!;TrustServerCertificate=True"
+      - name: Arrancar la API (aplica migraciones)
+        continue-on-error: true
+        run: |
+          sleep 20
+          dotnet run --project StockManager.Api --configuration Release --no-build --urls http://localhost:5050 > api.log 2>&1 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5050/api/catalogo/productos || true)
+            echo "intento $i -> $code"
+            if [ "$code" != "000" ]; then break; fi
+            sleep 3
+          done
+          sleep 5
+          echo "::error title=resumen::$(grep -E 'Applied migration|AddModuloNomina|AddFrecuencia|Now listening|Unhandled|Exception|fail:|HTTP' api.log | head -c 5000 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')"
+          echo "::error title=http::codigo=$code"
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=Diag;User Id=sa;Password=Diag_Pass_12345!;TrustServerCertificate=True"
