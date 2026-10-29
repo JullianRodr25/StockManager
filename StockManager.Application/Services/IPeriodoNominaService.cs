@@ -5,7 +5,7 @@ namespace StockManager.Application.Services;
 public interface IPeriodoNominaService
 {
     Task<IReadOnlyList<PeriodoNominaResumenResponse>> ListarAsync();
-    Task<PeriodoNominaResponse?> ObtenerActualAsync();
+    Task<PeriodoNominaResponse?> ObtenerActualAsync(string frecuencia = "Quincenal");
     Task<PeriodoNominaResponse> ObtenerAsync(int id);
     Task<PeriodoNominaResponse> AbrirAsync(AbrirPeriodoNominaRequest request);
     Task<PeriodoNominaResponse> RecalcularAsync(int id);

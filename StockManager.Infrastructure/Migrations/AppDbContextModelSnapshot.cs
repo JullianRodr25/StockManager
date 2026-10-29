@@ -1110,6 +1110,11 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<DateTime>("FechaIngreso")
                         .HasColumnType("date");
 
+                    b.Property<string>("FrecuenciaPago")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("MetodoPago")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1262,6 +1267,11 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<DateTime>("FechaInicio")
                         .HasColumnType("date");
 
+                    b.Property<string>("Frecuencia")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<DateTime?>("PagadaEn")
                         .HasColumnType("datetime2");
 
@@ -1269,7 +1279,7 @@ namespace StockManager.Infrastructure.Migrations
 
                     b.HasIndex("AprobadaPorEmpleadoId");
 
-                    b.HasIndex("FechaInicio")
+                    b.HasIndex("Frecuencia", "FechaInicio")
                         .IsUnique();
 
                     b.ToTable("PeriodosNomina", (string)null);

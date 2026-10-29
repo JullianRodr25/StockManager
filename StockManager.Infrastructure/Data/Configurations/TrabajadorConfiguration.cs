@@ -22,6 +22,7 @@ public class TrabajadorConfiguration : IEntityTypeConfiguration<Trabajador>
         builder.Property(t => t.SalarioMensual).HasColumnType("decimal(12, 2)").IsRequired();
         builder.Property(t => t.AplicaSeguridadSocial).IsRequired();
         builder.Property(t => t.MetodoPago).IsRequired().HasMaxLength(20);
+        builder.Property(t => t.FrecuenciaPago).IsRequired().HasMaxLength(20);
         builder.Property(t => t.Activo).IsRequired().HasDefaultValue(true);
         builder.Property(t => t.FechaCreacion).IsRequired();
 

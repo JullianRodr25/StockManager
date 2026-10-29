@@ -42,12 +42,12 @@ public class PeriodoNominaService : IPeriodoNominaService
             .ToList();
     }
 
-    public async Task<PeriodoNominaResponse?> ObtenerActualAsync()
+    public async Task<PeriodoNominaResponse?> ObtenerActualAsync(string frecuencia = Trabajador.FrecuenciaQuincenal)
     {
-        var inicio = PeriodoNomina.QuincenaDe(HoraColombia.Hoy()).Inicio;
+        var inicio = PeriodoNomina.PeriodoDe(frecuencia, HoraColombia.Hoy()).Inicio;
         var periodo = await _dbContext.PeriodosNomina
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.FechaInicio == inicio);
+            .FirstOrDefaultAsync(p => p.Frecuencia == frecuencia && p.FechaInicio == inicio);
 
         return periodo is null ? null : await ConstruirRespuestaAsync(periodo);
     }
@@ -62,26 +62,32 @@ public class PeriodoNominaService : IPeriodoNominaService
 
     public async Task<PeriodoNominaResponse> AbrirAsync(AbrirPeriodoNominaRequest request)
     {
-        var inicio = await ResolverInicioAsync(request.FechaInicio);
+        var frecuencia = string.IsNullOrWhiteSpace(request.Frecuencia)
+            ? Trabajador.FrecuenciaQuincenal
+            : request.Frecuencia;
+        if (!Trabajador.Frecuencias.Contains(frecuencia))
+            throw new ArgumentException("La frecuencia de pago no es válida.");
 
-        // Valida de entrada que sea una quincena válida (empieza el día 1 o el 16).
-        var periodo = PeriodoNomina.Crear(inicio);
+        var inicio = await ResolverInicioAsync(frecuencia, request.FechaInicio);
+
+        // Valida de entrada que el período empiece donde corresponde a su frecuencia.
+        var periodo = PeriodoNomina.Crear(frecuencia, inicio);
         var fin = periodo.FechaFin;
 
-        if (await _dbContext.PeriodosNomina.AnyAsync(p => p.FechaInicio == inicio))
+        if (await _dbContext.PeriodosNomina.AnyAsync(p => p.Frecuencia == frecuencia && p.FechaInicio == inicio))
             throw new PeriodoNominaDuplicadoException(inicio, fin);
 
-        // Los saldos de los préstamos solo son exactos si la quincena anterior ya se cerró.
+        // Los saldos de los préstamos solo son exactos si el período anterior ya se cerró.
         var anteriorSinCerrar = await _dbContext.PeriodosNomina
-            .AnyAsync(p => p.FechaInicio < inicio && p.Estado != PeriodoNomina.EstadoCerrada);
+            .AnyAsync(p => p.Frecuencia == frecuencia && p.FechaInicio < inicio && p.Estado != PeriodoNomina.EstadoCerrada);
         if (anteriorSinCerrar)
             throw new PeriodoNominaEstadoInvalidoException(
-                "Cierra la quincena anterior antes de abrir la siguiente.");
+                "Cierra el período anterior antes de abrir el siguiente.");
 
-        var posterior = await _dbContext.PeriodosNomina.AnyAsync(p => p.FechaInicio > inicio);
+        var posterior = await _dbContext.PeriodosNomina.AnyAsync(p => p.Frecuencia == frecuencia && p.FechaInicio > inicio);
         if (posterior)
             throw new PeriodoNominaEstadoInvalidoException(
-                "No se puede abrir una quincena anterior a una que ya existe.");
+                "No se puede abrir un período anterior a uno que ya existe.");
 
         _dbContext.PeriodosNomina.Add(periodo);
 
@@ -120,7 +126,7 @@ public class PeriodoNominaService : IPeriodoNominaService
             .Where(l => l.PeriodoNominaId == id)
             .ToListAsync();
         if (liquidaciones.Count == 0)
-            throw new PeriodoNominaEstadoInvalidoException("No hay trabajadores para liquidar en esta quincena.");
+            throw new PeriodoNominaEstadoInvalidoException("No hay trabajadores para liquidar en este período.");
 
         var negativo = liquidaciones.FirstOrDefault(l => l.Neto < 0);
         if (negativo is not null)
@@ -264,6 +270,7 @@ public class PeriodoNominaService : IPeriodoNominaService
         // No se prorratea: quien está en la quincena cobra la quincena completa.
         var trabajadores = await _dbContext.Trabajadores
             .Where(t => t.Activo
+                && t.FrecuenciaPago == periodo.Frecuencia
                 && t.FechaIngreso <= periodo.FechaFin
                 && (t.FechaFinContrato == null || t.FechaFinContrato >= periodo.FechaInicio))
             .OrderBy(t => t.Nombre)
@@ -306,7 +313,7 @@ public class PeriodoNominaService : IPeriodoNominaService
             var otrosDevengos = susNovedades.Where(n => n.Tipo == NovedadNomina.TipoDevengo).Sum(n => n.Valor);
             var otrosDescuentos = susNovedades.Where(n => n.Tipo == NovedadNomina.TipoDescuento).Sum(n => n.Valor);
 
-            var resultado = CalculadoraNomina.Calcular(trabajador, parametros, otrosDevengos, otrosDescuentos);
+            var resultado = CalculadoraNomina.Calcular(trabajador, parametros, otrosDevengos, otrosDescuentos, periodo);
 
             // Las cuotas solo pueden quitar lo que sobra: el neto nunca queda negativo por un préstamo.
             var disponible = resultado.CapacidadParaPrestamos;
@@ -390,15 +397,17 @@ public class PeriodoNominaService : IPeriodoNominaService
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task<DateTime> ResolverInicioAsync(DateTime? fechaInicio)
+    private async Task<DateTime> ResolverInicioAsync(string frecuencia, DateTime? fechaInicio)
     {
         if (fechaInicio.HasValue)
             return fechaInicio.Value.Date;
 
-        var ultima = await _dbContext.PeriodosNomina.MaxAsync(p => (DateTime?)p.FechaInicio);
+        var ultima = await _dbContext.PeriodosNomina
+            .Where(p => p.Frecuencia == frecuencia)
+            .MaxAsync(p => (DateTime?)p.FechaInicio);
         return ultima.HasValue
-            ? PeriodoNomina.QuincenaSiguiente(ultima.Value).Inicio
-            : PeriodoNomina.QuincenaDe(HoraColombia.Hoy()).Inicio;
+            ? PeriodoNomina.Siguiente(frecuencia, ultima.Value).Inicio
+            : PeriodoNomina.PeriodoDe(frecuencia, HoraColombia.Hoy()).Inicio;
     }
 
     private sealed record TotalesPeriodo(
@@ -433,6 +442,7 @@ public class PeriodoNominaService : IPeriodoNominaService
 
     private static PeriodoNominaResumenResponse MapearResumen(PeriodoNomina p, TotalesPeriodo? t) => new(
         p.Id,
+        p.Frecuencia,
         p.FechaInicio,
         p.FechaFin,
         p.Estado,

@@ -46,7 +46,7 @@ public class NominaResumenService : INominaResumenService
         AgregarAlertaDePrima(alertas, activos, hoy);
         if (actual is null)
         {
-            var (inicio, fin) = PeriodoNomina.QuincenaDe(hoy);
+            var (inicio, fin) = PeriodoNomina.PeriodoDe(Trabajador.FrecuenciaQuincenal, hoy);
             alertas.Add(new AlertaNominaResponse(
                 "quincena_sin_abrir", "info",
                 "La quincena actual no está abierta",

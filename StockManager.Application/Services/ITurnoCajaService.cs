@@ -7,6 +7,12 @@ public interface ITurnoCajaService
     /// <summary>Abre el turno del empleado con su base inicial; falla si ya tiene uno abierto.</summary>
     Task<TurnoCajaResponse> AbrirAsync(int empleadoId, AbrirTurnoRequest request);
 
+    /// <summary>Base con la que arrancaría la caja y datos del último cierre (compartido por todos los turnos).</summary>
+    Task<AperturaCajaResponse> ObtenerAperturaAsync();
+
+    /// <summary>Confirma la contraseña del usuario para abrir el cajón; lanza si no coincide.</summary>
+    Task VerificarContrasenaAsync(int empleadoId, string contrasena);
+
     /// <summary>Turno abierto del empleado (con totales en vivo según la regla de conteo a ciegas), o null.</summary>
     Task<TurnoCajaResponse?> ObtenerTurnoActualAsync(int empleadoId, bool esAdmin);
 
