@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -80,7 +81,7 @@ public class PedidosController : ControllerBase
     /// Lista todos los pedidos (para la web de administración).
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerPedidos(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 20,
@@ -124,7 +125,7 @@ public class PedidosController : ControllerBase
     /// El admin confirma que el pedido se va a atender.
     /// </summary>
     [HttpPut("{id}/confirmar")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Confirmar(int id) =>
         await EjecutarTransicionAsync(() => _pedidoService.ConfirmarAsync(id), "confirmar el pedido");
 
@@ -132,7 +133,7 @@ public class PedidosController : ControllerBase
     /// El pedido pasa a alistarse en bodega.
     /// </summary>
     [HttpPut("{id}/preparacion")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> IniciarPreparacion(int id) =>
         await EjecutarTransicionAsync(() => _pedidoService.IniciarPreparacionAsync(id), "iniciar la preparación del pedido");
 
@@ -140,7 +141,7 @@ public class PedidosController : ControllerBase
     /// El pedido sale a domicilio.
     /// </summary>
     [HttpPut("{id}/camino")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> EnviarACamino(int id) =>
         await EjecutarTransicionAsync(() => _pedidoService.EnviarACaminoAsync(id), "enviar el pedido a camino");
 
@@ -148,7 +149,7 @@ public class PedidosController : ControllerBase
     /// Marca el pedido como entregado: genera la Venta y la Factura equivalentes.
     /// </summary>
     [HttpPut("{id}/entregado")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> MarcarEntregado(int id, [FromBody] MarcarEntregadoRequest request)
     {
         try
@@ -183,7 +184,7 @@ public class PedidosController : ControllerBase
     /// Cancela el pedido y repone el stock de sus líneas disponibles.
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Cancelar(int id) =>
         await EjecutarTransicionAsync(() => _pedidoService.CancelarAsync(id), "cancelar el pedido");
 

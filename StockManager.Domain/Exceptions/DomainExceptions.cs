@@ -522,3 +522,24 @@ public class PeriodoNominaDuplicadoException : DomainException
     {
     }
 }
+
+/// <summary>Excepción lanzada cuando se busca una categoría que no existe.</summary>
+public class CategoriaNoEncontradaException : DomainException
+{
+    public int CategoriaId { get; }
+
+    public CategoriaNoEncontradaException(int categoriaId)
+        : base($"No se encontró la categoría con Id {categoriaId}.")
+    {
+        CategoriaId = categoriaId;
+    }
+}
+
+/// <summary>Excepción lanzada al intentar eliminar una categoría que todavía tiene productos.</summary>
+public class CategoriaConProductosException : DomainException
+{
+    public CategoriaConProductosException(string nombreCategoria, int cantidadProductos)
+        : base($"No se puede eliminar la categoría '{nombreCategoria}' porque tiene {cantidadProductos} producto(s). Cámbiales la categoría primero.")
+    {
+    }
+}

@@ -56,6 +56,7 @@ public sealed class ManejadorExcepcionesMiddleware
     {
         // Recurso inexistente
         ProductoNoEncontradoException
+            or CategoriaNoEncontradaException
             or VentaNoEncontradaException
             or PedidoNoEncontradoException
             or ProveedorNoEncontradoException
@@ -74,6 +75,7 @@ public sealed class ManejadorExcepcionesMiddleware
             or UsuarioDuplicadoPorIdentificacionException
             or UsuarioDuplicadoPorEmailException
             or CategoriaDuplicadaException
+            or CategoriaConProductosException
             or ProductoDuplicadoException
             or ResenaDuplicadaException
             or CuentaFiadoAbiertaException

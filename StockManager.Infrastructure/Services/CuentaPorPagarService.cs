@@ -19,16 +19,45 @@ public class CuentaPorPagarService : ICuentaPorPagarService
         _turnoCajaService = turnoCajaService;
     }
 
-    public async Task<CuentaPorPagarResponse> CrearAsync(CrearCuentaPorPagarRequest request)
+    public async Task<CuentaPorPagarResponse> CrearAsync(CrearCuentaPorPagarRequest request, int empleadoId)
     {
         var proveedorExiste = await _dbContext.Proveedores.AnyAsync(p => p.Id == request.ProveedorId);
         if (!proveedorExiste)
             throw new ProveedorNoEncontradoException(request.ProveedorId);
 
-        var cuenta = CuentaPorPagar.Crear(request.ProveedorId, request.Concepto, request.MontoTotal, request.FechaVencimiento);
+        var pagoInmediato = !string.IsNullOrWhiteSpace(request.MetodoPagoInmediato);
+
+        // Al pagarse en el acto, vence hoy (hora Colombia): no tiene sentido una fecha futura.
+        var fechaVencimiento = pagoInmediato ? HoraColombia.Hoy() : request.FechaVencimiento;
+        var cuenta = CuentaPorPagar.Crear(request.ProveedorId, request.Concepto, request.MontoTotal, fechaVencimiento);
+
+        if (!pagoInmediato)
+        {
+            _dbContext.CuentasPorPagar.Add(cuenta);
+            await _dbContext.SaveChangesAsync();
+            return (await ObtenerPorIdAsync(cuenta.Id))!;
+        }
+
+        // Mismo criterio que RegistrarAbonoAsync: un pago en efectivo sale del cajón y exige turno abierto.
+        // Se resuelve ANTES de abrir la transacción para que, si no hay caja abierta, no se cree nada.
+        var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(
+            empleadoId, request.MetodoPagoInmediato == "Efectivo");
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         _dbContext.CuentasPorPagar.Add(cuenta);
+        await _dbContext.SaveChangesAsync(); // Genera el Id que necesita el abono.
+
+        // Valida el método de pago (lanza ArgumentException si no es válido) y el monto.
+        var abono = AbonoCuentaPorPagar.Crear(cuenta.Id, cuenta.MontoTotal, request.MetodoPagoInmediato!, empleadoId);
+        if (turnoCajaId.HasValue)
+            abono.AsignarTurnoCaja(turnoCajaId.Value);
+        _dbContext.AbonosCuentaPorPagar.Add(abono);
+
+        cuenta.MarcarPagada();
+
         await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return (await ObtenerPorIdAsync(cuenta.Id))!;
     }

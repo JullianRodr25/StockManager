@@ -36,7 +36,7 @@ public class Empleado
             throw new ArgumentException("El hash de contraseña no puede estar vacío.", nameof(passwordHash));
 
         if (!Roles.EsRolDeEmpleado(rol))
-            throw new ArgumentException("El rol debe ser 'Admin', 'Empleado' o 'Inventario'.", nameof(rol));
+            throw new ArgumentException("El rol debe ser 'Admin', 'Caja' o 'Inventario'.", nameof(rol));
 
         return new Empleado
         {

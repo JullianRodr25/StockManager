@@ -14,7 +14,7 @@ namespace StockManager.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/caja")]
-[Authorize(Roles = Roles.AdminYEmpleado)]
+[Authorize(Roles = Roles.AdminYCaja)]
 public class CajaController : ControllerBase
 {
     private readonly ITurnoCajaService _turnoCajaService;

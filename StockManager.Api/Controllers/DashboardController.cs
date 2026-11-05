@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.Services;
@@ -6,7 +7,7 @@ namespace StockManager.Api.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = "Admin,Empleado")]
+[Authorize(Roles = Roles.AdminYCaja)]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

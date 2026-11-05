@@ -17,12 +17,23 @@ public class Categoria
     /// </summary>
     public static Categoria Crear(string nombre)
     {
+        return new Categoria { Nombre = NormalizarNombre(nombre) };
+    }
+
+    /// <summary>Cambia el nombre aplicando las mismas reglas que al crearla.</summary>
+    public void Renombrar(string nombre)
+    {
+        Nombre = NormalizarNombre(nombre);
+    }
+
+    private static string NormalizarNombre(string nombre)
+    {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre de la categoría no puede estar vacío.", nameof(nombre));
 
         if (nombre.Length > 100)
             throw new ArgumentException("El nombre de la categoría no puede exceder 100 caracteres.", nameof(nombre));
 
-        return new Categoria { Nombre = nombre.Trim() };
+        return nombre.Trim();
     }
 }

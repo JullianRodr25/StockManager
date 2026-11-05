@@ -27,7 +27,7 @@ public class ProveedoresController : ControllerBase
     /// Registra un nuevo proveedor.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = Roles.AdminYEmpleado)]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Crear([FromBody] CrearProveedorRequest request)
     {
         try
@@ -70,7 +70,7 @@ public class ProveedoresController : ControllerBase
     /// Obtiene un proveedor por su ID.
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = Roles.AdminYEmpleado)]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerPorId(int id)
     {
         var proveedor = await _proveedorService.ObtenerPorIdAsync(id);
@@ -84,7 +84,7 @@ public class ProveedoresController : ControllerBase
     /// Actualiza los datos de contacto de un proveedor.
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.AdminYEmpleado)]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarProveedorRequest request)
     {
         try
@@ -111,7 +111,7 @@ public class ProveedoresController : ControllerBase
     /// cuentas por pagar asociadas).
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = Roles.AdminYEmpleado)]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Desactivar(int id)
     {
         try
@@ -133,7 +133,7 @@ public class ProveedoresController : ControllerBase
     /// Reactiva un proveedor previamente desactivado.
     /// </summary>
     [HttpPost("{id}/activar")]
-    [Authorize(Roles = Roles.AdminYEmpleado)]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> Activar(int id)
     {
         try

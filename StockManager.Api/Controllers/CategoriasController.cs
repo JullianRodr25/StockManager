@@ -22,7 +22,7 @@ public class CategoriasController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene todas las categorías (acceso: Admin, Empleado e Inventario).
+    /// Obtiene todas las categorías (acceso: Admin, Caja e Inventario).
     /// </summary>
     /// <response code="200">Lista de categorías obtenida correctamente</response>
     /// <response code="401">No autorizado (token inválido o expirado)</response>
@@ -35,15 +35,15 @@ public class CategoriasController : ControllerBase
     }
 
     /// <summary>
-    /// Crea una nueva categoría (acceso: solo Admin).
+    /// Crea una nueva categoría (acceso: Admin y Caja).
     /// </summary>
     /// <param name="request">Datos de la categoría a crear</param>
     /// <response code="201">Categoría creada exitosamente</response>
     /// <response code="400">Error: categoría duplicada o datos inválidos</response>
     /// <response code="401">No autorizado (token inválido o expirado)</response>
-    /// <response code="403">Acceso prohibido (no es Admin)</response>
+    /// <response code="403">Acceso prohibido (no es Admin ni Caja)</response>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<ActionResult<CategoriaResponse>> Crear([FromBody] CrearCategoriaRequest request)
     {
         try
@@ -67,5 +67,32 @@ public class CategoriasController : ControllerBase
             // TODO: loguear ex con ILogger cuando se agregue logging
             return StatusCode(500, new { message = "Ocurrió un error al crear la categoría" });
         }
+    }
+
+    /// <summary>
+    /// Cambia el nombre de una categoría (acceso: Admin y Caja).
+    /// </summary>
+    /// <response code="404">La categoría no existe</response>
+    /// <response code="409">Ya existe otra categoría con ese nombre</response>
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = Roles.AdminYCaja)]
+    public async Task<ActionResult<CategoriaResponse>> Actualizar(int id, [FromBody] ActualizarCategoriaRequest request)
+    {
+        // Los errores de dominio (no existe, duplicada) los traduce ManejadorExcepcionesMiddleware.
+        return Ok(await _categoriaService.ActualizarAsync(id, request));
+    }
+
+    /// <summary>
+    /// Elimina una categoría sin productos (acceso: Admin y Caja).
+    /// </summary>
+    /// <response code="204">Categoría eliminada</response>
+    /// <response code="404">La categoría no existe</response>
+    /// <response code="409">La categoría todavía tiene productos</response>
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = Roles.AdminYCaja)]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        await _categoriaService.EliminarAsync(id);
+        return NoContent();
     }
 }

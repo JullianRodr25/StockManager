@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace StockManager.Api.Controllers;
 
 [ApiController]
 [Route("api/cuentas-por-pagar")]
-[Authorize(Roles = "Admin,Empleado")]
+[Authorize(Roles = Roles.AdminYCaja)]
 public class CuentasPorPagarController : ControllerBase
 {
     private readonly ICuentaPorPagarService _cuentaPorPagarService;
@@ -27,7 +28,8 @@ public class CuentasPorPagarController : ControllerBase
     {
         try
         {
-            var cuenta = await _cuentaPorPagarService.CrearAsync(request);
+            var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var cuenta = await _cuentaPorPagarService.CrearAsync(request, empleadoId);
             return Ok(cuenta);
         }
         catch (ProveedorNoEncontradoException ex)

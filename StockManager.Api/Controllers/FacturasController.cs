@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockManager.Application.Services;
@@ -28,7 +29,7 @@ public class FacturasController : ControllerBase
     /// Requiere sesión de personal, a diferencia del PDF que se abre con token firmado.
     /// </summary>
     [HttpGet("venta/{ventaId:int}/documento")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerDocumentoDeVenta(int ventaId)
     {
         var documento = await _documentoService.ObtenerPorVentaIdAsync(ventaId);

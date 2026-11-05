@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ public class VentasController : ControllerBase
     /// Registra una venta simple de mostrador y descuenta el stock de sus productos.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> RegistrarVenta([FromBody] RegistrarVentaRequest request)
     {
         try
@@ -57,7 +58,7 @@ public class VentasController : ControllerBase
     /// Obtiene una lista paginada de ventas, con filtros opcionales de rango de fecha y estado.
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerVentas(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 20,
@@ -82,7 +83,7 @@ public class VentasController : ControllerBase
     /// directos del mostrador en Ventas.
     /// </summary>
     [HttpGet("productos-recientes")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerProductosRecientes([FromQuery] int limite = 10)
     {
         var productos = await _ventaService.ObtenerProductosRecientesAsync(limite);
@@ -93,7 +94,7 @@ public class VentasController : ControllerBase
     /// Obtiene una venta por su ID, incluyendo sus detalles y número de factura.
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerVentaPorId(int id)
     {
         var venta = await _ventaService.ObtenerVentaPorIdAsync(id);
@@ -107,7 +108,7 @@ public class VentasController : ControllerBase
     /// Abre una cuenta fiada (venta en estado Pendiente) para un cliente registrado.
     /// </summary>
     [HttpPost("fiado")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> AbrirFiado([FromBody] AbrirFiadoRequest request)
     {
         try
@@ -134,7 +135,7 @@ public class VentasController : ControllerBase
     /// Agrega una línea de producto a una cuenta fiada abierta y descuenta el stock de inmediato.
     /// </summary>
     [HttpPost("{id}/lineas")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> AgregarLineaFiado(int id, [FromBody] LineaVentaRequest request)
     {
         try
@@ -176,7 +177,7 @@ public class VentasController : ControllerBase
     /// Cierra una cuenta fiada: fija el método de pago, pasa la venta a Pagada y genera la Factura.
     /// </summary>
     [HttpPost("{id}/cerrar")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> CerrarFiado(int id, [FromBody] CerrarFiadoRequest request)
     {
         try
@@ -208,7 +209,7 @@ public class VentasController : ControllerBase
     /// la cuenta se cierra automáticamente y se genera la Factura.
     /// </summary>
     [HttpPost("{id}/abonos")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> RegistrarAbono(int id, [FromBody] RegistrarAbonoRequest request)
     {
         try
@@ -239,7 +240,7 @@ public class VentasController : ControllerBase
     /// Obtiene el historial de abonos de una cuenta fiada.
     /// </summary>
     [HttpGet("{id}/abonos")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> ObtenerAbonos(int id)
     {
         var abonos = await _ventaService.ObtenerAbonosAsync(id);
@@ -250,7 +251,7 @@ public class VentasController : ControllerBase
     /// Edita la cantidad de una línea de una cuenta fiada abierta, ajustando stock y Total.
     /// </summary>
     [HttpPut("{id}/lineas/{detalleId}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> EditarCantidadLinea(int id, int detalleId, [FromBody] EditarCantidadLineaRequest request)
     {
         try
@@ -296,7 +297,7 @@ public class VentasController : ControllerBase
     /// Quita una línea de una cuenta fiada abierta, repone el stock y ajusta el Total.
     /// </summary>
     [HttpDelete("{id}/lineas/{detalleId}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> QuitarLinea(int id, int detalleId)
     {
         try
@@ -335,7 +336,7 @@ public class VentasController : ControllerBase
     /// pasa la venta a Cancelada. Se rechaza si ya tiene abonos registrados.
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin,Empleado")]
+    [Authorize(Roles = Roles.AdminYCaja)]
     public async Task<IActionResult> CancelarCuenta(int id)
     {
         try

@@ -10,8 +10,8 @@ public static class Roles
     /// <summary>Acceso completo, incluida la configuración, los reportes y las operaciones masivas de inventario (Excel, etiquetas).</summary>
     public const string Admin = "Admin";
 
-    /// <summary>Opera el negocio (ventas, pedidos, clientes, proveedores) y gestiona el inventario (crea, edita, desactiva y ajusta stock).</summary>
-    public const string Empleado = "Empleado";
+    /// <summary>Opera el negocio desde la caja (ventas, pedidos, clientes, proveedores, pagos de caja menor) y gestiona el inventario (crea, edita, desactiva y ajusta stock).</summary>
+    public const string Caja = "Caja";
 
     /// <summary>
     /// Encargado de inventario: ve y crea productos y solo puede sumar stock (no edita, no resta,
@@ -21,16 +21,16 @@ public static class Roles
     public const string Inventario = "Inventario";
 
     /// <summary>Quienes operan el negocio (excluye al encargado de inventario).</summary>
-    public const string AdminYEmpleado = Admin + "," + Empleado;
+    public const string AdminYCaja = Admin + "," + Caja;
 
     /// <summary>Quienes pueden consultar el inventario: productos, categorías y datos de apoyo.</summary>
-    public const string PersonalConInventario = Admin + "," + Empleado + "," + Inventario;
+    public const string PersonalConInventario = Admin + "," + Caja + "," + Inventario;
 
     /// <summary>
     /// Quienes gestionan los productos por completo: crear, editar, desactivar/reactivar y ajustar el
     /// stock sumando o restando. El encargado de inventario queda fuera a propósito (ver <see cref="AltaInventario"/>).
     /// </summary>
-    public const string GestionProductos = Admin + "," + Empleado;
+    public const string GestionProductos = Admin + "," + Caja;
 
     /// <summary>
     /// Quienes pueden dar de alta productos y SUMAR stock: la gestión completa más el encargado de
@@ -40,5 +40,5 @@ public static class Roles
 
     /// <summary>Un rol es válido para un empleado si es uno de los de personal.</summary>
     public static bool EsRolDeEmpleado(string? rol) =>
-        rol is Admin or Empleado or Inventario;
+        rol is Admin or Caja or Inventario;
 }

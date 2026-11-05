@@ -1,10 +1,15 @@
 namespace StockManager.Application.DTOs;
 
+/// <param name="MetodoPagoInmediato">
+/// Si viene (Efectivo, Tarjeta o Transferencia) la cuenta se paga completa en el mismo momento
+/// de registrarla y queda en estado Pagada. Si es null queda Pendiente, como siempre.
+/// </param>
 public record CrearCuentaPorPagarRequest(
     int ProveedorId,
     string Concepto,
     decimal MontoTotal,
-    DateTime FechaVencimiento
+    DateTime FechaVencimiento,
+    string? MetodoPagoInmediato = null
 );
 
 public record RegistrarAbonoCuentaPorPagarRequest(decimal Monto, string MetodoPago);

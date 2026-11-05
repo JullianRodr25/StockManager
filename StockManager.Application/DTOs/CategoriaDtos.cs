@@ -26,3 +26,13 @@ public class CrearCategoriaRequest
     [MaxLength(100, ErrorMessage = "El nombre de la categoría no puede exceder 100 caracteres")]
     public string Nombre { get; set; } = null!;
 }
+
+/// <summary>
+/// DTO para renombrar una categoría existente.
+/// </summary>
+public class ActualizarCategoriaRequest
+{
+    [Required(ErrorMessage = "El nombre de la categoría es requerido")]
+    [MaxLength(100, ErrorMessage = "El nombre de la categoría no puede exceder 100 caracteres")]
+    public string Nombre { get; set; } = null!;
+}

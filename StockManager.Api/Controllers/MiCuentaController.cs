@@ -1,3 +1,4 @@
+using StockManager.Domain.Constants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace StockManager.Api.Controllers;
 /// <summary>
 /// Autoservicio del Cliente autenticado desde la PWA: ver/editar sus propios datos de
 /// contacto, cambiar su propia contraseña y gestionar su foto de perfil. Deliberadamente
-/// separado de ClientesController (que es [Authorize(Roles = "Admin,Empleado")] y opera sobre
+/// separado de ClientesController (que es [Authorize(Roles = Roles.AdminYCaja)] y opera sobre
 /// cualquier cliente por ID): acá el ID sale siempre del token, nunca del request, así que un
 /// cliente no puede leer ni tocar la cuenta de otro cambiando un parámetro. Ambos
 /// controladores reutilizan el mismo IClienteService como única fuente de verdad para las

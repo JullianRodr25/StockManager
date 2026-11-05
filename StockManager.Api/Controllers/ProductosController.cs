@@ -351,7 +351,7 @@ public class ProductosController : ControllerBase
         // El encargado de inventario solo puede SUMAR stock (llegó mercancía). Restar o corregir
         // conteos a la baja queda para quienes gestionan productos (Admin y Empleado): una resta
         // puede ocultar una pérdida o un faltante.
-        var puedeRestar = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Empleado);
+        var puedeRestar = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Caja);
         if (request.Delta <= 0 && !puedeRestar)
         {
             return StatusCode(StatusCodes.Status403Forbidden,

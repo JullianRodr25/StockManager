@@ -66,4 +66,41 @@ public class CategoriaService : ICategoriaService
             CantidadProductos = 0
         };
     }
+
+    public async Task<CategoriaResponse> ActualizarAsync(int id, ActualizarCategoriaRequest request)
+    {
+        var categoria = await _dbContext.Categorias.FirstOrDefaultAsync(c => c.Id == id)
+            ?? throw new CategoriaNoEncontradaException(id);
+
+        var nombreNormalizado = request.Nombre.Trim();
+
+        // Otra categoría (no esta misma) con ese nombre, sin distinguir mayúsculas.
+        var duplicada = await _dbContext.Categorias
+            .AnyAsync(c => c.Id != id && c.Nombre.ToUpper() == nombreNormalizado.ToUpper());
+        if (duplicada)
+            throw new CategoriaDuplicadaException(nombreNormalizado);
+
+        categoria.Renombrar(nombreNormalizado);
+        await _dbContext.SaveChangesAsync();
+
+        return new CategoriaResponse
+        {
+            Id = categoria.Id,
+            Nombre = categoria.Nombre,
+            CantidadProductos = await _dbContext.Productos.CountAsync(p => p.CategoriaId == id)
+        };
+    }
+
+    public async Task EliminarAsync(int id)
+    {
+        var categoria = await _dbContext.Categorias.FirstOrDefaultAsync(c => c.Id == id)
+            ?? throw new CategoriaNoEncontradaException(id);
+
+        var cantidadProductos = await _dbContext.Productos.CountAsync(p => p.CategoriaId == id);
+        if (cantidadProductos > 0)
+            throw new CategoriaConProductosException(categoria.Nombre, cantidadProductos);
+
+        _dbContext.Categorias.Remove(categoria);
+        await _dbContext.SaveChangesAsync();
+    }
 }

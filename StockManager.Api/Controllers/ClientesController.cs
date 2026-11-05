@@ -9,7 +9,7 @@ namespace StockManager.Api.Controllers;
 
 [ApiController]
 [Route("api/clientes")]
-[Authorize(Roles = "Admin,Empleado")]
+[Authorize(Roles = Roles.AdminYCaja)]
 public class ClientesController : ControllerBase
 {
     private const int MaxBytesArchivoExcel = 5 * 1024 * 1024;

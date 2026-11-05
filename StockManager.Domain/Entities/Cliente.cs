@@ -6,7 +6,7 @@ namespace StockManager.Domain.Entities;
 /// </summary>
 public class Cliente
 {
-    // "Pwa": se autoregistró desde la PWA pública. "Caja": lo creó un Empleado/Admin desde el
+    // "Pwa": se autoregistró desde la PWA pública. "Caja": lo creó un usuario Caja/Admin desde el
     // panel (típicamente un cliente de mostrador). Puramente informativo (reportes/filtros):
     // no cambia ninguna regla de validación ni de permisos.
     private static readonly string[] OrigenesValidos = { "Pwa", "Caja" };

@@ -11,7 +11,7 @@ namespace StockManager.Infrastructure.RealTime;
 /// JwtBearerEvents.OnMessageReceived en Program.cs, necesaria porque un WebSocket no puede
 /// mandar el token en un header Authorization como una petición HTTP normal).
 ///
-/// Incluye el rol "Cliente" (además de Admin/Empleado) porque también lo consume el catálogo
+/// Incluye el rol "Cliente" (además de Admin/Caja) porque también lo consume el catálogo
 /// de la PWA: el stock de un producto ya es información pública ahí (se muestra sin login
 /// especial en el catálogo), así que no hay nada que proteger de más al dejarlos conectarse.
 /// </summary>

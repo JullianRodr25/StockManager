@@ -4,7 +4,11 @@ namespace StockManager.Application.Services;
 
 public interface ICuentaPorPagarService
 {
-    Task<CuentaPorPagarResponse> CrearAsync(CrearCuentaPorPagarRequest request);
+    /// <summary>
+    /// Registra una cuenta por pagar. Con <c>MetodoPagoInmediato</c> la crea y la paga en una sola
+    /// operación atómica (queda Pagada); si falla el pago, tampoco se crea la cuenta.
+    /// </summary>
+    Task<CuentaPorPagarResponse> CrearAsync(CrearCuentaPorPagarRequest request, int empleadoId);
     Task<CuentaPorPagarResponse> RegistrarAbonoAsync(int cuentaId, RegistrarAbonoCuentaPorPagarRequest request, int empleadoId);
     Task<CuentaPorPagarResponse> CancelarAsync(int cuentaId);
     Task<CuentaPorPagarResponse?> ObtenerPorIdAsync(int id);
