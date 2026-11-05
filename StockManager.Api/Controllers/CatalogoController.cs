@@ -23,10 +23,11 @@ public class CatalogoController : ControllerBase
     public async Task<IActionResult> ObtenerCatalogo(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanoPagina = 20,
-        [FromQuery] int? categoriaId = null)
+        [FromQuery] int? categoriaId = null,
+        [FromQuery] string? busqueda = null)
     {
         var (items, total) = await _productoService
-            .ObtenerCatalogoPaginadoAsync(pagina, tamanoPagina, categoriaId);
+            .ObtenerCatalogoPaginadoAsync(pagina, tamanoPagina, categoriaId, busqueda);
 
         return Ok(new
         {

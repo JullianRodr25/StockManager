@@ -36,9 +36,10 @@ public interface IProductoService
     Task<List<ProductoResponse>> ObtenerAlertasStockAsync();
 
     /// <summary>
-    /// Obtiene el catálogo público paginado de productos activos para clientes.
+    /// Obtiene el catálogo público paginado de productos activos para clientes. Si se envía
+    /// <paramref name="busqueda"/>, solo devuelve los productos cuyo nombre contiene todas sus palabras.
     /// </summary>
-    Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId);
+    Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(int pagina, int tamanoPagina, int? categoriaId, string? busqueda = null);
 
     /// <summary>
     /// Obtiene las categorías que tienen al menos un producto activo, para armar los chips de

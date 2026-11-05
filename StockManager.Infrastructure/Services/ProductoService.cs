@@ -114,15 +114,31 @@ public class ProductoService : IProductoService
     public async Task<(List<ProductoCatalogoResponse> Items, int Total)> ObtenerCatalogoPaginadoAsync(
         int pagina,
         int tamanoPagina,
-        int? categoriaId)
+        int? categoriaId,
+        string? busqueda = null)
     {
         if (pagina < 1)
             pagina = 1;
         if (tamanoPagina < 1)
             tamanoPagina = 50;
 
-        var query = _dbContext.Productos.AsNoTracking()
-            .Where(p => p.Activo)
+        var productos = _dbContext.Productos.AsNoTracking().Where(p => p.Activo);
+
+        // Búsqueda por texto: cada palabra escrita debe aparecer en el nombre (así "taladro 1/2"
+        // encuentra "Taladro percutor 1/2"). Se limita para no armar consultas enormes.
+        if (!string.IsNullOrWhiteSpace(busqueda))
+        {
+            var palabras = busqueda.Trim()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Take(5);
+            foreach (var palabra in palabras)
+            {
+                var termino = palabra.Length > 50 ? palabra[..50] : palabra;
+                productos = productos.Where(p => p.Nombre.Contains(termino));
+            }
+        }
+
+        var query = productos
             .Join(
                 _dbContext.Categorias.AsNoTracking(),
                 producto => producto.CategoriaId,
