@@ -41,7 +41,12 @@ public class DashboardService : IDashboardService
 
         var ventasHoyQuery = _dbContext.Ventas.AsNoTracking()
             .Where(v => v.Fecha >= inicioHoyUtc && v.Fecha < finHoyUtc && v.Estado != "Cancelada");
-        var ventasHoyTotal = await ventasHoyQuery.SumAsync(v => (decimal?)v.Total) ?? 0m;
+        // Neto de devoluciones y cambios de hoy: una devolución con reembolso resta; un cambio que
+        // se cobra de más suma. El conteo de ventas no cambia (una devolución no es una venta).
+        var devolucionesHoyNeto = await _dbContext.Devoluciones.AsNoTracking()
+            .Where(d => d.Fecha >= inicioHoyUtc && d.Fecha < finHoyUtc)
+            .SumAsync(d => (decimal?)(d.TotalCambio - d.TotalDevuelto)) ?? 0m;
+        var ventasHoyTotal = (await ventasHoyQuery.SumAsync(v => (decimal?)v.Total) ?? 0m) + devolucionesHoyNeto;
         var ventasHoyCantidad = await ventasHoyQuery.CountAsync();
 
         var productosStockBajo = await _dbContext.Productos.AsNoTracking()

@@ -82,7 +82,9 @@ public record VentaResumenResponse(
     string? MetodoPago,
     string NumeroFactura,
     // Suma de los abonos registrados (cuentas abiertas/fiado). 0 en ventas sin abonos.
-    decimal TotalAbonado = 0
+    decimal TotalAbonado = 0,
+    // Valor de lo devuelto en devoluciones/cambios de esta venta (a precio de la venta). 0 si no tiene.
+    decimal TotalDevuelto = 0
 );
 
 public record AbrirFiadoRequest(int ClienteId);

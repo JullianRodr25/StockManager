@@ -42,21 +42,40 @@ public class ReporteService : IReporteService
             .Select(d => new { d.VentaId, d.MetodoPago, d.Monto })
             .ToListAsync();
 
-        var totalVendido = ventas.Sum(v => v.Total);
+        // Devoluciones y cambios del período: lo que movieron en dinero (cambio − devuelto) se suma a
+        // las ventas, en el día y con el método en que se saldó. Así los totales son netos.
+        var devoluciones = await _db.Devoluciones.AsNoTracking()
+            .Where(d => d.Fecha >= inicio && d.Fecha < fin)
+            .Select(d => new { d.Fecha, d.MetodoPago, Neto = d.TotalCambio - d.TotalDevuelto })
+            .ToListAsync();
+
+        var totalVendido = ventas.Sum(v => v.Total) + devoluciones.Sum(d => d.Neto);
         var porDia = ventas
             .GroupBy(v => DateOnly.FromDateTime(HoraColombia.ALocal(v.Fecha)))
+            .Select(g => (Dia: g.Key, Cantidad: g.Count(), Total: g.Sum(v => v.Total)))
+            .Concat(devoluciones
+                .GroupBy(d => DateOnly.FromDateTime(HoraColombia.ALocal(d.Fecha)))
+                .Select(g => (Dia: g.Key, Cantidad: 0, Total: g.Sum(d => d.Neto))))
+            .GroupBy(x => x.Dia)
             .OrderBy(g => g.Key)
-            .Select(g => new VentasPorDiaItem(g.Key, g.Count(), g.Sum(v => v.Total)))
+            .Select(g => new VentasPorDiaItem(g.Key, g.Sum(x => x.Cantidad), g.Sum(x => x.Total)))
             .ToList();
 
-        // Pagos simples por su método; los "Mixto" se reparten según su desglose.
+        // Pagos simples por su método; los "Mixto" se reparten según su desglose. Las devoluciones
+        // con dinero de por medio entran con su método y sin VentaId (no cuentan como una venta más).
         var pagosSimples = ventas
             .Where(v => v.MetodoPago != "Mixto")
-            .Select(v => (Metodo: v.MetodoPago ?? "Sin método", VentaId: v.Id, Monto: v.Total));
-        var pagosMixtos = lineasMixtas.Select(l => (Metodo: l.MetodoPago, VentaId: l.VentaId, Monto: l.Monto));
-        var porMetodo = pagosSimples.Concat(pagosMixtos)
+            .Select(v => (Metodo: v.MetodoPago ?? "Sin método", VentaId: (int?)v.Id, Monto: v.Total));
+        var pagosMixtos = lineasMixtas.Select(l => (Metodo: l.MetodoPago, VentaId: (int?)l.VentaId, Monto: l.Monto));
+        var pagosDevolucion = devoluciones
+            .Where(d => d.MetodoPago != null && d.Neto != 0)
+            .Select(d => (Metodo: d.MetodoPago!, VentaId: (int?)null, Monto: d.Neto));
+        var porMetodo = pagosSimples.Concat(pagosMixtos).Concat(pagosDevolucion)
             .GroupBy(p => p.Metodo)
-            .Select(g => new VentasPorMetodoItem(g.Key, g.Select(p => p.VentaId).Distinct().Count(), g.Sum(p => p.Monto)))
+            .Select(g => new VentasPorMetodoItem(
+                g.Key,
+                g.Where(p => p.VentaId.HasValue).Select(p => p.VentaId!.Value).Distinct().Count(),
+                g.Sum(p => p.Monto)))
             .OrderByDescending(m => m.Total)
             .ToList();
 
