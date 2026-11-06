@@ -224,6 +224,7 @@ namespace StockManager.Infrastructure.Migrations
 
                     b.Property<string>("OrigenRegistro")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)")
                         .HasDefaultValue("Caja");
@@ -406,6 +407,84 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.CuotaPrestamo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aplicada")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PeriodoNominaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PrestamoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrestamoId");
+
+                    b.HasIndex("PeriodoNominaId", "PrestamoId")
+                        .IsUnique();
+
+                    b.ToTable("CuotasPrestamo", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.DetalleDevolucion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DetalleVentaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DevolucionId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ReintegradoAlStock")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Sentido")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DetalleVentaId");
+
+                    b.HasIndex("DevolucionId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("DetallesDevolucion", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DetalleDevolucion_Cantidad_Positiva", "[Cantidad] > 0");
+                        });
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.DetallePagoVenta", b =>
                 {
                     b.Property<int>("Id")
@@ -495,6 +574,57 @@ namespace StockManager.Infrastructure.Migrations
                     b.HasIndex("VentaId");
 
                     b.ToTable("DetallesVenta", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.Devolucion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MetodoPago")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("RequiereNotaCredito")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TotalCambio")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal>("TotalDevuelto")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VentaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("Fecha");
+
+                    b.HasIndex("TurnoCajaId");
+
+                    b.HasIndex("VentaId");
+
+                    b.ToTable("Devoluciones", (string)null);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.Empleado", b =>
@@ -587,6 +717,83 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.LiquidacionNomina", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AuxilioTransporte")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("Cargo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("DescuentoPension")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal>("DescuentoPrestamos")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal>("DescuentoSalud")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal>("Devengado")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("MetodoPago")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Neto")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("NombreTrabajador")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("OtrosDescuentos")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal>("OtrosDevengos")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<bool>("Pagada")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PagadaEn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PeriodoNominaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SalarioQuincena")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("TrabajadorId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrabajadorId");
+
+                    b.HasIndex("TurnoCajaId");
+
+                    b.HasIndex("PeriodoNominaId", "TrabajadorId")
+                        .IsUnique();
+
+                    b.ToTable("LiquidacionesNomina", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.MovimientoStock", b =>
                 {
                     b.Property<int>("Id")
@@ -629,6 +836,55 @@ namespace StockManager.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_MovimientoStock_Cantidad_NotZero", "[Cantidad] <> 0");
                         });
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.NotificacionInterna", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EntidadId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntidadTipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaLeida")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Leida")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Leida", "FechaCreacion");
+
+                    b.ToTable("NotificacionesInternas", (string)null);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.NotificacionLog", b =>
@@ -684,7 +940,7 @@ namespace StockManager.Infrastructure.Migrations
                     b.ToTable("NotificacionesLog", (string)null);
                 });
 
-            modelBuilder.Entity("StockManager.Domain.Entities.NotificacionInterna", b =>
+            modelBuilder.Entity("StockManager.Domain.Entities.NovedadNomina", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -692,45 +948,66 @@ namespace StockManager.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("EntidadId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EntidadTipo")
+                    b.Property<string>("Concepto")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("FechaLeida")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("Leida")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Mensaje")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<int>("PeriodoNominaId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int>("TrabajadorId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("decimal(12, 2)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Leida", "FechaCreacion");
+                    b.HasIndex("TrabajadorId");
 
-                    b.ToTable("NotificacionesInternas", (string)null);
+                    b.HasIndex("PeriodoNominaId", "TrabajadorId");
+
+                    b.ToTable("NovedadesNomina", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.ParametrosNomina", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AuxilioTransporte")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("LimiteSalariosAuxilio")
+                        .HasColumnType("decimal(6, 2)");
+
+                    b.Property<decimal>("PorcentajePensionTrabajador")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<decimal>("PorcentajeSaludTrabajador")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<decimal>("SalarioMinimo")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ParametrosNomina", (string)null);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.Pedido", b =>
@@ -780,6 +1057,108 @@ namespace StockManager.Infrastructure.Migrations
                     b.HasIndex("VentaId");
 
                     b.ToTable("Pedidos", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.PeriodoNomina", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AprobadaEn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AprobadaPorEmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CerradaEn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaFin")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Frecuencia")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("PagadaEn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AprobadaPorEmpleadoId");
+
+                    b.HasIndex("Frecuencia", "FechaInicio")
+                        .IsUnique();
+
+                    b.ToTable("PeriodosNomina", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.Prestamo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CuotasDescontadas")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("Nota")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("NumeroCuotas")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PrimeraCuotaDesde")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("SaldoPendiente")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TrabajadorId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ValorCuota")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrabajadorId", "Estado");
+
+                    b.ToTable("Prestamos", (string)null);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.Producto", b =>
@@ -876,11 +1255,11 @@ namespace StockManager.Infrastructure.Migrations
 
                     b.ToTable("Productos", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Producto_Costo_GreaterOrEqual_Zero", "[Costo] >= 0");
+
                             t.HasCheckConstraint("CK_Producto_Precio_GreaterOrEqual_Zero", "[Precio] >= 0");
 
                             t.HasCheckConstraint("CK_Producto_StockActual_GreaterOrEqual_Zero", "[StockActual] >= 0");
-
-                            t.HasCheckConstraint("CK_Producto_Costo_GreaterOrEqual_Zero", "[Costo] >= 0");
 
                             t.HasCheckConstraint("CK_Producto_TarifaIva_Between_Zero_And_OneHundred", "[TarifaIva] >= 0 AND [TarifaIva] <= 100");
                         });
@@ -1004,6 +1383,78 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.Trabajador", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("AplicaSeguridadSocial")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Cargo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaFinContrato")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaIngreso")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FrecuenciaPago")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("MetodoPago")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NumeroIdentificacion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("SalarioMensual")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TipoContrato")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("NumeroIdentificacion")
+                        .IsUnique();
+
+                    b.ToTable("Trabajadores", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.TurnoCaja", b =>
                 {
                     b.Property<int>("Id")
@@ -1081,359 +1532,6 @@ namespace StockManager.Infrastructure.Migrations
                     b.ToTable("TurnosCaja", (string)null);
                 });
 
-            modelBuilder.Entity("StockManager.Domain.Entities.Trabajador", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("AplicaSeguridadSocial")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Cargo")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaFinContrato")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime>("FechaIngreso")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FrecuenciaPago")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("MetodoPago")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("NumeroIdentificacion")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("SalarioMensual")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("Telefono")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("TipoContrato")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NumeroIdentificacion")
-                        .IsUnique();
-
-                    b.HasIndex("Activo");
-
-                    b.ToTable("Trabajadores", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.ParametrosNomina", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("AuxilioTransporte")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<DateTime>("FechaActualizacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("LimiteSalariosAuxilio")
-                        .HasColumnType("decimal(6, 2)");
-
-                    b.Property<decimal>("PorcentajePensionTrabajador")
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<decimal>("PorcentajeSaludTrabajador")
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<decimal>("SalarioMinimo")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ParametrosNomina", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.Prestamo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CuotasDescontadas")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("Monto")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("Nota")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<int>("NumeroCuotas")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("PrimeraCuotaDesde")
-                        .HasColumnType("date");
-
-                    b.Property<decimal>("SaldoPendiente")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("TrabajadorId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ValorCuota")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "TrabajadorId", "Estado" });
-
-                    b.ToTable("Prestamos", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.PeriodoNomina", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("AprobadaEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("AprobadaPorEmpleadoId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CerradaEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaFin")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime>("FechaInicio")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Frecuencia")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("PagadaEn")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AprobadaPorEmpleadoId");
-
-                    b.HasIndex("Frecuencia", "FechaInicio")
-                        .IsUnique();
-
-                    b.ToTable("PeriodosNomina", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.LiquidacionNomina", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("AuxilioTransporte")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("Cargo")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("DescuentoPension")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<decimal>("DescuentoPrestamos")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<decimal>("DescuentoSalud")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<decimal>("Devengado")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("MetodoPago")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<decimal>("Neto")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<string>("NombreTrabajador")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("OtrosDescuentos")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<decimal>("OtrosDevengos")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<bool>("Pagada")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("PagadaEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PeriodoNominaId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("SalarioQuincena")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.Property<int?>("TurnoCajaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TrabajadorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "PeriodoNominaId", "TrabajadorId" })
-                        .IsUnique();
-
-                    b.HasIndex("TrabajadorId");
-
-                    b.HasIndex("TurnoCajaId");
-
-                    b.ToTable("LiquidacionesNomina", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.NovedadNomina", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Concepto")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PeriodoNominaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("TrabajadorId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "PeriodoNominaId", "TrabajadorId" });
-
-                    b.HasIndex("TrabajadorId");
-
-                    b.ToTable("NovedadesNomina", (string)null);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.CuotaPrestamo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Aplicada")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Numero")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PeriodoNominaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PrestamoId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("decimal(12, 2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "PeriodoNominaId", "PrestamoId" })
-                        .IsUnique();
-
-                    b.HasIndex("PrestamoId");
-
-                    b.ToTable("CuotasPrestamo", (string)null);
-                });
-
             modelBuilder.Entity("StockManager.Domain.Entities.Venta", b =>
                 {
                     b.Property<int>("Id")
@@ -1506,9 +1604,6 @@ namespace StockManager.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<int?>("TurnoCajaId")
-                        .HasColumnType("int");
-
                     b.Property<string>("TelefonoComprador")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -1519,6 +1614,9 @@ namespace StockManager.Infrastructure.Migrations
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int?>("TurnoCajaId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -1545,16 +1643,16 @@ namespace StockManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("StockManager.Domain.Entities.Venta", null)
                         .WithMany()
                         .HasForeignKey("VentaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
-                        .WithMany()
-                        .HasForeignKey("TurnoCajaId")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.AbonoCuentaPorPagar", b =>
@@ -1577,15 +1675,6 @@ namespace StockManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("StockManager.Domain.Entities.CuentaPorPagar", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.Proveedor", null)
-                        .WithMany()
-                        .HasForeignKey("ProveedorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("StockManager.Domain.Entities.BackorderRequest", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Cliente", null)
@@ -1598,6 +1687,50 @@ namespace StockManager.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("DetallePedidoId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Producto", null)
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.CuentaPorPagar", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Proveedor", null)
+                        .WithMany()
+                        .HasForeignKey("ProveedorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.CuotaPrestamo", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoNominaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Prestamo", null)
+                        .WithMany()
+                        .HasForeignKey("PrestamoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.DetalleDevolucion", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.DetalleVenta", null)
+                        .WithMany()
+                        .HasForeignKey("DetalleVentaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Devolucion", null)
+                        .WithMany()
+                        .HasForeignKey("DevolucionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("StockManager.Domain.Entities.Producto", null)
                         .WithMany()
@@ -1645,6 +1778,26 @@ namespace StockManager.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.Devolucion", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Venta", null)
+                        .WithMany()
+                        .HasForeignKey("VentaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Factura", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Pedido", null)
@@ -1658,11 +1811,46 @@ namespace StockManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.LiquidacionNomina", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoNominaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
+                        .WithMany()
+                        .HasForeignKey("TrabajadorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.MovimientoStock", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Producto", null)
                         .WithMany()
                         .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.NovedadNomina", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoNominaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
+                        .WithMany()
+                        .HasForeignKey("TrabajadorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -1681,6 +1869,23 @@ namespace StockManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.PeriodoNomina", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("AprobadaPorEmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.Prestamo", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
+                        .WithMany()
+                        .HasForeignKey("TrabajadorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Producto", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Categoria", null)
@@ -1697,6 +1902,21 @@ namespace StockManager.Infrastructure.Migrations
 
             modelBuilder.Entity("StockManager.Domain.Entities.ProductoFoto", b =>
                 {
+                    b.HasOne("StockManager.Domain.Entities.Producto", null)
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.ResenaProducto", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("StockManager.Domain.Entities.Producto", null)
                         .WithMany()
                         .HasForeignKey("ProductoId")
@@ -1735,87 +1955,6 @@ namespace StockManager.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("TurnoCajaId")
                         .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.ResenaProducto", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.Producto", null)
-                        .WithMany()
-                        .HasForeignKey("ProductoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.Cliente", null)
-                        .WithMany()
-                        .HasForeignKey("ClienteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-            modelBuilder.Entity("StockManager.Domain.Entities.Prestamo", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
-                        .WithMany()
-                        .HasForeignKey("TrabajadorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.PeriodoNomina", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
-                        .WithMany()
-                        .HasForeignKey("AprobadaPorEmpleadoId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.LiquidacionNomina", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
-                        .WithMany()
-                        .HasForeignKey("PeriodoNominaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
-                        .WithMany()
-                        .HasForeignKey("TrabajadorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
-                        .WithMany()
-                        .HasForeignKey("TurnoCajaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.NovedadNomina", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
-                        .WithMany()
-                        .HasForeignKey("PeriodoNominaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.Trabajador", null)
-                        .WithMany()
-                        .HasForeignKey("TrabajadorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("StockManager.Domain.Entities.CuotaPrestamo", b =>
-                {
-                    b.HasOne("StockManager.Domain.Entities.PeriodoNomina", null)
-                        .WithMany()
-                        .HasForeignKey("PeriodoNominaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("StockManager.Domain.Entities.Prestamo", null)
-                        .WithMany()
-                        .HasForeignKey("PrestamoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
