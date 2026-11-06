@@ -17,6 +17,9 @@ public interface IVentaService
 
     Task<VentaResponse> CerrarFiadoAsync(int ventaId, string metodoPago, int empleadoId, decimal? montoRecibido = null, List<DetallePagoRequest>? detallesPago = null);
 
+    /// <summary>Corrige el método de pago de una venta pagada, solo durante el día en que se registró.</summary>
+    Task<VentaResponse> CambiarMetodoPagoAsync(int ventaId, CambiarMetodoPagoRequest request, int empleadoId);
+
     Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId);
 
     Task<List<AbonoResponse>> ObtenerAbonosAsync(int ventaId);

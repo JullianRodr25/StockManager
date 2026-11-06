@@ -205,6 +205,19 @@ public class VentasController : ControllerBase
     }
 
     /// <summary>
+    /// Corrige el método de pago de una venta pagada (permite Mixto). Solo durante el día en que
+    /// se registró; las reglas de negocio las traduce el middleware global de excepciones.
+    /// </summary>
+    [HttpPut("{id}/metodo-pago")]
+    [Authorize(Roles = Roles.AdminYCaja)]
+    public async Task<IActionResult> CambiarMetodoPago(int id, [FromBody] CambiarMetodoPagoRequest request)
+    {
+        var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var venta = await _ventaService.CambiarMetodoPagoAsync(id, request, empleadoId);
+        return Ok(venta);
+    }
+
+    /// <summary>
     /// Registra un abono a una cuenta fiada abierta. Si el abono cubre el saldo pendiente,
     /// la cuenta se cierra automáticamente y se genera la Factura.
     /// </summary>

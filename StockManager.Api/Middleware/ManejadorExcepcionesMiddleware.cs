@@ -81,6 +81,7 @@ public sealed class ManejadorExcepcionesMiddleware
             or CuentaFiadoAbiertaException
             or CuentaConAbonosException
             or VentaEstadoInvalidoException
+            or CambioMetodoPagoNoPermitidoException
             or PedidoEstadoInvalidoException
             or CuentaPorPagarEstadoInvalidoException
             or ClienteConPedidosActivosException

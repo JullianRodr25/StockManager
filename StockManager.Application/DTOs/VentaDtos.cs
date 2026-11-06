@@ -93,6 +93,9 @@ public record AbrirFiadoRequest(int ClienteId);
 
 public record CerrarFiadoRequest(string MetodoPago, decimal? MontoRecibido = null, List<DetallePagoRequest>? DetallesPago = null);
 
+/// <summary>Nuevo método de pago para una venta ya pagada (mismas reglas que al registrarla).</summary>
+public record CambiarMetodoPagoRequest(string MetodoPago, decimal? MontoRecibido = null, List<DetallePagoRequest>? DetallesPago = null);
+
 public record RegistrarAbonoRequest(decimal Monto, string MetodoPago);
 
 public record AbonoResponse(
