@@ -312,6 +312,26 @@ public class Venta
     }
 
     /// <summary>
+    /// Corrige el método de pago de una venta ya pagada, con las mismas reglas que al registrarla
+    /// (efectivo exige monto recibido suficiente; Mixto exige desglose que sume el total). Las
+    /// reglas de contexto (mismo día, turno abierto, etc.) las aplica el servicio de aplicación:
+    /// aquí solo vive lo que depende del estado de la propia venta.
+    /// </summary>
+    public void CambiarMetodoPago(string metodoPago, decimal? montoRecibido, IReadOnlyList<(string MetodoPago, decimal Monto)>? detallesPago)
+    {
+        if (Estado != "Pagada")
+            throw new VentaEstadoInvalidoException(Id, Estado, "Pagada");
+
+        if (!MetodosPagoValidos.Contains(metodoPago))
+            throw new ArgumentException($"El método de pago '{metodoPago}' no es válido.", nameof(metodoPago));
+
+        ValidarDetallesPago(metodoPago, Total, detallesPago);
+
+        MetodoPago = metodoPago;
+        MontoRecibido = ValidarMontoRecibido(metodoPago, Total, montoRecibido);
+    }
+
+    /// <summary>
     /// Cancela por completo una cuenta fiada: exige que esté "Pendiente" y pasa a "Cancelada".
     /// La validación de que no tenga abonos registrados es responsabilidad del servicio de aplicación,
     /// ya que requiere consultar la tabla AbonosCuenta.

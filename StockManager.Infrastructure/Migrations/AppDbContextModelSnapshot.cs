@@ -147,6 +147,42 @@ namespace StockManager.Infrastructure.Migrations
                     b.ToTable("BackorderRequests", (string)null);
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.CambioMetodoPagoVenta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MetodoAnterior")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("MetodoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("VentaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("VentaId");
+
+                    b.ToTable("CambiosMetodoPagoVenta", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Categoria", b =>
                 {
                     b.Property<int>("Id")
@@ -1691,6 +1727,21 @@ namespace StockManager.Infrastructure.Migrations
                     b.HasOne("StockManager.Domain.Entities.Producto", null)
                         .WithMany()
                         .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.CambioMetodoPagoVenta", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Venta", null)
+                        .WithMany()
+                        .HasForeignKey("VentaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

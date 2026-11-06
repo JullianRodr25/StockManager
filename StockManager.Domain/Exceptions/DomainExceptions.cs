@@ -543,3 +543,15 @@ public class CategoriaConProductosException : DomainException
     {
     }
 }
+
+/// <summary>
+/// Excepción lanzada cuando una venta ya no admite cambiar su método de pago (pasó el día de
+/// registro, el turno de caja ya cerró, la factura electrónica ya fue transmitida, etc.).
+/// </summary>
+public class CambioMetodoPagoNoPermitidoException : DomainException
+{
+    public CambioMetodoPagoNoPermitidoException(string motivo)
+        : base(motivo)
+    {
+    }
+}

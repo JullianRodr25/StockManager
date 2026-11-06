@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Common;
 using StockManager.Domain.Entities;
 using StockManager.Domain.Events;
 using StockManager.Domain.Exceptions;
@@ -552,6 +553,81 @@ public class VentaService : IVentaService
             venta.RazonSocialFacturada,
             venta.DireccionFacturada,
             venta.EmailFacturacion);
+    }
+
+    public async Task<VentaResponse> CambiarMetodoPagoAsync(int ventaId, CambiarMetodoPagoRequest request, int empleadoId)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var venta = await _dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == ventaId);
+        if (venta == null)
+            throw new VentaNoEncontradaException(ventaId);
+
+        await ValidarVentanaDeCambioDeMetodoAsync(venta);
+
+        var metodoAnterior = venta.MetodoPago ?? "—";
+
+        // Si la venta no estaba atada a ningún turno (se pagó sin efectivo) y ahora pasa a
+        // incluirlo, ese efectivo entra a la caja de quien hace la corrección; sin turno abierto
+        // ResolverTurnoParaPagoAsync lanza TurnoCajaNoAbiertoException (409).
+        int? turnoNuevo = null;
+        if (!venta.TurnoCajaId.HasValue && IncluyeEfectivo(request.MetodoPago, request.DetallesPago))
+            turnoNuevo = await _turnoCajaService.ResolverTurnoParaPagoAsync(empleadoId, incluyeEfectivo: true);
+
+        venta.CambiarMetodoPago(request.MetodoPago, request.MontoRecibido, AConTuplasDetallesPago(request.DetallesPago));
+
+        if (turnoNuevo.HasValue)
+            venta.AsignarTurnoCaja(turnoNuevo.Value);
+
+        // Reemplaza el desglose anterior: sus filas ya no describen cómo se pagó la venta.
+        var lineasAnteriores = await _dbContext.DetallesPagoVenta.Where(d => d.VentaId == ventaId).ToListAsync();
+        _dbContext.DetallesPagoVenta.RemoveRange(lineasAnteriores);
+
+        if (venta.MetodoPago == "Mixto")
+        {
+            foreach (var linea in request.DetallesPago!)
+                _dbContext.DetallesPagoVenta.Add(DetallePagoVenta.Crear(venta.Id, linea.MetodoPago, linea.Monto));
+        }
+
+        _dbContext.CambiosMetodoPagoVenta.Add(
+            CambioMetodoPagoVenta.Crear(venta.Id, empleadoId, metodoAnterior, venta.MetodoPago!));
+
+        await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return (await ObtenerVentaPorIdAsync(ventaId))!;
+    }
+
+    /// <summary>
+    /// Reglas de contexto para corregir el método de pago: solo el mismo día calendario
+    /// (Colombia) en que se registró la venta, y nunca si hacerlo reescribiría algo ya cerrado
+    /// (cierre de caja, factura electrónica transmitida) o si el dinero entró por abonos.
+    /// </summary>
+    private async Task ValidarVentanaDeCambioDeMetodoAsync(Venta venta)
+    {
+        if (venta.EsCotizacion)
+            throw new CambioMetodoPagoNoPermitidoException("Una cotización no tiene método de pago.");
+
+        if (venta.Fecha < HoraColombia.InicioDiaUtc())
+            throw new CambioMetodoPagoNoPermitidoException(
+                "El método de pago solo se puede cambiar el mismo día en que se registró la venta.");
+
+        if (venta.EstadoFacturaElectronica == "Transmitida")
+            throw new CambioMetodoPagoNoPermitidoException(
+                "La factura electrónica de esta venta ya fue transmitida a la DIAN; no se puede cambiar el método de pago.");
+
+        if (await _dbContext.AbonosCuenta.AnyAsync(a => a.VentaId == venta.Id))
+            throw new CambioMetodoPagoNoPermitidoException(
+                "Esta venta se pagó con abonos; su método de pago se deriva de ellos y no se puede cambiar.");
+
+        if (venta.TurnoCajaId.HasValue)
+        {
+            var turnoCerrado = await _dbContext.TurnosCaja
+                .AnyAsync(t => t.Id == venta.TurnoCajaId.Value && t.Estado == TurnoCaja.EstadoCerrado);
+            if (turnoCerrado)
+                throw new CambioMetodoPagoNoPermitidoException(
+                    "El turno de caja de esta venta ya fue cerrado; no se puede cambiar el método de pago.");
+        }
     }
 
     public async Task<VentaResponse> RegistrarAbonoAsync(int ventaId, decimal monto, string metodoPago, int empleadoId)
