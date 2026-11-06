@@ -316,11 +316,11 @@ public class VentaService : IVentaService
                 .AsNoTracking()
                 .Where(d => idsVentas.Contains(d.VentaId))
                 .GroupBy(d => d.VentaId)
-                .Select(g => new { VentaId = g.Key, Total = g.Sum(d => d.TotalDevuelto) })
-                .ToDictionaryAsync(x => x.VentaId, x => x.Total);
+                .Select(g => new { VentaId = g.Key, Devuelto = g.Sum(d => d.TotalDevuelto), Cambio = g.Sum(d => d.TotalCambio) })
+                .ToDictionaryAsync(x => x.VentaId);
 
             items = items
-                .Select(i => devueltoPorVenta.TryGetValue(i.Id, out var devuelto) ? i with { TotalDevuelto = devuelto } : i)
+                .Select(i => devueltoPorVenta.TryGetValue(i.Id, out var d) ? i with { TotalDevuelto = d.Devuelto, TotalCambio = d.Cambio } : i)
                 .ToList();
         }
 

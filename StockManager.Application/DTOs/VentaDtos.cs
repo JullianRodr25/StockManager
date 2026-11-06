@@ -84,7 +84,9 @@ public record VentaResumenResponse(
     // Suma de los abonos registrados (cuentas abiertas/fiado). 0 en ventas sin abonos.
     decimal TotalAbonado = 0,
     // Valor de lo devuelto en devoluciones/cambios de esta venta (a precio de la venta). 0 si no tiene.
-    decimal TotalDevuelto = 0
+    decimal TotalDevuelto = 0,
+    // Valor de lo que el cliente se llevó a cambio en esas devoluciones. Total neto = Total − TotalDevuelto + TotalCambio.
+    decimal TotalCambio = 0
 );
 
 public record AbrirFiadoRequest(int ClienteId);
