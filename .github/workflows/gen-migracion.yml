@@ -1,0 +1,35 @@
+# TEMPORAL: compila y genera la migración de EF exactamente como la espera el modelo.
+# Solo corre en la rama gen-mig-devoluciones; NO despliega nada y NO debe llegar a main.
+name: Generar migración temporal
+
+on:
+  push:
+    branches:
+      - gen-mig-devoluciones
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+      - name: Compilar
+        run: dotnet build --configuration Release
+      - name: Instalar dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+      - name: Generar la migración
+        run: |
+          dotnet ef migrations add AddDevoluciones --project StockManager.Infrastructure --startup-project StockManager.Api --no-build --configuration Release
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=Diag;User Id=sa;Password=Diag_Pass_12345!;TrustServerCertificate=True"
+      - name: Subir los archivos generados a la rama
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add StockManager.Infrastructure/Migrations
+          git commit -m "Migración generada: AddDevoluciones"
+          git push

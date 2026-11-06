@@ -83,6 +83,7 @@ builder.Services.AddScoped<ITrabajadorService, TrabajadorService>();
 builder.Services.AddScoped<IPrestamoService, PrestamoService>();
 builder.Services.AddScoped<INominaResumenService, NominaResumenService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
+builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IClienteExcelImportador, ClienteExcelImportador>();

@@ -9,10 +9,10 @@ public class MovimientoStock
 {
     public int Id { get; private set; }
     public int ProductoId { get; private set; }
-    public string Tipo { get; private set; } = null!;  // 'Entrada' | 'SalidaVenta' | 'SalidaPedido' | 'Ajuste'
+    public string Tipo { get; private set; } = null!;  // 'Entrada' | 'SalidaVenta' | 'SalidaPedido' | 'Ajuste' | 'EntradaDevolucion'
     public int Cantidad { get; private set; }
     public DateTime Fecha { get; private set; }
-    public string ReferenciaTipo { get; private set; } = null!;  // 'Venta' | 'Pedido' | 'Ajuste' | null
+    public string ReferenciaTipo { get; private set; } = null!;  // 'Venta' | 'Pedido' | 'Ajuste' | 'Devolucion' | null
     public int? ReferenciaId { get; private set; }
 
     private MovimientoStock() { }
@@ -27,7 +27,7 @@ public class MovimientoStock
         if (productoId <= 0)
             throw new ArgumentException("ProductoId debe ser mayor a 0.", nameof(productoId));
 
-        var tipos = new[] { "Entrada", "SalidaVenta", "SalidaPedido", "Ajuste" };
+        var tipos = new[] { "Entrada", "SalidaVenta", "SalidaPedido", "Ajuste", "EntradaDevolucion" };
         if (!tipos.Contains(tipo))
             throw new ArgumentException($"El tipo '{tipo}' no es válido.", nameof(tipo));
 

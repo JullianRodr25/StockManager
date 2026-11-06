@@ -265,6 +265,15 @@ public class TurnoCajaService : ITurnoCajaService
             .Select(g => new { Metodo = g.Key, Monto = g.Sum(d => d.Monto) })
             .ToListAsync();
 
+        // Devoluciones y cambios: lo que movieron en dinero (cambio − devuelto) se suma a las ventas
+        // del método con el que se saldó. Un reembolso en efectivo queda negativo y baja el efectivo
+        // esperado; una diferencia cobrada en efectivo lo sube. Así las "ventas" del turno son netas.
+        var devolucionesNetas = await _dbContext.Devoluciones
+            .Where(d => d.TurnoCajaId == turnoId && d.MetodoPago != null)
+            .GroupBy(d => d.MetodoPago)
+            .Select(g => new { Metodo = g.Key, Monto = g.Sum(d => d.TotalCambio - d.TotalDevuelto) })
+            .ToListAsync();
+
         var abonosFiado = await _dbContext.AbonosCuenta
             .Where(a => a.TurnoCajaId == turnoId)
             .GroupBy(a => a.MetodoPago)
@@ -283,6 +292,7 @@ public class TurnoCajaService : ITurnoCajaService
         var entradas = new List<(string? Metodo, decimal Monto)>();
         entradas.AddRange(ventasDirectas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
         entradas.AddRange(ventasMixtas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
+        entradas.AddRange(devolucionesNetas.Select(x => (Metodo: x.Metodo, Monto: x.Monto)));
 
         var abonos = abonosFiado
             .Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto))

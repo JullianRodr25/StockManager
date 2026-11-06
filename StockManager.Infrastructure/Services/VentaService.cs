@@ -309,6 +309,19 @@ public class VentaService : IVentaService
             items = items
                 .Select(i => abonadoPorVenta.TryGetValue(i.Id, out var abonado) ? i with { TotalAbonado = abonado } : i)
                 .ToList();
+
+            // Lo devuelto por venta, también en una sola consulta para la página: el historial marca
+            // "Con devolución" sin pedir las devoluciones una por una.
+            var devueltoPorVenta = await _dbContext.Devoluciones
+                .AsNoTracking()
+                .Where(d => idsVentas.Contains(d.VentaId))
+                .GroupBy(d => d.VentaId)
+                .Select(g => new { VentaId = g.Key, Total = g.Sum(d => d.TotalDevuelto) })
+                .ToDictionaryAsync(x => x.VentaId, x => x.Total);
+
+            items = items
+                .Select(i => devueltoPorVenta.TryGetValue(i.Id, out var devuelto) ? i with { TotalDevuelto = devuelto } : i)
+                .ToList();
         }
 
         return (items, total);
