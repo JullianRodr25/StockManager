@@ -55,6 +55,13 @@ public class ReportesController : ControllerBase
     [HttpGet("inventario")]
     public async Task<IActionResult> Inventario() => Ok(await _reportes.InventarioAsync());
 
+    [HttpGet("cotizaciones")]
+    public async Task<IActionResult> Cotizaciones([FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta)
+    {
+        var (d, h) = ResolverRango(desde, hasta);
+        return ValidarRango(d, h) ?? Ok(await _reportes.CotizacionesAsync(d, h));
+    }
+
     [HttpGet("cartera")]
     public async Task<IActionResult> Cartera() => Ok(await _reportes.CarteraAsync());
 }

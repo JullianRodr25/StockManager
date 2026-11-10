@@ -59,6 +59,75 @@ public class VentaService : IVentaService
 
     public async Task<VentaResponse> RegistrarVentaAsync(RegistrarVentaRequest request, int empleadoId)
     {
+        // Venta armada desde la pantalla de Ventas a partir de una cotización ("traer cotización").
+        // El cajero pudo cambiar las líneas: se respeta el precio cotizado solo en los productos
+        // que siguen en la venta; los agregados se cobran a precio de lista. La cotización queda
+        // convertida igual (ver MarcarConvertida) y ligada a esta venta.
+        if (request.CotizacionId is not int cotizacionId)
+            return await RegistrarVentaCoreAsync(request, empleadoId, cotizacion: null, preciosCotizados: null);
+
+        var cotizacion = await CargarCotizacionConvertibleAsync(cotizacionId);
+        var precios = cotizacion.Detalles.ToDictionary(d => d.ProductoId, d => d.PrecioUnitario);
+        return await RegistrarVentaCoreAsync(request, empleadoId, cotizacion, precios);
+    }
+
+    /// <summary>Carga la cotización con sus líneas y exige que siga vigente y dentro de plazo.</summary>
+    private async Task<Cotizacion> CargarCotizacionConvertibleAsync(int cotizacionId)
+    {
+        var cotizacion = await _dbContext.Cotizaciones
+            .Include(c => c.Detalles)
+            .FirstOrDefaultAsync(c => c.Id == cotizacionId)
+            ?? throw new CotizacionNoEncontradaException(cotizacionId);
+
+        // Se valida antes de resolver caja o tocar stock; MarcarConvertida lo vuelve a exigir.
+        var hoy = DateOnly.FromDateTime(HoraColombia.Hoy());
+        if (cotizacion.Estado != Cotizacion.EstadoVigente)
+            throw new CotizacionNoModificableException(
+                $"No se puede convertir en venta una cotización {cotizacion.Estado.ToLowerInvariant()}.");
+        if (cotizacion.EstaVencida(hoy))
+            throw new CotizacionNoModificableException(
+                $"La cotización venció el {cotizacion.FechaVencimiento:dd/MM/yyyy}. Edita su plazo para volver a activarla.");
+        return cotizacion;
+    }
+
+    public async Task<VentaResponse> RegistrarVentaDesdeCotizacionAsync(
+        int cotizacionId, ConvertirCotizacionRequest request, int empleadoId)
+    {
+        var cotizacion = await CargarCotizacionConvertibleAsync(cotizacionId);
+
+        // Un cliente registrado no lleva nombre/teléfono/correo propios en la venta (ver
+        // RegistrarVentaCoreAsync); para un comprador sin registrar, se usan los de la cotización.
+        var registrado = cotizacion.ClienteId.HasValue;
+        var ventaRequest = new RegistrarVentaRequest(
+            cotizacion.ClienteId,
+            registrado ? null : cotizacion.NombreCliente,
+            registrado ? null : cotizacion.TelefonoCliente,
+            registrado ? null : cotizacion.EmailCliente,
+            request.MetodoPago,
+            cotizacion.Detalles.Select(d => new LineaVentaRequest(d.ProductoId, d.Cantidad)).ToList(),
+            request.MontoRecibido,
+            request.DetallesPago,
+            request.RequiereFacturaElectronica,
+            request.TipoDocumentoFiscal,
+            request.NumeroDocumentoFiscal,
+            request.RazonSocialFiscal,
+            request.DireccionFiscal,
+            request.EmailFacturacion);
+
+        var precios = cotizacion.Detalles.ToDictionary(d => d.ProductoId, d => d.PrecioUnitario);
+        return await RegistrarVentaCoreAsync(ventaRequest, empleadoId, cotizacion, precios);
+    }
+
+    /// <summary>
+    /// Flujo único de registro de venta. Si viene una cotización, usa sus precios (en vez de los
+    /// de lista) y la marca como convertida dentro de la misma transacción: o ocurre todo o nada.
+    /// </summary>
+    private async Task<VentaResponse> RegistrarVentaCoreAsync(
+        RegistrarVentaRequest request,
+        int empleadoId,
+        Cotizacion? cotizacion,
+        IReadOnlyDictionary<int, decimal>? preciosCotizados)
+    {
         if (request.Lineas == null || request.Lineas.Count == 0)
             throw new ArgumentException("Debe incluir al menos un producto");
 
@@ -113,7 +182,13 @@ public class VentaService : IVentaService
             // bruto en base + IVA: iva = bruto * tarifa%, base = bruto - iva. Si el producto no
             // aplica IVA, TarifaIva siempre vale 0 (invariante del dominio), así que iva da 0 y
             // la base es igual al bruto.
-            var bruto = producto.Precio * linea.Cantidad;
+            // Al convertir una cotización se respeta el precio ofrecido, no el de lista de hoy.
+            var precioUnitario = preciosCotizados is not null
+                                 && preciosCotizados.TryGetValue(producto.Id, out var precioCotizado)
+                ? precioCotizado
+                : producto.Precio;
+
+            var bruto = precioUnitario * linea.Cantidad;
             var iva = bruto * (producto.TarifaIva / 100m);
             var subtotalSinIva = bruto - iva;
             var subtotalConIva = bruto;
@@ -121,7 +196,7 @@ public class VentaService : IVentaService
             calculos.Add(new CalculoLinea(
                 producto,
                 linea.Cantidad,
-                producto.Precio,
+                precioUnitario,
                 subtotalSinIva,
                 iva,
                 subtotalConIva));
@@ -153,6 +228,9 @@ public class VentaService : IVentaService
 
         _dbContext.Ventas.Add(venta);
         await _dbContext.SaveChangesAsync();
+
+        // Se guarda junto con el resto de la aplicación (mismo SaveChanges y misma transacción).
+        cotizacion?.MarcarConvertida(venta.Id, DateOnly.FromDateTime(HoraColombia.Hoy()));
 
         // FASE DE APLICACIÓN: modifica stock y crea los registros relacionados.
         foreach (var calculo in calculos)

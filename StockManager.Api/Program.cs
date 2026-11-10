@@ -78,6 +78,8 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<ITurnoCajaService, TurnoCajaService>();
 builder.Services.AddScoped<IRetiroCajaService, RetiroCajaService>();
+builder.Services.AddScoped<ICotizacionService, CotizacionService>();
+builder.Services.AddScoped<ICotizacionPdfService, QuestPdfCotizacionService>();
 builder.Services.AddScoped<IParametrosNominaService, ParametrosNominaService>();
 builder.Services.AddScoped<IPeriodoNominaService, PeriodoNominaService>();
 builder.Services.AddScoped<ITrabajadorService, TrabajadorService>();

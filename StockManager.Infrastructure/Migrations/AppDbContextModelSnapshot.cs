@@ -396,6 +396,77 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.Cotizacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EmailCliente")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaConversion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("FechaVencimiento")
+                        .HasColumnType("date");
+
+                    b.Property<string>("NombreCliente")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TelefonoCliente")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int?>("VentaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("Fecha");
+
+                    b.HasIndex("VentaId");
+
+                    b.ToTable("Cotizaciones", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.CuentaPorPagar", b =>
                 {
                     b.Property<int>("Id")
@@ -474,6 +545,35 @@ namespace StockManager.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("CuotasPrestamo", (string)null);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.DetalleCotizacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CotizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CotizacionId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("DetallesCotizacion", (string)null);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.DetalleDevolucion", b =>
@@ -1799,6 +1899,25 @@ namespace StockManager.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.Cotizacion", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Venta", null)
+                        .WithMany()
+                        .HasForeignKey("VentaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.CuentaPorPagar", b =>
                 {
                     b.HasOne("StockManager.Domain.Entities.Proveedor", null)
@@ -1819,6 +1938,21 @@ namespace StockManager.Infrastructure.Migrations
                     b.HasOne("StockManager.Domain.Entities.Prestamo", null)
                         .WithMany()
                         .HasForeignKey("PrestamoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.DetalleCotizacion", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Cotizacion", null)
+                        .WithMany("Detalles")
+                        .HasForeignKey("CotizacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Producto", null)
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -2084,6 +2218,11 @@ namespace StockManager.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("TurnoCajaId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.Cotizacion", b =>
+                {
+                    b.Navigation("Detalles");
                 });
 #pragma warning restore 612, 618
         }

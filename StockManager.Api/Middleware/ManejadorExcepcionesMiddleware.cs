@@ -67,6 +67,7 @@ public sealed class ManejadorExcepcionesMiddleware
             or ResenaNoEncontradaException
             or TurnoCajaNoEncontradoException
             or RetiroCajaNoEncontradoException
+            or CotizacionNoEncontradaException
             or TrabajadorNoEncontradoException
             or PrestamoNoEncontradoException
             or PeriodoNominaNoEncontradoException => (StatusCodes.Status404NotFound, ex.Message),
@@ -83,6 +84,7 @@ public sealed class ManejadorExcepcionesMiddleware
             or CuentaConAbonosException
             or VentaEstadoInvalidoException
             or CambioMetodoPagoNoPermitidoException
+            or CotizacionNoModificableException
             or PedidoEstadoInvalidoException
             or CuentaPorPagarEstadoInvalidoException
             or ClienteConPedidosActivosException

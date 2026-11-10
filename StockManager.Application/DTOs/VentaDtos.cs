@@ -33,7 +33,10 @@ public record RegistrarVentaRequest(
     string? NumeroDocumentoFiscal = null,
     string? RazonSocialFiscal = null,
     string? DireccionFiscal = null,
-    string? EmailFacturacion = null
+    string? EmailFacturacion = null,
+    // Cotización de origen cuando la venta se arma en Ventas con "traer cotización": sus precios
+    // se respetan en los productos que siguen en la venta y queda convertida y ligada a ella.
+    int? CotizacionId = null
 );
 
 public record DetalleVentaResponse(

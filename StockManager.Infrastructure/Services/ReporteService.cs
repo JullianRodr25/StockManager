@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
 using StockManager.Domain.Common;
+using StockManager.Domain.Entities;
 using StockManager.Infrastructure.Data;
 
 namespace StockManager.Infrastructure.Services;
@@ -265,5 +266,80 @@ public class ReporteService : IReporteService
             porPagar.Sum(p => p.Saldo),
             porPagar.Sum(p => p.SaldoVencido),
             porPagar);
+    }
+
+    public async Task<ReporteCotizacionesResponse> CotizacionesAsync(DateOnly desde, DateOnly hasta)
+    {
+        var (inicio, fin) = RangoUtc(desde, hasta);
+        var hoy = DateOnly.FromDateTime(HoraColombia.Hoy());
+
+        var filas = await _db.Cotizaciones.AsNoTracking()
+            .Where(c => c.Fecha >= inicio && c.Fecha < fin)
+            .Select(c => new
+            {
+                c.Id, c.NombreCliente, c.EmpleadoId, c.Fecha, c.FechaVencimiento, c.Estado, c.Total,
+                c.VentaId, Lineas = c.Detalles.Count
+            })
+            .ToListAsync();
+
+        var empleadoIds = filas.Select(f => f.EmpleadoId).Distinct().ToList();
+        var nombres = await _db.Empleados.AsNoTracking()
+            .Where(e => empleadoIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, e => e.Nombre);
+
+        // "Vencida" se deduce: sigue Vigente y su plazo ya pasó.
+        string EstadoDe(string estado, DateOnly vence) =>
+            estado == Cotizacion.EstadoVigente && vence < hoy ? Cotizacion.EstadoVencida : estado;
+
+        var items = filas
+            .OrderByDescending(f => f.Fecha)
+            .Select(f => new CotizacionResumenResponse(
+                f.Id,
+                CotizacionService.FormatearNumero(f.Id),
+                f.NombreCliente,
+                nombres.GetValueOrDefault(f.EmpleadoId, string.Empty),
+                f.Fecha,
+                f.FechaVencimiento,
+                EstadoDe(f.Estado, f.FechaVencimiento),
+                f.Total,
+                f.Lineas,
+                f.VentaId))
+            .ToList();
+
+        var porEstado = new[] { Cotizacion.EstadoVigente, Cotizacion.EstadoVencida, Cotizacion.EstadoConvertida, Cotizacion.EstadoAnulada }
+            .Select(estado => new CotizacionesPorEstadoResponse(
+                estado,
+                items.Count(i => i.Estado == estado),
+                items.Where(i => i.Estado == estado).Sum(i => i.Total)))
+            .ToList();
+
+        var porEmpleado = filas
+            .GroupBy(f => f.EmpleadoId)
+            .Select(g => new CotizacionesPorEmpleadoResponse(
+                g.Key,
+                nombres.GetValueOrDefault(g.Key, string.Empty),
+                g.Count(),
+                g.Sum(f => f.Total),
+                g.Count(f => f.Estado == Cotizacion.EstadoConvertida),
+                g.Where(f => f.Estado == Cotizacion.EstadoConvertida).Sum(f => f.Total)))
+            .OrderByDescending(e => e.Valor)
+            .ToList();
+
+        var convertidas = items.Where(i => i.Estado == Cotizacion.EstadoConvertida).ToList();
+        var competidas = items.Where(i => i.Estado != Cotizacion.EstadoAnulada).ToList();
+        var valorCompetido = competidas.Sum(i => i.Total);
+        var valorConvertido = convertidas.Sum(i => i.Total);
+
+        return new ReporteCotizacionesResponse(
+            desde,
+            hasta,
+            items.Count,
+            items.Sum(i => i.Total),
+            valorConvertido,
+            competidas.Count == 0 ? 0m : Math.Round(100m * convertidas.Count / competidas.Count, 1),
+            valorCompetido == 0m ? 0m : Math.Round(100m * valorConvertido / valorCompetido, 1),
+            porEstado,
+            porEmpleado,
+            items);
     }
 }
