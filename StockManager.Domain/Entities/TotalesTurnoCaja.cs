@@ -14,15 +14,17 @@ public sealed record TotalesTurnoCaja(
     decimal PagosProveedorEfectivo,
     decimal Transferencias,
     decimal Tarjeta,
-    decimal PagosNominaEfectivo = 0m)
+    decimal PagosNominaEfectivo = 0m,
+    decimal RetirosEfectivo = 0m)
 {
     public static readonly TotalesTurnoCaja Vacio = new(0m, 0m, 0m, 0m, 0m);
 
     /// <summary>
     /// Efectivo que debería haber en el cajón: base inicial + lo que entró en efectivo − lo que
     /// salió en efectivo. Las ventas cuentan por su total (no por lo recibido), porque el cambio
-    /// devuelto al cliente nunca se queda en la caja.
+    /// devuelto al cliente nunca se queda en la caja. Los retiros parciales también restan: es
+    /// efectivo que el dueño sacó del cajón a propósito (ver RetiroCaja), no un faltante.
     /// </summary>
     public decimal EfectivoEsperado(decimal baseInicial) =>
-        baseInicial + VentasEfectivo + AbonosFiadoEfectivo - PagosProveedorEfectivo - PagosNominaEfectivo;
+        baseInicial + VentasEfectivo + AbonosFiadoEfectivo - PagosProveedorEfectivo - PagosNominaEfectivo - RetirosEfectivo;
 }

@@ -52,7 +52,8 @@ public record TotalesCajaResponse(
     decimal PagosProveedorEfectivo,
     decimal Transferencias,
     decimal Tarjeta,
-    decimal PagosNominaEfectivo);
+    decimal PagosNominaEfectivo,
+    decimal RetirosEfectivo = 0m);
 
 public record ConteoDenominacionResponse(int Denominacion, int Cantidad, decimal Valor);
 

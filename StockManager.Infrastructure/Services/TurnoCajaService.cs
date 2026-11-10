@@ -289,6 +289,11 @@ public class TurnoCajaService : ITurnoCajaService
             .Where(l => l.TurnoCajaId == turnoId)
             .SumAsync(l => (decimal?)l.Neto) ?? 0m;
 
+        // Retiros parciales vigentes (los anulados no cuentan).
+        var retirosEfectivo = await _dbContext.RetirosCaja
+            .Where(r => r.TurnoCajaId == turnoId && !r.Anulado)
+            .SumAsync(r => (decimal?)r.Monto) ?? 0m;
+
         var entradas = new List<(string? Metodo, decimal Monto)>();
         entradas.AddRange(ventasDirectas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
         entradas.AddRange(ventasMixtas.Select(x => (Metodo: (string?)x.Metodo, Monto: x.Monto)));
@@ -307,7 +312,8 @@ public class TurnoCajaService : ITurnoCajaService
             PagosProveedorEfectivo: pagosProveedorEfectivo,
             Transferencias: Sumar(entradas, Transferencia) + Sumar(abonos, Transferencia),
             Tarjeta: Sumar(entradas, Tarjeta) + Sumar(abonos, Tarjeta),
-            PagosNominaEfectivo: pagosNominaEfectivo);
+            PagosNominaEfectivo: pagosNominaEfectivo,
+            RetirosEfectivo: retirosEfectivo);
     }
 
     private async Task<TurnoCajaResponse> MapearAsync(TurnoCaja turno, bool esperadoVisible)
@@ -331,7 +337,7 @@ public class TurnoCajaService : ITurnoCajaService
             var t = turno.TotalesCierre!;
             totalesResponse = new TotalesCajaResponse(
                 t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta,
-                t.PagosNominaEfectivo);
+                t.PagosNominaEfectivo, t.RetirosEfectivo);
             esperado = turno.EfectivoEsperado;
         }
         else if (esperadoVisible)
@@ -339,7 +345,7 @@ public class TurnoCajaService : ITurnoCajaService
             var t = await CalcularTotalesAsync(turno.Id);
             totalesResponse = new TotalesCajaResponse(
                 t.VentasEfectivo, t.AbonosFiadoEfectivo, t.PagosProveedorEfectivo, t.Transferencias, t.Tarjeta,
-                t.PagosNominaEfectivo);
+                t.PagosNominaEfectivo, t.RetirosEfectivo);
             esperado = t.EfectivoEsperado(turno.BaseInicial);
         }
 
