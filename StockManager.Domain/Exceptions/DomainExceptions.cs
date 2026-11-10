@@ -564,3 +564,24 @@ public class CambioMetodoPagoNoPermitidoException : DomainException
     {
     }
 }
+
+/// <summary>Excepción lanzada cuando no se encuentra una cotización con el ID especificado.</summary>
+public class CotizacionNoEncontradaException : DomainException
+{
+    public CotizacionNoEncontradaException(int cotizacionId)
+        : base($"No se encontró la cotización con ID {cotizacionId}.")
+    {
+    }
+}
+
+/// <summary>
+/// Excepción lanzada cuando una cotización no admite la operación pedida por su estado
+/// (ya convertida, anulada o vencida).
+/// </summary>
+public class CotizacionNoModificableException : DomainException
+{
+    public CotizacionNoModificableException(string mensaje)
+        : base(mensaje)
+    {
+    }
+}

@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
     public DbSet<DetallePagoVenta> DetallesPagoVenta { get; set; } = null!;
     public DbSet<CambioMetodoPagoVenta> CambiosMetodoPagoVenta { get; set; } = null!;
     public DbSet<RetiroCaja> RetirosCaja { get; set; } = null!;
+    public DbSet<Cotizacion> Cotizaciones { get; set; } = null!;
+    public DbSet<DetalleCotizacion> DetallesCotizacion { get; set; } = null!;
     public DbSet<Devolucion> Devoluciones { get; set; } = null!;
     public DbSet<DetalleDevolucion> DetallesDevolucion { get; set; } = null!;
     public DbSet<Pedido> Pedidos { get; set; } = null!;
@@ -68,6 +70,8 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DetallePagoVentaConfiguration());
         modelBuilder.ApplyConfiguration(new DevolucionConfiguration());
         modelBuilder.ApplyConfiguration(new RetiroCajaConfiguration());
+        modelBuilder.ApplyConfiguration(new CotizacionConfiguration());
+        modelBuilder.ApplyConfiguration(new DetalleCotizacionConfiguration());
         modelBuilder.ApplyConfiguration(new CambioMetodoPagoVentaConfiguration());
         modelBuilder.ApplyConfiguration(new DetalleDevolucionConfiguration());
         modelBuilder.ApplyConfiguration(new PedidoConfiguration());

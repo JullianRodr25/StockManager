@@ -8,4 +8,5 @@ public interface IReporteService
     Task<ReporteProductosVendidosResponse> ProductosVendidosAsync(DateOnly desde, DateOnly hasta, int top);
     Task<ReporteInventarioResponse> InventarioAsync();
     Task<ReporteCarteraResponse> CarteraAsync();
+    Task<ReporteCotizacionesResponse> CotizacionesAsync(DateOnly desde, DateOnly hasta);
 }

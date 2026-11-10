@@ -6,6 +6,13 @@ public interface IVentaService
 {
     Task<VentaResponse> RegistrarVentaAsync(RegistrarVentaRequest request, int empleadoId);
 
+    /// <summary>
+    /// Convierte una cotización vigente en venta, de forma atómica: crea la venta con las líneas
+    /// y los precios COTIZADOS (no los de lista), descuenta el stock y deja la cotización
+    /// enlazada a la venta. Falla, sin cambios, si falta stock o la cotización ya no es vigente.
+    /// </summary>
+    Task<VentaResponse> RegistrarVentaDesdeCotizacionAsync(int cotizacionId, ConvertirCotizacionRequest request, int empleadoId);
+
     Task<(List<VentaResumenResponse> Items, int Total)> ObtenerVentasPaginadoAsync(
         int pagina, int tamanoPagina, DateTime? desde, DateTime? hasta, string? estado);
 

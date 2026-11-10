@@ -56,3 +56,31 @@ public record ReporteCarteraResponse(
     decimal TotalPorPagar,
     decimal TotalVencidoPorPagar,
     IReadOnlyList<SaldoProveedorItem> PorPagar);
+
+// ---------- Cotizaciones ----------
+
+public record CotizacionesPorEstadoResponse(string Estado, int Cantidad, decimal Valor);
+
+public record CotizacionesPorEmpleadoResponse(
+    int EmpleadoId,
+    string Empleado,
+    int Cantidad,
+    decimal Valor,
+    int Convertidas,
+    decimal ValorConvertido);
+
+/// <summary>
+/// Cotizaciones creadas en el rango. La tasa de conversión excluye las anuladas (una cotización
+/// anulada no llegó a competir) y se mide por cantidad y por valor.
+/// </summary>
+public record ReporteCotizacionesResponse(
+    DateOnly Desde,
+    DateOnly Hasta,
+    int Cantidad,
+    decimal ValorCotizado,
+    decimal ValorConvertido,
+    decimal TasaConversionCantidad,
+    decimal TasaConversionValor,
+    List<CotizacionesPorEstadoResponse> PorEstado,
+    List<CotizacionesPorEmpleadoResponse> PorEmpleado,
+    List<CotizacionResumenResponse> Cotizaciones);
