@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using StockManager.Application.Services;
 using StockManager.Application.DTOs;
+using StockManager.Domain.Constants;
 using StockManager.Domain.Exceptions;
 
 namespace StockManager.Api.Controllers;
@@ -150,5 +152,23 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "El enlace de restablecimiento no es válido o expiró." });
 
         return Ok(new { message = "Tu contraseña fue actualizada exitosamente." });
+    }
+
+    /// <summary>
+    /// Cambio de contraseña del empleado autenticado (cualquier rol de personal). El ID sale del
+    /// token, nunca del request: nadie puede cambiar la contraseña de otro usuario por aquí. Los
+    /// errores de dominio (contraseña actual incorrecta) los traduce el middleware global.
+    /// </summary>
+    [HttpPost("cambiar-contrasena")]
+    [Authorize(Roles = Roles.PersonalConInventario)]
+    public async Task<IActionResult> CambiarContrasena([FromBody] CambiarPasswordPropioRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var empleadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _authService.CambiarPasswordEmpleadoAsync(empleadoId, request.PasswordActual, request.PasswordNueva);
+
+        return Ok(new { message = "Tu contraseña fue actualizada." });
     }
 }

@@ -52,5 +52,12 @@ namespace StockManager.Application.Services
         /// inválido, expiró, o el usuario ya no existe.
         /// </summary>
         Task<bool> RestablecerContrasenaAsync(string token, string nuevaPassword);
+
+        /// <summary>
+        /// Cambio de contraseña del propio empleado autenticado. A diferencia de la recuperación
+        /// por correo, exige conocer la contraseña actual: así una sesión abierta y desatendida no
+        /// basta para adueñarse de la cuenta. La nueva debe ser distinta de la actual.
+        /// </summary>
+        Task CambiarPasswordEmpleadoAsync(int empleadoId, string passwordActual, string passwordNueva);
     }
 }

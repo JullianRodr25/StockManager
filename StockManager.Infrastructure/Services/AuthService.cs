@@ -274,6 +274,22 @@ namespace StockManager.Infrastructure.Services
             }
         }
 
+        public async Task CambiarPasswordEmpleadoAsync(int empleadoId, string passwordActual, string passwordNueva)
+        {
+            var empleado = await _db.Empleados.FirstOrDefaultAsync(e => e.Id == empleadoId)
+                ?? throw new ArgumentException("No se encontró tu usuario.");
+
+            var resultado = _passwordHasherEmpleado.VerifyHashedPassword(empleado, empleado.PasswordHash, passwordActual);
+            if (resultado == PasswordVerificationResult.Failed)
+                throw new ContrasenaActualIncorrectaException();
+
+            if (passwordActual == passwordNueva)
+                throw new ArgumentException("La nueva contraseña debe ser distinta de la actual.");
+
+            empleado.ActualizarPasswordHash(_passwordHasherEmpleado.HashPassword(empleado, passwordNueva));
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<bool> RestablecerContrasenaAsync(string token, string nuevaPassword)
         {
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(nuevaPassword))
