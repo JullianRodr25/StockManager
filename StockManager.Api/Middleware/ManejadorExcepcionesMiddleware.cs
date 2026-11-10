@@ -66,6 +66,7 @@ public sealed class ManejadorExcepcionesMiddleware
             or NotificacionInternaNoEncontradaException
             or ResenaNoEncontradaException
             or TurnoCajaNoEncontradoException
+            or RetiroCajaNoEncontradoException
             or TrabajadorNoEncontradoException
             or PrestamoNoEncontradoException
             or PeriodoNominaNoEncontradoException => (StatusCodes.Status404NotFound, ex.Message),

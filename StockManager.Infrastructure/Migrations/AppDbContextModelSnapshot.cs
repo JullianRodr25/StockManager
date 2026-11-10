@@ -1419,6 +1419,48 @@ namespace StockManager.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockManager.Domain.Entities.RetiroCaja", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Anulado")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("AnuladoPorEmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("TurnoCajaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnuladoPorEmpleadoId");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("Fecha");
+
+                    b.HasIndex("TurnoCajaId");
+
+                    b.ToTable("RetirosCaja", (string)null);
+                });
+
             modelBuilder.Entity("StockManager.Domain.Entities.Trabajador", b =>
                 {
                     b.Property<int>("Id")
@@ -1543,6 +1585,9 @@ namespace StockManager.Infrastructure.Migrations
                         .HasColumnType("decimal(12, 2)");
 
                     b.Property<decimal?>("TotalPagosProveedorEfectivo")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<decimal?>("TotalRetirosEfectivo")
                         .HasColumnType("decimal(12, 2)");
 
                     b.Property<decimal?>("TotalTarjeta")
@@ -1972,6 +2017,26 @@ namespace StockManager.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockManager.Domain.Entities.RetiroCaja", b =>
+                {
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("AnuladoPorEmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.TurnoCaja", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

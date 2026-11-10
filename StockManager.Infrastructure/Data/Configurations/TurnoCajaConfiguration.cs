@@ -37,6 +37,7 @@ public class TurnoCajaConfiguration : IEntityTypeConfiguration<TurnoCaja>
         builder.Property(t => t.TotalAbonosFiadoEfectivo).HasColumnType("decimal(12, 2)");
         builder.Property(t => t.TotalPagosProveedorEfectivo).HasColumnType("decimal(12, 2)");
         builder.Property(t => t.TotalPagosNominaEfectivo).HasColumnType("decimal(12, 2)");
+        builder.Property(t => t.TotalRetirosEfectivo).HasColumnType("decimal(12, 2)");
         builder.Property(t => t.TotalTransferencias).HasColumnType("decimal(12, 2)");
         builder.Property(t => t.TotalTarjeta).HasColumnType("decimal(12, 2)");
 

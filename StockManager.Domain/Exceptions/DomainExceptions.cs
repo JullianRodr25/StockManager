@@ -455,6 +455,15 @@ public class TurnoCajaEstadoInvalidoException : DomainException
     }
 }
 
+/// <summary>Excepción lanzada cuando no se encuentra un retiro de caja con el ID especificado.</summary>
+public class RetiroCajaNoEncontradoException : DomainException
+{
+    public RetiroCajaNoEncontradoException(int retiroId)
+        : base($"No se encontró el retiro de caja con ID {retiroId}.")
+    {
+    }
+}
+
 /// <summary>
 /// Excepción lanzada cuando una operación de caja incumple una regla de negocio (por ejemplo,
 /// cerrar con diferencia sin explicarla en una nota).

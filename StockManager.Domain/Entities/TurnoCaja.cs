@@ -40,6 +40,7 @@ public class TurnoCaja
     public decimal? TotalAbonosFiadoEfectivo { get; private set; }
     public decimal? TotalPagosProveedorEfectivo { get; private set; }
     public decimal? TotalPagosNominaEfectivo { get; private set; }
+    public decimal? TotalRetirosEfectivo { get; private set; }
     public decimal? TotalTransferencias { get; private set; }
     public decimal? TotalTarjeta { get; private set; }
 
@@ -104,6 +105,7 @@ public class TurnoCaja
         TotalAbonosFiadoEfectivo = totales.AbonosFiadoEfectivo;
         TotalPagosProveedorEfectivo = totales.PagosProveedorEfectivo;
         TotalPagosNominaEfectivo = totales.PagosNominaEfectivo;
+        TotalRetirosEfectivo = totales.RetirosEfectivo;
         TotalTransferencias = totales.Transferencias;
         TotalTarjeta = totales.Tarjeta;
         Estado = EstadoCerrado;
@@ -118,6 +120,7 @@ public class TurnoCaja
                 TotalPagosProveedorEfectivo ?? 0m,
                 TotalTransferencias ?? 0m,
                 TotalTarjeta ?? 0m,
-                TotalPagosNominaEfectivo ?? 0m)
+                TotalPagosNominaEfectivo ?? 0m,
+                TotalRetirosEfectivo ?? 0m)
             : null;
 }
