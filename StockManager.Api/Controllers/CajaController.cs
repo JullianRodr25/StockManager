@@ -81,6 +81,11 @@ public class CajaController : ControllerBase
         return Ok(turno);
     }
 
+    /// <summary>Edita la nota explicativa de un turno cerrado (dueño del turno o Admin).</summary>
+    [HttpPut("{id:int}/nota")]
+    public async Task<IActionResult> ActualizarNota(int id, [FromBody] ActualizarNotaTurnoRequest request) =>
+        Ok(await _turnoCajaService.ActualizarNotaAsync(id, EmpleadoId, EsAdmin, request.Nota));
+
     /// <summary>Historial de turnos, el más reciente primero. Un empleado solo ve los suyos.</summary>
     [HttpGet]
     public async Task<IActionResult> ObtenerHistorial([FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 20)

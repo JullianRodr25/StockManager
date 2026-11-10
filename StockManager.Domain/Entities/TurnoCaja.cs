@@ -33,6 +33,10 @@ public class TurnoCaja
     public decimal? Diferencia { get; private set; }
     public string? NotaCierre { get; private set; }
 
+    /// <summary>Auditoría de la nota: quién y cuándo la editó después del cierre (null si es la original).</summary>
+    public int? NotaActualizadaPorEmpleadoId { get; private set; }
+    public DateTime? FechaNotaActualizada { get; private set; }
+
     /// <summary>Desglose del conteo por denominación (JSON), para reimprimir el cierre fielmente.</summary>
     public string? DetalleConteo { get; private set; }
 
@@ -109,6 +113,32 @@ public class TurnoCaja
         TotalTransferencias = totales.Transferencias;
         TotalTarjeta = totales.Tarjeta;
         Estado = EstadoCerrado;
+    }
+
+    /// <summary>
+    /// Corrige la nota explicativa de un turno ya cerrado (por qué sobró o faltó). Es lo único
+    /// editable de un cierre: los montos siguen congelados. Si hay diferencia, la nota sigue
+    /// siendo obligatoria, igual que al cerrar, y queda registrado quién la editó y cuándo.
+    /// </summary>
+    public void ActualizarNota(string? nota, int empleadoId)
+    {
+        if (Estado != EstadoCerrado)
+            throw new TurnoCajaEstadoInvalidoException(Id, Estado, EstadoCerrado);
+
+        if (empleadoId <= 0)
+            throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
+
+        var notaLimpia = string.IsNullOrWhiteSpace(nota) ? null : nota.Trim();
+
+        if (Diferencia is not null and not 0m && notaLimpia is null)
+            throw new OperacionInvalidaCajaException("Hay una diferencia en este cierre: la nota que la explica es obligatoria.");
+
+        if (notaLimpia is { Length: > 300 })
+            throw new OperacionInvalidaCajaException("La nota no puede exceder 300 caracteres.");
+
+        NotaCierre = notaLimpia;
+        NotaActualizadaPorEmpleadoId = empleadoId;
+        FechaNotaActualizada = DateTime.UtcNow;
     }
 
     /// <summary>Totales congelados al cierre; solo disponible con el turno cerrado.</summary>

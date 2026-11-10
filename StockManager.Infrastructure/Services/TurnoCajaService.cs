@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Common;
 using StockManager.Domain.Entities;
 using StockManager.Domain.Exceptions;
 using StockManager.Infrastructure.Data;
@@ -122,6 +123,28 @@ public class TurnoCajaService : ITurnoCajaService
 
         var visible = turno.Estado == TurnoCaja.EstadoCerrado || await EsperadoVisibleAsync(esAdmin);
         return await MapearAsync(turno, visible);
+    }
+
+    public async Task<TurnoCajaResponse> ActualizarNotaAsync(int turnoId, int usuarioId, bool esAdmin, string? nota)
+    {
+        var turno = await _dbContext.TurnosCaja.FirstOrDefaultAsync(t => t.Id == turnoId);
+
+        // Misma regla que ObtenerPorIdAsync: el dueño del turno o un Admin; a otros no se les revela.
+        if (turno is null || (!esAdmin && turno.EmpleadoId != usuarioId))
+            throw new TurnoCajaNoEncontradoException(turnoId);
+
+        // Solo las cajas cerradas hoy (día calendario de Colombia): pasado ese día el cierre queda
+        // como se firmó. Es una regla de contexto (depende del reloj), por eso vive aquí y no en
+        // la entidad.
+        if (turno.Estado == TurnoCaja.EstadoCerrado
+            && (turno.FechaCierre is null || turno.FechaCierre.Value < HoraColombia.InicioDiaUtc()))
+            throw new OperacionInvalidaCajaException(
+                "La nota solo se puede editar el mismo día en que se cerró la caja.");
+
+        turno.ActualizarNota(nota, usuarioId);
+        await _dbContext.SaveChangesAsync();
+
+        return await MapearAsync(turno, esperadoVisible: true);
     }
 
     public async Task<(List<TurnoCajaResumenResponse> Items, int Total)> ObtenerHistorialAsync(
@@ -325,8 +348,9 @@ public class TurnoCajaService : ITurnoCajaService
 
         var empleadoId = turno.EmpleadoId;
         var cerradoPorId = turno.CerradoPorEmpleadoId;
+        var notaPorId = turno.NotaActualizadaPorEmpleadoId;
         var nombres = await _dbContext.Empleados.AsNoTracking()
-            .Where(e => e.Id == empleadoId || e.Id == cerradoPorId)
+            .Where(e => e.Id == empleadoId || e.Id == cerradoPorId || e.Id == notaPorId)
             .ToDictionaryAsync(e => e.Id, e => e.Nombre);
 
         TotalesCajaResponse? totalesResponse = null;
@@ -374,6 +398,8 @@ public class TurnoCajaService : ITurnoCajaService
             turno.EfectivoContado,
             turno.Diferencia,
             turno.NotaCierre,
-            conteo);
+            conteo,
+            turno.NotaActualizadaPorEmpleadoId.HasValue ? nombres.GetValueOrDefault(turno.NotaActualizadaPorEmpleadoId.Value) : null,
+            turno.FechaNotaActualizada);
     }
 }

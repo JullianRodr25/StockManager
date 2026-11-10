@@ -35,6 +35,12 @@ public class ConteoDenominacionRequest
     public int Cantidad { get; set; }
 }
 
+public class ActualizarNotaTurnoRequest
+{
+    [MaxLength(300)]
+    public string? Nota { get; set; }
+}
+
 public class CerrarTurnoRequest
 {
     /// <summary>Cantidad contada por cada denominación; el total contado se calcula en el servidor.</summary>
@@ -77,7 +83,9 @@ public record TurnoCajaResponse(
     decimal? EfectivoContado,
     decimal? Diferencia,
     string? NotaCierre,
-    List<ConteoDenominacionResponse>? Conteo);
+    List<ConteoDenominacionResponse>? Conteo,
+    string? NotaActualizadaPorNombre = null,
+    DateTime? NotaActualizadaEn = null);
 
 public record TurnoCajaResumenResponse(
     int Id,
