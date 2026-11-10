@@ -124,6 +124,20 @@ public class TurnoCajaService : ITurnoCajaService
         return await MapearAsync(turno, visible);
     }
 
+    public async Task<TurnoCajaResponse> ActualizarNotaAsync(int turnoId, int usuarioId, bool esAdmin, string? nota)
+    {
+        var turno = await _dbContext.TurnosCaja.FirstOrDefaultAsync(t => t.Id == turnoId);
+
+        // Misma regla que ObtenerPorIdAsync: el dueño del turno o un Admin; a otros no se les revela.
+        if (turno is null || (!esAdmin && turno.EmpleadoId != usuarioId))
+            throw new TurnoCajaNoEncontradoException(turnoId);
+
+        turno.ActualizarNota(nota, usuarioId);
+        await _dbContext.SaveChangesAsync();
+
+        return await MapearAsync(turno, esperadoVisible: true);
+    }
+
     public async Task<(List<TurnoCajaResumenResponse> Items, int Total)> ObtenerHistorialAsync(
         int usuarioId, bool esAdmin, int pagina, int tamanoPagina)
     {
@@ -325,8 +339,9 @@ public class TurnoCajaService : ITurnoCajaService
 
         var empleadoId = turno.EmpleadoId;
         var cerradoPorId = turno.CerradoPorEmpleadoId;
+        var notaPorId = turno.NotaActualizadaPorEmpleadoId;
         var nombres = await _dbContext.Empleados.AsNoTracking()
-            .Where(e => e.Id == empleadoId || e.Id == cerradoPorId)
+            .Where(e => e.Id == empleadoId || e.Id == cerradoPorId || e.Id == notaPorId)
             .ToDictionaryAsync(e => e.Id, e => e.Nombre);
 
         TotalesCajaResponse? totalesResponse = null;
@@ -374,6 +389,8 @@ public class TurnoCajaService : ITurnoCajaService
             turno.EfectivoContado,
             turno.Diferencia,
             turno.NotaCierre,
-            conteo);
+            conteo,
+            turno.NotaActualizadaPorEmpleadoId.HasValue ? nombres.GetValueOrDefault(turno.NotaActualizadaPorEmpleadoId.Value) : null,
+            turno.FechaNotaActualizada);
     }
 }

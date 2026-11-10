@@ -25,6 +25,9 @@ public interface ITurnoCajaService
     /// <summary>Un turno por ID. Un no-Admin solo puede ver los suyos.</summary>
     Task<TurnoCajaResponse> ObtenerPorIdAsync(int turnoId, int usuarioId, bool esAdmin);
 
+    /// <summary>Edita la nota de un turno cerrado (dueño o Admin); los montos del cierre no cambian.</summary>
+    Task<TurnoCajaResponse> ActualizarNotaAsync(int turnoId, int usuarioId, bool esAdmin, string? nota);
+
     /// <summary>Historial de turnos, el más reciente primero. Un no-Admin solo ve los suyos.</summary>
     Task<(List<TurnoCajaResumenResponse> Items, int Total)> ObtenerHistorialAsync(
         int usuarioId, bool esAdmin, int pagina, int tamanoPagina);

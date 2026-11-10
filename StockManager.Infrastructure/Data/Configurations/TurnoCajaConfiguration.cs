@@ -42,6 +42,12 @@ public class TurnoCajaConfiguration : IEntityTypeConfiguration<TurnoCaja>
         builder.Property(t => t.TotalTarjeta).HasColumnType("decimal(12, 2)");
 
         builder.Property(t => t.NotaCierre).HasMaxLength(300);
+
+        builder.HasOne<Empleado>()
+            .WithMany()
+            .HasForeignKey(t => t.NotaActualizadaPorEmpleadoId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
         builder.Property(t => t.DetalleConteo).HasMaxLength(1000);
 
         // Preservar historial: un empleado con turnos no se puede borrar de la base.
