@@ -1574,6 +1574,12 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<DateTime?>("FechaCierre")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FechaNotaActualizada")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("NotaActualizadaPorEmpleadoId")
+                        .HasColumnType("int");
+
                     b.Property<string>("NotaCierre")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -1609,6 +1615,8 @@ namespace StockManager.Infrastructure.Migrations
                         .HasFilter("[Estado] = 'Abierto'");
 
                     b.HasIndex("FechaApertura");
+
+                    b.HasIndex("NotaActualizadaPorEmpleadoId");
 
                     b.ToTable("TurnosCaja", (string)null);
                 });
@@ -2052,6 +2060,11 @@ namespace StockManager.Infrastructure.Migrations
                         .HasForeignKey("EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("StockManager.Domain.Entities.Empleado", null)
+                        .WithMany()
+                        .HasForeignKey("NotaActualizadaPorEmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("StockManager.Domain.Entities.Venta", b =>
