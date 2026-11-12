@@ -8,4 +8,7 @@ public interface IFacturaPdfService
 {
     /// <summary>Devuelve null si la factura no existe.</summary>
     Task<byte[]?> GenerarPdfAsync(int facturaId);
+
+    /// <summary>Igual, pero a partir de la venta (para imprimir desde el historial). Null si no tiene factura.</summary>
+    Task<byte[]?> GenerarPdfDeVentaAsync(int ventaId);
 }

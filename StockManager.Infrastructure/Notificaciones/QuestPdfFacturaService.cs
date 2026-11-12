@@ -1,20 +1,34 @@
+using System.Reflection;
 using QuestPDF.Fluent;
-using StockManager.Domain.Common;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
+using StockManager.Domain.Common;
 
 namespace StockManager.Infrastructure.Notificaciones;
 
 /// <summary>
 /// Genera el PDF de una Factura bajo demanda con QuestPDF. No decide qué datos mostrar: los
 /// recibe ya armados de <see cref="IFacturaDocumentoService"/> (el mismo modelo que usan el
-/// tiquete térmico y la vista digital) y solo se ocupa de la maquetación. No se persiste
-/// ningún archivo: cada solicitud vuelve a construir el documento.
+/// tiquete térmico y la vista digital) y solo se ocupa de la maquetación, que sigue el formato
+/// de la factura de Ferretería Gold: logo, datos del emisor y del cliente, tabla de ítems,
+/// totales y firmas. No se persiste ningún archivo: cada solicitud reconstruye el documento.
+///
+/// Importante: es la factura de venta del sistema, NO una factura electrónica validada por la
+/// DIAN. Por eso no lleva CUFE, código QR ni "Representación gráfica": esos datos los emite el
+/// proveedor tecnológico (Datico) y esta aplicación no los tiene.
 /// </summary>
 public class QuestPdfFacturaService : IFacturaPdfService
 {
+    private const string RecursoLogo = "StockManager.Recursos.logo-factura.jpg";
+    private const string ColorTexto = "#222222";
+    private const string ColorSecundario = "#555555";
+    private const string ColorLinea = "#222222";
+
+    // Se lee una sola vez: es un recurso embebido que no cambia mientras corre la aplicación.
+    private static readonly Lazy<byte[]?> Logo = new(CargarLogo);
+
     private readonly IFacturaDocumentoService _documentoService;
 
     public QuestPdfFacturaService(IFacturaDocumentoService documentoService)
@@ -28,24 +42,58 @@ public class QuestPdfFacturaService : IFacturaPdfService
         return documento is null ? null : ConstruirPdf(documento);
     }
 
+    public async Task<byte[]?> GenerarPdfDeVentaAsync(int ventaId)
+    {
+        var documento = await _documentoService.ObtenerPorVentaIdAsync(ventaId);
+        return documento is null ? null : ConstruirPdf(documento);
+    }
+
+    private static byte[]? CargarLogo()
+    {
+        using var flujo = Assembly.GetExecutingAssembly().GetManifestResourceStream(RecursoLogo);
+        if (flujo is null) return null;
+        using var memoria = new MemoryStream();
+        flujo.CopyTo(memoria);
+        return memoria.ToArray();
+    }
+
+    // Las fechas se guardan en UTC: se muestran en hora de Colombia (ver HoraColombia).
+    private static DateTime AHoraColombia(DateTime utc) => HoraColombia.ALocal(utc);
+
+    private static string Moneda(decimal valor) => "$" + valor.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
+
     private static byte[] ConstruirPdf(FacturaDocumentoResponse doc)
     {
         var pdf = Document.Create(contenedor =>
         {
             contenedor.Page(pagina =>
             {
-                pagina.Size(PageSizes.A4);
-                pagina.Margin(2, Unit.Centimetre);
-                pagina.DefaultTextStyle(x => x.FontSize(10));
+                pagina.Size(PageSizes.Letter);
+                pagina.MarginHorizontal(1.2f, Unit.Centimetre);
+                pagina.MarginVertical(1.2f, Unit.Centimetre);
+                pagina.DefaultTextStyle(x => x.FontSize(9).FontColor(ColorTexto));
 
                 pagina.Content().Column(col =>
                 {
-                    col.Spacing(6);
                     ComponerEncabezado(col, doc);
-                    ComponerComprador(col, doc);
-                    ComponerLineas(col, doc);
-                    ComponerTotales(col, doc);
-                    ComponerPie(col, doc);
+                    col.Item().PaddingTop(18).Element(c => ComponerPartes(c, doc));
+                    col.Item().PaddingTop(22).Element(c => ComponerItems(c, doc));
+                    col.Item().PaddingTop(8).Element(c => ComponerTotales(c, doc));
+                    col.Item().PaddingTop(46).Element(ComponerFirmas);
+                    col.Item().PaddingTop(20).Element(c => ComponerNotas(c, doc));
+                });
+
+                pagina.Footer().Row(fila =>
+                {
+                    fila.RelativeItem().AlignBottom().Text("Gracias por su compra.").FontSize(8).FontColor(ColorSecundario);
+                    fila.ConstantItem(90).AlignRight().Text(t =>
+                    {
+                        t.DefaultTextStyle(x => x.FontSize(8).FontColor(ColorSecundario));
+                        t.Span("PÁGINA ");
+                        t.CurrentPageNumber();
+                        t.Span(" / ");
+                        t.TotalPages();
+                    });
                 });
             });
         });
@@ -53,122 +101,236 @@ public class QuestPdfFacturaService : IFacturaPdfService
         return pdf.GeneratePdf();
     }
 
-    // Las fechas se guardan en UTC: se muestran en hora de Colombia (ver HoraColombia).
-    private static DateTime AHoraColombia(DateTime utc) => HoraColombia.ALocal(utc);
-
     private static void ComponerEncabezado(ColumnDescriptor col, FacturaDocumentoResponse doc)
     {
         var e = doc.Emisor;
 
-        col.Item().AlignCenter().Text(e.Nombre ?? "Ferretería Gold").FontSize(18).Bold();
-        if (e.Nit is not null)
-            col.Item().AlignCenter().Text($"NIT {e.Nit}");
-        if (e.ResponsabilidadIva is not null)
-            col.Item().AlignCenter().Text(e.ResponsabilidadIva);
-        if (e.ActividadEconomica is not null)
-            col.Item().AlignCenter().Text($"Actividad económica: {e.ActividadEconomica}");
-
-        var direccion = string.Join(" - ", new[] { e.Direccion, e.Barrio, e.Ciudad }.Where(p => p is not null));
-        if (direccion.Length > 0)
-            col.Item().AlignCenter().Text(direccion);
-
-        var contacto = string.Join(" · ", new[] { e.Telefono is null ? null : $"Tel. {e.Telefono}", e.Email }.Where(p => p is not null));
-        if (contacto.Length > 0)
-            col.Item().AlignCenter().Text(contacto);
-
-        if (e.ResolucionDianTexto is not null)
-            col.Item().AlignCenter().Text(e.ResolucionDianTexto).FontSize(9);
-
-        col.Item().PaddingTop(8).Text(t =>
+        col.Item().Row(fila =>
         {
-            t.Span("Factura de venta No. ").Bold();
-            t.Span(doc.Numero);
+            // Izquierda: logo y los textos tributarios del negocio (los de la Configuración).
+            fila.RelativeItem(11).Column(izq =>
+            {
+                if (Logo.Value is { } logo)
+                    izq.Item().Width(95).Image(logo).FitWidth();
+
+                izq.Item().PaddingTop(3).Column(textos =>
+                {
+                    textos.Spacing(1);
+                    if (e.ActividadEconomica is not null)
+                        textos.Item().Text($"Actividad Económica Principal {e.ActividadEconomica}").FontSize(7).FontColor(ColorSecundario);
+                    if (e.ResponsabilidadIva is not null)
+                        textos.Item().Text(e.ResponsabilidadIva).FontSize(7).FontColor(ColorSecundario);
+                    if (e.ResolucionDianTexto is not null)
+                        textos.Item().Text(e.ResolucionDianTexto).FontSize(7).FontColor(ColorSecundario);
+                });
+            });
+
+            // Derecha: título, número y datos de la operación.
+            fila.RelativeItem(10).Column(der =>
+            {
+                der.Item().Row(titulo =>
+                {
+                    titulo.RelativeItem().Text("Factura de Venta").FontSize(15);
+                    titulo.AutoItem().Text(doc.Numero).FontSize(13);
+                });
+
+                der.Item().PaddingTop(10).Column(datos =>
+                {
+                    datos.Spacing(1);
+                    Dato(datos, "Fecha de Generación", AHoraColombia(doc.Fecha).ToString("dd/MM/yyyy HH:mm"));
+                    if (doc.Pagos.Count > 0)
+                    {
+                        Dato(datos, "Forma de Pago", "Contado");
+                        Dato(datos, "Medio de Pago", doc.Pagos.Count > 1 ? "Mixto" : doc.Pagos[0].MetodoPago);
+                    }
+                    if (doc.Vendedor is not null)
+                        Dato(datos, "Vendedor", doc.Vendedor);
+                    Dato(datos, "Moneda", "COP");
+                });
+            });
         });
-        col.Item().Text($"Fecha: {AHoraColombia(doc.Fecha):dd/MM/yyyy HH:mm}");
-        if (doc.Vendedor is not null)
-            col.Item().Text($"Vendedor: {doc.Vendedor}");
     }
 
-    private static void ComponerComprador(ColumnDescriptor col, FacturaDocumentoResponse doc)
+    private static void Dato(ColumnDescriptor col, string etiqueta, string valor)
     {
+        col.Item().Row(f =>
+        {
+            f.RelativeItem().Text(etiqueta).FontSize(8);
+            f.RelativeItem().AlignRight().Text(valor).FontSize(8);
+        });
+    }
+
+    private static void ComponerPartes(IContainer contenedor, FacturaDocumentoResponse doc)
+    {
+        var e = doc.Emisor;
         var c = doc.Comprador;
+        var direccionEmisor = string.Join(", ", new[] { e.Direccion, e.Barrio, e.Ciudad }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
-        col.Item().PaddingTop(4).LineHorizontal(0.5f);
-        col.Item().Text($"Cliente: {c.Nombre}");
-        if (c.Documento is not null)
-            col.Item().Text($"{c.TipoDocumento ?? "Documento"}: {c.Documento}");
-        if (c.Direccion is not null)
-            col.Item().Text($"Dirección: {c.Direccion}");
-        if (c.Telefono is not null)
-            col.Item().Text($"Teléfono: {c.Telefono}");
-        if (c.DireccionEntrega is not null)
-            col.Item().Text($"Dirección de entrega: {c.DireccionEntrega}");
+        contenedor.Row(fila =>
+        {
+            fila.RelativeItem().PaddingRight(10).Column(emisor =>
+            {
+                Titulo(emisor, "DATOS DEL EMISOR");
+                Campo(emisor, "Razón Social", e.Nombre);
+                Campo(emisor, "NIT", e.Nit);
+                Campo(emisor, "Email", e.Email);
+                Campo(emisor, "Teléfono", e.Telefono);
+                Campo(emisor, "Dirección Fiscal", direccionEmisor);
+            });
+
+            fila.ConstantItem(0.5f).Background(ColorLinea);
+
+            fila.RelativeItem().PaddingLeft(10).Column(cliente =>
+            {
+                Titulo(cliente, "DATOS DEL CLIENTE");
+                Campo(cliente, "Razón Social", c.Nombre);
+                Campo(cliente, c.TipoDocumento ?? "NIT / Documento", c.Documento);
+                Campo(cliente, "Teléfono", c.Telefono);
+                Campo(cliente, "Dirección", c.Direccion);
+                Campo(cliente, "Entrega", c.DireccionEntrega);
+            });
+        });
     }
 
-    private static void ComponerLineas(ColumnDescriptor col, FacturaDocumentoResponse doc)
+    private static void Titulo(ColumnDescriptor col, string texto)
     {
-        col.Item().PaddingTop(4).Table(tabla =>
+        col.Item().BorderBottom(0.5f).BorderColor(ColorLinea).PaddingBottom(4).AlignCenter()
+            .Text(texto).FontSize(12);
+        col.Item().Height(6);
+    }
+
+    // Campos sin dato se omiten (el comprador "CLIENTE FINAL" no trae documento ni dirección).
+    private static void Campo(ColumnDescriptor col, string etiqueta, string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor)) return;
+        col.Item().PaddingBottom(5).Row(f =>
         {
-            tabla.ColumnsDefinition(columnas =>
+            f.ConstantItem(85).Text(etiqueta).FontSize(8.5f);
+            f.RelativeItem().Text(valor).FontSize(8.5f);
+        });
+    }
+
+    private static void ComponerItems(IContainer contenedor, FacturaDocumentoResponse doc)
+    {
+        contenedor.Table(tabla =>
+        {
+            tabla.ColumnsDefinition(c =>
             {
-                columnas.RelativeColumn(5);
-                columnas.RelativeColumn(1);
-                columnas.RelativeColumn(2);
-                columnas.RelativeColumn(1);
-                columnas.RelativeColumn(2);
+                c.ConstantColumn(24);   // No
+                c.RelativeColumn(7);    // Descripción
+                c.ConstantColumn(38);   // Cant
+                c.ConstantColumn(34);   // U/M
+                c.RelativeColumn(2);    // Precio
+                c.ConstantColumn(38);   // IMP
+                c.RelativeColumn(2);    // Total
             });
 
-            tabla.Header(encabezado =>
+            static IContainer Cab(IContainer c) =>
+                c.BorderTop(0.5f).BorderBottom(0.5f).BorderColor(ColorLinea).PaddingVertical(4);
+
+            tabla.Header(h =>
             {
-                encabezado.Cell().BorderBottom(0.5f).Text("Producto").Bold();
-                encabezado.Cell().BorderBottom(0.5f).AlignRight().Text("Cant.").Bold();
-                encabezado.Cell().BorderBottom(0.5f).AlignRight().Text("Precio unit.").Bold();
-                encabezado.Cell().BorderBottom(0.5f).AlignRight().Text("IVA").Bold();
-                encabezado.Cell().BorderBottom(0.5f).AlignRight().Text("Total").Bold();
+                h.Cell().Element(Cab).Text("No").FontSize(8).Bold();
+                h.Cell().Element(Cab).Text("DESCRIPCIÓN").FontSize(10).Bold();
+                h.Cell().Element(Cab).AlignRight().Text("CANT").FontSize(10).Bold();
+                h.Cell().Element(Cab).AlignCenter().Text("U/M").FontSize(10).Bold();
+                h.Cell().Element(Cab).AlignRight().Text("PRECIO").FontSize(10).Bold();
+                h.Cell().Element(Cab).AlignRight().Text("IMP").FontSize(10).Bold();
+                h.Cell().Element(Cab).AlignRight().Text("TOTAL ITEM").FontSize(10).Bold();
             });
 
-            foreach (var linea in doc.Lineas)
+            var numero = 0;
+            foreach (var l in doc.Lineas)
             {
-                tabla.Cell().Text(linea.Producto);
-                tabla.Cell().AlignRight().Text(linea.Cantidad.ToString());
-                tabla.Cell().AlignRight().Text(linea.PrecioUnitario.ToString("N0"));
-                tabla.Cell().AlignRight().Text($"{linea.TarifaIva:0.##}%");
-                tabla.Cell().AlignRight().Text(linea.Total.ToString("N0"));
+                numero++;
+                static IContainer Fila(IContainer c) => c.PaddingVertical(3);
+                tabla.Cell().Element(Fila).Text(numero.ToString()).FontSize(8);
+                tabla.Cell().Element(Fila).Text(l.Producto).FontSize(8);
+                tabla.Cell().Element(Fila).AlignRight().Text(l.Cantidad.ToString()).FontSize(8);
+                tabla.Cell().Element(Fila).AlignCenter().Text("EA").FontSize(7);
+                tabla.Cell().Element(Fila).AlignRight().Text(Moneda(l.PrecioUnitario)).FontSize(8);
+                tabla.Cell().Element(Fila).AlignRight().Text(l.TarifaIva > 0 ? $"{l.TarifaIva:0.##}%" : "").FontSize(8);
+                tabla.Cell().Element(Fila).AlignRight().Text(Moneda(l.Total)).FontSize(8);
             }
         });
     }
 
-    private static void ComponerTotales(ColumnDescriptor col, FacturaDocumentoResponse doc)
+    private static void ComponerTotales(IContainer contenedor, FacturaDocumentoResponse doc)
     {
-        col.Item().PaddingTop(6).AlignRight().Column(totales =>
+        contenedor.Row(fila =>
         {
-            totales.Spacing(2);
+            fila.RelativeItem(11).AlignBottom().Text("Unidades de medida: EA = cada").FontSize(7).FontColor(ColorSecundario);
 
-            foreach (var r in doc.ResumenIva.Where(r => r.Tarifa > 0))
+            fila.RelativeItem(10).Column(t =>
             {
-                totales.Item().AlignRight().Text($"Base IVA {r.Tarifa:0.##}%: ${r.Base:N0}");
-                totales.Item().AlignRight().Text($"IVA {r.Tarifa:0.##}%: ${r.Iva:N0}");
-            }
+                t.Spacing(3);
+                t.Item().Row(f =>
+                {
+                    f.RelativeItem().Text("Subtotal").FontSize(10);
+                    f.RelativeItem().AlignRight().Text(Moneda(doc.SubtotalBase)).FontSize(10);
+                });
 
-            totales.Item().AlignRight().Text($"TOTAL: ${doc.Total:N0}").FontSize(13).Bold();
+                foreach (var r in doc.ResumenIva.Where(r => r.Tarifa > 0))
+                {
+                    t.Item().Row(f =>
+                    {
+                        f.RelativeItem().Text($"IVA {r.Tarifa:0.##}% (base {Moneda(r.Base)})").FontSize(8.5f);
+                        f.RelativeItem().AlignRight().Text(Moneda(r.Iva)).FontSize(8.5f);
+                    });
+                }
 
-            foreach (var pago in doc.Pagos)
-                totales.Item().AlignRight().Text($"{pago.MetodoPago}: ${pago.Monto:N0}");
+                t.Item().BorderTop(0.5f).BorderColor(ColorLinea).PaddingTop(5).Row(f =>
+                {
+                    f.RelativeItem().Text("Total a Pagar").FontSize(13);
+                    f.RelativeItem().AlignRight().Text(Moneda(doc.Total)).FontSize(13);
+                });
 
-            if (doc.MontoRecibido.HasValue)
-                totales.Item().AlignRight().Text($"Recibido: ${doc.MontoRecibido.Value:N0}");
-            if (doc.Cambio.HasValue)
-                totales.Item().AlignRight().Text($"Cambio: ${doc.Cambio.Value:N0}");
+                if (doc.MontoRecibido.HasValue)
+                {
+                    t.Item().Row(f =>
+                    {
+                        f.RelativeItem().Text("Recibido").FontSize(8.5f);
+                        f.RelativeItem().AlignRight().Text(Moneda(doc.MontoRecibido.Value)).FontSize(8.5f);
+                    });
+                }
+                if (doc.Cambio.HasValue)
+                {
+                    t.Item().Row(f =>
+                    {
+                        f.RelativeItem().Text("Cambio").FontSize(8.5f);
+                        f.RelativeItem().AlignRight().Text(Moneda(doc.Cambio.Value)).FontSize(8.5f);
+                    });
+                }
+            });
         });
     }
 
-    private static void ComponerPie(ColumnDescriptor col, FacturaDocumentoResponse doc)
+    private static void ComponerFirmas(IContainer contenedor)
     {
-        if (doc.TextoLegal is not null)
-            col.Item().PaddingTop(10).Text(doc.TextoLegal).FontSize(8);
-        if (doc.PoliticaCambios is not null)
-            col.Item().Text(doc.PoliticaCambios).FontSize(8);
+        contenedor.Row(fila =>
+        {
+            fila.RelativeItem().PaddingHorizontal(10).Column(c =>
+            {
+                c.Item().BorderBottom(0.5f).BorderColor(ColorLinea).Height(1);
+                c.Item().PaddingTop(5).AlignCenter().Text("FIRMA EMISOR").FontSize(8.5f).FontColor(ColorSecundario);
+            });
+            fila.RelativeItem().PaddingHorizontal(10).Column(c =>
+            {
+                c.Item().BorderBottom(0.5f).BorderColor(ColorLinea).Height(1);
+                c.Item().PaddingTop(5).AlignCenter().Text("FIRMA CLIENTE").FontSize(8.5f).FontColor(ColorSecundario);
+            });
+        });
+    }
 
-        col.Item().PaddingTop(6).AlignCenter().Text("Gracias por su compra.");
+    private static void ComponerNotas(IContainer contenedor, FacturaDocumentoResponse doc)
+    {
+        contenedor.Column(c =>
+        {
+            c.Spacing(3);
+            if (doc.TextoLegal is not null)
+                c.Item().Text(doc.TextoLegal).FontSize(7.5f).FontColor(ColorSecundario);
+            if (doc.PoliticaCambios is not null)
+                c.Item().Text(doc.PoliticaCambios).FontSize(7.5f).FontColor(ColorSecundario);
+        });
     }
 }

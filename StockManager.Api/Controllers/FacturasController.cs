@@ -40,6 +40,21 @@ public class FacturasController : ControllerBase
     }
 
     /// <summary>
+    /// PDF de la factura de una venta para imprimirla desde el historial. A diferencia del
+    /// PDF por token (WhatsApp), este exige sesión de personal.
+    /// </summary>
+    [HttpGet("venta/{ventaId:int}/pdf")]
+    [Authorize(Roles = Roles.AdminYCaja)]
+    public async Task<IActionResult> ObtenerPdfDeVenta(int ventaId)
+    {
+        var pdf = await _facturaPdfService.GenerarPdfDeVentaAsync(ventaId);
+        if (pdf is null)
+            return NotFound(new { message = "Factura no encontrada" });
+
+        return File(pdf, "application/pdf", $"factura-venta-{ventaId}.pdf");
+    }
+
+    /// <summary>
     /// Descarga el PDF de una factura. Deliberadamente SIN [Authorize]: Twilio necesita poder
     /// descargar este archivo él mismo para adjuntarlo al mensaje de WhatsApp, y no puede
     /// presentar el JWT de un usuario logueado. En su lugar, el acceso lo protege el

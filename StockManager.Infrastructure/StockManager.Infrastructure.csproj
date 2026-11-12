@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Logo que se estampa en el PDF de la factura (no depende del navegador del usuario). -->
+    <EmbeddedResource Include="Recursos\logo-factura.jpg" LogicalName="StockManager.Recursos.logo-factura.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageReference Include="ClosedXML" Version="0.101.3" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.11" />
