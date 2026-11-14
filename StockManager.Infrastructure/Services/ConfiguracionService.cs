@@ -48,6 +48,8 @@ public class ConfiguracionService : IConfiguracionService
             request.TextoLegalFactura,
             request.PoliticaCambiosFactura);
 
+        configuracion.ActualizarCodigoMunicipioEmpresa(request.CodigoMunicipioEmpresa);
+
         if (request.ConteoCiegoCaja.HasValue)
             configuracion.ActualizarConteoCiegoCaja(request.ConteoCiegoCaja.Value);
 
@@ -69,6 +71,7 @@ public class ConfiguracionService : IConfiguracionService
             TelefonoEmpresa = configuracion.TelefonoEmpresa,
             EmailEmpresa = configuracion.EmailEmpresa,
             CiudadEmpresa = configuracion.CiudadEmpresa,
+            CodigoMunicipioEmpresa = configuracion.CodigoMunicipioEmpresa,
             BarrioEmpresa = configuracion.BarrioEmpresa,
             ResponsabilidadIvaEmpresa = configuracion.ResponsabilidadIvaEmpresa,
             ActividadEconomicaEmpresa = configuracion.ActividadEconomicaEmpresa,

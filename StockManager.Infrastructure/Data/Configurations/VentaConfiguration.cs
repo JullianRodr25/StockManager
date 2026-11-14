@@ -83,6 +83,12 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
         builder.Property(v => v.EmailFacturacion)
             .HasMaxLength(200);
 
+        builder.Property(v => v.TipoPersonaFacturada)
+            .HasMaxLength(10);
+
+        builder.Property(v => v.CodigoMunicipioFacturado)
+            .HasMaxLength(5);
+
         // Cambio es una propiedad calculada en memoria (MontoRecibido - Total), no una columna:
         // no tiene setter porque nunca se guarda por su cuenta, siempre se deriva de MontoRecibido.
         builder.Ignore(v => v.Cambio);

@@ -64,6 +64,12 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.Property(c => c.EmailFacturacion)
             .HasMaxLength(200);
 
+        builder.Property(c => c.TipoPersona)
+            .HasMaxLength(10);
+
+        builder.Property(c => c.CodigoMunicipioDane)
+            .HasMaxLength(5);
+
         builder.Property(c => c.FotoUrl)
             .HasMaxLength(2048);
 

@@ -1,6 +1,7 @@
 namespace StockManager.Domain.Entities;
 
 using StockManager.Domain.Exceptions;
+using StockManager.Domain.Fiscal;
 
 /// <summary>
 /// Entidad Producto del dominio.
@@ -40,6 +41,12 @@ public class Producto
     /// </summary>
     public bool AplicaIva { get; private set; }
     public decimal TarifaIva { get; private set; }
+
+    /// <summary>
+    /// Código DIAN de la unidad de medida con que se factura ("94" = unidad, "KGM", "MTR"...).
+    /// Ver UnidadesMedidaDian. Todo producto tiene una: por defecto "94".
+    /// </summary>
+    public string UnidadMedidaDian { get; private set; } = UnidadesMedidaDian.Unidad;
 
     /// <summary>
     /// Costo de adquisición del producto (lo que cuesta comprarlo/producirlo), para calcular
@@ -103,7 +110,8 @@ public class Producto
         decimal tarifaIva,
         decimal costo = 0,
         string? codigoBarras = null,
-        int? proveedorId = null)
+        int? proveedorId = null,
+        string? unidadMedidaDian = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del producto no puede estar vacío.", nameof(nombre));
@@ -154,7 +162,8 @@ public class Producto
             CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras.Trim(),
             EsCodigoGenerado = false,
             FechaImpresionEtiqueta = null,
-            ProveedorId = proveedorId
+            ProveedorId = proveedorId,
+            UnidadMedidaDian = UnidadesMedidaDian.Validar(unidadMedidaDian)
         };
     }
 
@@ -270,7 +279,8 @@ public class Producto
         bool aplicaIva,
         decimal tarifaIva,
         string? codigoBarras,
-        int? proveedorId = null)
+        int? proveedorId = null,
+        string? unidadMedidaDian = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre no puede estar vacío.");
@@ -295,6 +305,9 @@ public class Producto
         TarifaIva = aplicaIva ? tarifaIva : 0;
         CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? CodigoBarras : codigoBarras.Trim();
         ProveedorId = proveedorId;
+        // Null = el formulario no la envió: se conserva la actual (no se pisa con el valor por defecto).
+        if (!string.IsNullOrWhiteSpace(unidadMedidaDian))
+            UnidadMedidaDian = UnidadesMedidaDian.Validar(unidadMedidaDian);
     }
 
     /// <summary>

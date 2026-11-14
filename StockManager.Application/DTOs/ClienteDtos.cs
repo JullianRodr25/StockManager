@@ -22,7 +22,9 @@ public record ClienteResponse(
     string? DireccionFiscal,
     string? EmailFacturacion,
     bool TieneDatosFacturacionElectronicaCompletos,
-    string? FotoUrl
+    string? FotoUrl,
+    string? TipoPersona,
+    string? CodigoMunicipioDane
 );
 
 /// <summary>
@@ -45,7 +47,9 @@ public record CrearClienteRequest(
     string? NumeroDocumentoFiscal = null,
     string? RazonSocialFiscal = null,
     string? DireccionFiscal = null,
-    string? EmailFacturacion = null
+    string? EmailFacturacion = null,
+    string? TipoPersona = null,
+    string? CodigoMunicipioDane = null
 );
 
 /// <summary>
@@ -72,7 +76,9 @@ public record ActualizarDatosFacturacionRequest(
     string? NumeroDocumentoFiscal,
     string? RazonSocialFiscal,
     string? DireccionFiscal,
-    string? EmailFacturacion
+    string? EmailFacturacion,
+    string? TipoPersona = null,
+    string? CodigoMunicipioDane = null
 );
 
 /// <summary>

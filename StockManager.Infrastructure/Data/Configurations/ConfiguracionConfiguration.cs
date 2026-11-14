@@ -41,6 +41,7 @@ public class ConfiguracionConfiguration : IEntityTypeConfiguration<Configuracion
             .HasMaxLength(200);
 
         builder.Property(c => c.CiudadEmpresa).HasMaxLength(100);
+        builder.Property(c => c.CodigoMunicipioEmpresa).HasMaxLength(5);
         builder.Property(c => c.BarrioEmpresa).HasMaxLength(100);
         builder.Property(c => c.ResponsabilidadIvaEmpresa).HasMaxLength(100);
         builder.Property(c => c.ActividadEconomicaEmpresa).HasMaxLength(50);

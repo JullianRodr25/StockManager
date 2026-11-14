@@ -278,7 +278,8 @@ public class ProductoService : IProductoService
             tarifaIva,
             request.Costo,
             request.CodigoBarras,
-            request.ProveedorId);
+            request.ProveedorId,
+            request.UnidadMedidaDian);
 
         // Agregar a la base de datos
         _dbContext.Productos.Add(producto);
@@ -342,7 +343,8 @@ public class ProductoService : IProductoService
             request.AplicaIva,
             request.TarifaIva ?? producto.TarifaIva,
             codigoBarrasNormalizado,
-            request.ProveedorId);
+            request.ProveedorId,
+            request.UnidadMedidaDian);
 
         await _dbContext.SaveChangesAsync();
 
@@ -505,6 +507,7 @@ public class ProductoService : IProductoService
             AplicaIva = producto.AplicaIva,
             TarifaIva = producto.TarifaIva,
             Costo = producto.Costo,
+            UnidadMedidaDian = producto.UnidadMedidaDian,
             CodigoBarras = producto.CodigoBarras,
             Activo = producto.Activo,
             ProveedorId = producto.ProveedorId,

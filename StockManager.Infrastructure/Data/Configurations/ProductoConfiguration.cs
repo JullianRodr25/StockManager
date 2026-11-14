@@ -40,6 +40,11 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(p => p.UnidadMedidaDian)
+            .IsRequired()
+            .HasMaxLength(5)
+            .HasDefaultValue("94");
+
         builder.Property(p => p.TarifaIva)
             .HasColumnType("decimal(5, 2)")
             .HasDefaultValue(19.00m)
