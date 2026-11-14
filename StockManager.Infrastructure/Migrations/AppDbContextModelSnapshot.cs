@@ -217,6 +217,10 @@ namespace StockManager.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("CodigoMunicipioDane")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
                     b.Property<string>("Direccion")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -282,6 +286,10 @@ namespace StockManager.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("TipoPersona")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -315,6 +323,10 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<string>("CiudadEmpresa")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CodigoMunicipioEmpresa")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
 
                     b.Property<bool>("ConteoCiegoCaja")
                         .ValueGeneratedOnAdd()
@@ -1375,6 +1387,13 @@ namespace StockManager.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<string>("UnidadMedidaDian")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasDefaultValue("94");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CodigoBarras")
@@ -1732,6 +1751,10 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<int?>("ClienteId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CodigoMunicipioFacturado")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
                     b.Property<string>("DireccionFacturada")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -1800,6 +1823,10 @@ namespace StockManager.Infrastructure.Migrations
                     b.Property<string>("TipoDocumentoFacturado")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TipoPersonaFacturada")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(12, 2)");
