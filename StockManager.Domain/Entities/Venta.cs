@@ -1,3 +1,4 @@
+using StockManager.Domain.Fiscal;
 namespace StockManager.Domain.Entities;
 
 using StockManager.Domain.Exceptions;
@@ -49,6 +50,8 @@ public class Venta
     public string? RazonSocialFacturada { get; private set; }
     public string? DireccionFacturada { get; private set; }
     public string? EmailFacturacion { get; private set; }
+    public string? TipoPersonaFacturada { get; private set; }
+    public string? CodigoMunicipioFacturado { get; private set; }
 
     /// <summary>
     /// Cuánto efectivo entregó físicamente el cliente, solo cuando MetodoPago es "Efectivo"
@@ -99,7 +102,9 @@ public class Venta
         string? numeroDocumentoFacturado = null,
         string? razonSocialFacturada = null,
         string? direccionFacturada = null,
-        string? emailFacturacion = null)
+        string? emailFacturacion = null,
+        string? tipoPersonaFacturada = null,
+        string? codigoMunicipioFacturado = null)
     {
         if (empleadoId <= 0)
             throw new ArgumentException("EmpleadoId debe ser mayor a 0.", nameof(empleadoId));
@@ -121,7 +126,8 @@ public class Venta
         ValidarDetallesPago(metodoPago, total, detallesPago);
 
         var datosFactura = ValidarYNormalizarFacturaElectronica(
-            requiereFacturaElectronica, tipoDocumentoFacturado, numeroDocumentoFacturado, razonSocialFacturada);
+            requiereFacturaElectronica, tipoDocumentoFacturado, numeroDocumentoFacturado, razonSocialFacturada,
+            tipoPersonaFacturada, codigoMunicipioFacturado);
 
         return new Venta
         {
@@ -142,7 +148,9 @@ public class Venta
             NumeroDocumentoFacturado = datosFactura.Numero,
             RazonSocialFacturada = datosFactura.RazonSocial,
             DireccionFacturada = requiereFacturaElectronica ? direccionFacturada?.Trim() : null,
-            EmailFacturacion = requiereFacturaElectronica ? emailFacturacion?.Trim() : null
+            EmailFacturacion = requiereFacturaElectronica ? emailFacturacion?.Trim() : null,
+            TipoPersonaFacturada = datosFactura.TipoPersona,
+            CodigoMunicipioFacturado = datosFactura.CodigoMunicipio
         };
     }
 
@@ -153,17 +161,32 @@ public class Venta
     /// dato fiscal que hayan pasado por error — una venta sin factura electrónica no debe
     /// guardar esos datos.
     /// </summary>
-    private static (string? Tipo, string? Numero, string? RazonSocial) ValidarYNormalizarFacturaElectronica(
-        bool requiereFacturaElectronica, string? tipo, string? numero, string? razonSocial)
+    private static (string? Tipo, string? Numero, string? RazonSocial, string? TipoPersona, string? CodigoMunicipio)
+        ValidarYNormalizarFacturaElectronica(
+            bool requiereFacturaElectronica, string? tipo, string? numero, string? razonSocial,
+            string? tipoPersona, string? codigoMunicipio)
     {
         if (!requiereFacturaElectronica)
-            return (null, null, null);
+            return (null, null, null, null, null);
 
         if (string.IsNullOrWhiteSpace(tipo) || string.IsNullOrWhiteSpace(numero) || string.IsNullOrWhiteSpace(razonSocial))
             throw new ArgumentException(
                 "Para solicitar factura electrónica se requiere tipo y número de documento fiscal, y la razón social.");
 
-        return (tipo.Trim(), numero.Trim(), razonSocial.Trim());
+        if (!DocumentoFiscal.TiposDocumento.Contains(tipo.Trim()))
+            throw new ArgumentException($"El tipo de documento fiscal '{tipo}' no es válido.");
+
+        // La DIAN exige saber si el adquirente es persona natural o jurídica.
+        var persona = DocumentoFiscal.NormalizarTipoPersona(tipoPersona)
+            ?? throw new ArgumentException("Para solicitar factura electrónica indica si el cliente es persona natural o jurídica.");
+        DocumentoFiscal.ValidarCoherencia(tipo.Trim(), persona);
+
+        return (
+            tipo.Trim(),
+            DocumentoFiscal.NormalizarNumero(tipo.Trim(), numero),
+            razonSocial.Trim(),
+            persona,
+            DocumentoFiscal.NormalizarCodigoMunicipio(codigoMunicipio));
     }
 
     /// <summary>

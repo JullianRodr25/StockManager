@@ -1,3 +1,5 @@
+using StockManager.Domain.Common;
+using StockManager.Domain.Fiscal;
 using Microsoft.EntityFrameworkCore;
 using StockManager.Application.DTOs;
 using StockManager.Application.Services;
@@ -13,7 +15,7 @@ namespace StockManager.Infrastructure.Services;
 /// </summary>
 public class FacturaDocumentoService : IFacturaDocumentoService
 {
-    private const string NombreClienteFinal = "CLIENTE FINAL";
+    private const string NombreClienteFinal = "Cliente Final";
 
     private readonly AppDbContext _db;
 
@@ -76,7 +78,7 @@ public class FacturaDocumentoService : IFacturaDocumentoService
                 (d, p) => new LineaOrigen(p.Nombre, d.Cantidad, d.PrecioUnitario, p.TarifaIva))
             .ToListAsync();
 
-        var comprador = ConstruirCompradorDeVenta(venta, cliente);
+        var comprador = Presentable(ConstruirCompradorDeVenta(venta, cliente));
         var pagos = await ObtenerPagosAsync(venta);
 
         return Ensamblar(factura, vendedor, emisor, comprador, lineas, pagos,
@@ -98,7 +100,7 @@ public class FacturaDocumentoService : IFacturaDocumentoService
                 (d, p) => new LineaOrigen(p.Nombre, d.Cantidad, d.PrecioUnitario, p.TarifaIva))
             .ToListAsync();
 
-        var comprador = ConstruirCompradorRegistrado(cliente, pedido.ClienteId, direccionEntrega: pedido.Direccion);
+        var comprador = Presentable(ConstruirCompradorRegistrado(cliente, pedido.ClienteId, direccionEntrega: pedido.Direccion));
 
         // Un pedido de la PWA no registra método de pago en el sistema: no se inventa uno.
         return Ensamblar(factura, vendedor: null, emisor, comprador, lineas,
@@ -118,7 +120,7 @@ public class FacturaDocumentoService : IFacturaDocumentoService
                 venta.ClienteId,
                 Limpiar(venta.RazonSocialFacturada) ?? cliente?.Nombre ?? NombreClienteFinal,
                 Limpiar(venta.TipoDocumentoFacturado),
-                venta.NumeroDocumentoFacturado!.Trim(),
+                FormatearDocumento(venta.TipoDocumentoFacturado, venta.NumeroDocumentoFacturado!),
                 direccion,
                 cliente?.Telefono ?? Limpiar(venta.TelefonoComprador),
                 null,
@@ -129,7 +131,7 @@ public class FacturaDocumentoService : IFacturaDocumentoService
 
         // Sin cliente registrado: no se guarda nada del comprador y no hay cédula. Si el cajero
         // escribió un nombre en la venta, la factura sale a ese nombre; solo cuando no se
-        // escribió ninguno aparece "CLIENTE FINAL".
+        // escribió ninguno aparece "Cliente Final".
         if (cliente is null)
         {
             var nombreEscrito = Limpiar(venta.NombreComprador);
@@ -143,6 +145,25 @@ public class FacturaDocumentoService : IFacturaDocumentoService
         }
 
         return ConstruirCompradorRegistrado(cliente, venta.ClienteId, direccionEntrega: null);
+    }
+
+    private static FacturaCompradorDto Presentable(FacturaCompradorDto c) => c with
+    {
+        Nombre = FormatoTexto.ATitulo(c.Nombre)!,
+        Direccion = FormatoTexto.ATitulo(c.Direccion),
+        DireccionEntrega = FormatoTexto.ATitulo(c.DireccionEntrega),
+    };
+
+    /// <summary>
+    /// El NIT se guarda sin dígito de verificación; en el documento impreso se muestra con él
+    /// (900123456-8), calculado, como lo exige la presentación fiscal.
+    /// </summary>
+    private static string FormatearDocumento(string? tipo, string numero)
+    {
+        var limpio = numero.Trim();
+        return tipo == "NIT" && limpio.Length is >= 5 and <= 15 && limpio.All(char.IsAsciiDigit)
+            ? $"{limpio}-{DigitoVerificacionNit.Calcular(limpio)}"
+            : limpio;
     }
 
     private static FacturaCompradorDto ConstruirCompradorRegistrado(Cliente? cliente, int? clienteId, string? direccionEntrega)
@@ -203,15 +224,15 @@ public class FacturaDocumentoService : IFacturaDocumentoService
             return new FacturaEmisorDto(null, null, null, null, null, null, null, null, null, null);
 
         return new FacturaEmisorDto(
-            Limpiar(c.NombreEmpresa),
+            FormatoTexto.ATitulo(Limpiar(c.NombreEmpresa)),
             Limpiar(c.NitEmpresa),
-            Limpiar(c.DireccionEmpresa),
-            Limpiar(c.BarrioEmpresa),
-            Limpiar(c.CiudadEmpresa),
+            FormatoTexto.ATitulo(Limpiar(c.DireccionEmpresa)),
+            FormatoTexto.ATitulo(Limpiar(c.BarrioEmpresa)),
+            FormatoTexto.ATitulo(Limpiar(c.CiudadEmpresa)),
             Limpiar(c.TelefonoEmpresa),
             Limpiar(c.EmailEmpresa),
             Limpiar(c.ResponsabilidadIvaEmpresa),
-            Limpiar(c.ActividadEconomicaEmpresa),
+            FormatoTexto.ATitulo(Limpiar(c.ActividadEconomicaEmpresa)),
             ArmarTextoResolucion(c));
     }
 
@@ -254,7 +275,7 @@ public class FacturaDocumentoService : IFacturaDocumentoService
         Configuracion? configuracion)
     {
         var lineas = origen
-            .Select(l => new FacturaLineaDto(l.Producto, l.Cantidad, l.PrecioUnitario, l.TarifaIva, l.PrecioUnitario * l.Cantidad))
+            .Select(l => new FacturaLineaDto(FormatoTexto.ATitulo(l.Producto)!, l.Cantidad, l.PrecioUnitario, l.TarifaIva, l.PrecioUnitario * l.Cantidad))
             .ToList();
 
         // Misma convención que VentaService: PrecioUnitario es el valor cobrado y el IVA de la

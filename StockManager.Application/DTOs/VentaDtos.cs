@@ -36,7 +36,11 @@ public record RegistrarVentaRequest(
     string? EmailFacturacion = null,
     // Cotización de origen cuando la venta se arma en Ventas con "traer cotización": sus precios
     // se respetan en los productos que siguen en la venta y queda convertida y ligada a ella.
-    int? CotizacionId = null
+    int? CotizacionId = null,
+    // Datos fiscales de ESTA venta que exige la DIAN: tipo de persona del adquirente y municipio
+    // (código DANE). Igual que los demás, si no vienen se completan desde el Cliente.
+    string? TipoPersonaFiscal = null,
+    string? CodigoMunicipioFiscal = null
 );
 
 public record DetalleVentaResponse(

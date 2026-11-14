@@ -33,6 +33,7 @@ public class ConfiguracionResponse
 
     // Datos de facturación (impresos en el tiquete y la factura). Todos opcionales.
     public string? CiudadEmpresa { get; set; }
+    public string? CodigoMunicipioEmpresa { get; set; }
     public string? BarrioEmpresa { get; set; }
     public string? ResponsabilidadIvaEmpresa { get; set; }
     public string? ActividadEconomicaEmpresa { get; set; }
@@ -68,6 +69,7 @@ public class ActualizarConfiguracionRequest
     public string? EmailEmpresa { get; set; }
 
     [MaxLength(100)] public string? CiudadEmpresa { get; set; }
+    [MaxLength(5)] public string? CodigoMunicipioEmpresa { get; set; }
     [MaxLength(100)] public string? BarrioEmpresa { get; set; }
     [MaxLength(100)] public string? ResponsabilidadIvaEmpresa { get; set; }
     [MaxLength(50)] public string? ActividadEconomicaEmpresa { get; set; }

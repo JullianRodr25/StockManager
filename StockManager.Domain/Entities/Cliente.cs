@@ -1,3 +1,5 @@
+using StockManager.Domain.Fiscal;
+
 namespace StockManager.Domain.Entities;
 
 /// <summary>
@@ -52,6 +54,10 @@ public class Cliente
     public string? RazonSocialFiscal { get; private set; }
     public string? DireccionFiscal { get; private set; }
     public string? EmailFacturacion { get; private set; }
+    /// <summary>"Natural" o "Juridica" (ver DocumentoFiscal). Lo exige la DIAN para facturar.</summary>
+    public string? TipoPersona { get; private set; }
+    /// <summary>Código DANE del municipio (5 dígitos). El dígito de verificación del NIT no se guarda: se calcula.</summary>
+    public string? CodigoMunicipioDane { get; private set; }
 
     /// <summary>
     /// URL pública (Azure Blob Storage) de la foto de perfil del cliente. Null cuando no ha
@@ -68,7 +74,8 @@ public class Cliente
     public bool TieneDatosFacturacionElectronicaCompletos =>
         !string.IsNullOrWhiteSpace(TipoDocumentoFiscal) &&
         !string.IsNullOrWhiteSpace(NumeroDocumentoFiscal) &&
-        !string.IsNullOrWhiteSpace(RazonSocialFiscal);
+        !string.IsNullOrWhiteSpace(RazonSocialFiscal) &&
+        !string.IsNullOrWhiteSpace(TipoPersona);
 
     private Cliente() { }
 
@@ -131,22 +138,35 @@ public class Cliente
     /// <summary>
     /// Actualiza los datos fiscales usados para solicitar factura electrónica. Todos
     /// opcionales (null/vacío limpia el campo); si se deja vacío el tipo, número o razón
-    /// social, TieneDatosFacturacionElectronicaCompletos vuelve a dar false. No valida el
-    /// número de documento contra un formato específico (el NIT colombiano incluye dígito de
-    /// verificación con reglas propias que no vale la pena duplicar acá).
+    /// social, TieneDatosFacturacionElectronicaCompletos vuelve a dar false. El número se
+    /// normaliza según el tipo de documento (ver DocumentoFiscal.NormalizarNumero): un NIT se
+    /// guarda sin dígito de verificación, que se calcula cuando hace falta.
     /// </summary>
     public void ActualizarDatosFacturacionElectronica(
         string? tipoDocumentoFiscal,
         string? numeroDocumentoFiscal,
         string? razonSocialFiscal,
         string? direccionFiscal,
-        string? emailFacturacion)
+        string? emailFacturacion,
+        string? tipoPersona = null,
+        string? codigoMunicipioDane = null)
     {
         if (!string.IsNullOrWhiteSpace(tipoDocumentoFiscal) && !TiposDocumentoFiscalValidos.Contains(tipoDocumentoFiscal))
             throw new ArgumentException($"El tipo de documento fiscal '{tipoDocumentoFiscal}' no es válido.", nameof(tipoDocumentoFiscal));
 
-        TipoDocumentoFiscal = string.IsNullOrWhiteSpace(tipoDocumentoFiscal) ? null : tipoDocumentoFiscal.Trim();
-        NumeroDocumentoFiscal = string.IsNullOrWhiteSpace(numeroDocumentoFiscal) ? null : numeroDocumentoFiscal.Trim();
+        var tipoDoc = string.IsNullOrWhiteSpace(tipoDocumentoFiscal) ? null : tipoDocumentoFiscal.Trim();
+        var persona = DocumentoFiscal.NormalizarTipoPersona(tipoPersona);
+        var municipio = DocumentoFiscal.NormalizarCodigoMunicipio(codigoMunicipioDane);
+        if (tipoDoc is not null)
+            DocumentoFiscal.ValidarCoherencia(tipoDoc, persona);
+
+        TipoDocumentoFiscal = tipoDoc;
+        // El número se normaliza según su tipo (NIT sin puntos ni DV, CC solo dígitos).
+        NumeroDocumentoFiscal = string.IsNullOrWhiteSpace(numeroDocumentoFiscal)
+            ? null
+            : tipoDoc is null ? numeroDocumentoFiscal.Trim() : DocumentoFiscal.NormalizarNumero(tipoDoc, numeroDocumentoFiscal);
+        TipoPersona = persona;
+        CodigoMunicipioDane = municipio;
         RazonSocialFiscal = string.IsNullOrWhiteSpace(razonSocialFiscal) ? null : razonSocialFiscal.Trim();
         DireccionFiscal = string.IsNullOrWhiteSpace(direccionFiscal) ? null : direccionFiscal.Trim();
         EmailFacturacion = string.IsNullOrWhiteSpace(emailFacturacion) ? null : emailFacturacion.Trim();

@@ -49,6 +49,8 @@ public class Configuracion
     /// <summary>Código de actividad económica (CIIU), ej. "4752".</summary>
     public string? ActividadEconomicaEmpresa { get; private set; }
 
+    /// <summary>Código DANE (5 dígitos) del municipio del negocio, que piden los proveedores de factura electrónica.</summary>
+    public string? CodigoMunicipioEmpresa { get; private set; }
     public string? ResolucionDianNumero { get; private set; }
     public DateTime? ResolucionDianFecha { get; private set; }
     public string? ResolucionDianPrefijo { get; private set; }
@@ -173,6 +175,11 @@ public class Configuracion
         ResolucionDianVigenciaMeses = vigenciaMeses;
         TextoLegalFactura = Limpiar(textoLegal);
         PoliticaCambiosFactura = Limpiar(politicaCambios);
+    }
+
+    public void ActualizarCodigoMunicipioEmpresa(string? codigo)
+    {
+        CodigoMunicipioEmpresa = StockManager.Domain.Fiscal.DocumentoFiscal.NormalizarCodigoMunicipio(codigo);
     }
 
     public void ActualizarConteoCiegoCaja(bool conteoCiego)

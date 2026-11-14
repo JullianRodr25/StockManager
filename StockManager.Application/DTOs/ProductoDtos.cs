@@ -17,6 +17,8 @@ public class ProductoResponse
     public bool AplicaIva { get; set; }
     public decimal TarifaIva { get; set; }
     public decimal Costo { get; set; }
+    /// <summary>Código DIAN de la unidad de medida ("94" = unidad).</summary>
+    public string UnidadMedidaDian { get; set; } = "94";
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
     public int? ProveedorId { get; set; }
@@ -70,6 +72,9 @@ public class CrearProductoRequest
     public decimal Costo { get; set; }
     public string? CodigoBarras { get; set; }
     public int? ProveedorId { get; set; }
+    // Código DIAN de la unidad de medida; null = predeterminada al crear / se conserva al editar.
+    [MaxLength(5)]
+    public string? UnidadMedidaDian { get; set; }
 }
 
 /// <summary>
@@ -88,6 +93,9 @@ public class ActualizarProductoRequest
     public decimal Costo { get; set; }
     public string? CodigoBarras { get; set; }
     public int? ProveedorId { get; set; }
+    // Código DIAN de la unidad de medida; null = predeterminada al crear / se conserva al editar.
+    [MaxLength(5)]
+    public string? UnidadMedidaDian { get; set; }
 }
 
 /// <summary>

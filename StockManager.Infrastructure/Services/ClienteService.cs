@@ -63,7 +63,9 @@ public class ClienteService : IClienteService
                 c.DireccionFiscal,
                 c.EmailFacturacion,
                 c.TieneDatosFacturacionElectronicaCompletos,
-                c.FotoUrl))
+                c.FotoUrl,
+                c.TipoPersona,
+                c.CodigoMunicipioDane))
             .ToListAsync();
     }
 
@@ -89,7 +91,9 @@ public class ClienteService : IClienteService
                 c.DireccionFiscal,
                 c.EmailFacturacion,
                 c.TieneDatosFacturacionElectronicaCompletos,
-                c.FotoUrl))
+                c.FotoUrl,
+                c.TipoPersona,
+                c.CodigoMunicipioDane))
             .FirstOrDefaultAsync();
     }
 
@@ -140,14 +144,17 @@ public class ClienteService : IClienteService
 
         if (request.TipoDocumentoFiscal is not null || request.NumeroDocumentoFiscal is not null ||
             request.RazonSocialFiscal is not null || request.DireccionFiscal is not null ||
-            request.EmailFacturacion is not null)
+            request.EmailFacturacion is not null || request.TipoPersona is not null ||
+            request.CodigoMunicipioDane is not null)
         {
             cliente.ActualizarDatosFacturacionElectronica(
                 request.TipoDocumentoFiscal,
                 request.NumeroDocumentoFiscal,
                 request.RazonSocialFiscal,
                 request.DireccionFiscal,
-                request.EmailFacturacion);
+                request.EmailFacturacion,
+                request.TipoPersona,
+                request.CodigoMunicipioDane);
         }
 
         _dbContext.Clientes.Add(cliente);
@@ -167,7 +174,9 @@ public class ClienteService : IClienteService
             request.NumeroDocumentoFiscal,
             request.RazonSocialFiscal,
             request.DireccionFiscal,
-            request.EmailFacturacion);
+            request.EmailFacturacion,
+            request.TipoPersona,
+            request.CodigoMunicipioDane);
 
         await _dbContext.SaveChangesAsync();
 
@@ -265,7 +274,9 @@ public class ClienteService : IClienteService
         cliente.DireccionFiscal,
         cliente.EmailFacturacion,
         cliente.TieneDatosFacturacionElectronicaCompletos,
-        cliente.FotoUrl);
+        cliente.FotoUrl,
+        cliente.TipoPersona,
+        cliente.CodigoMunicipioDane);
 
     /// <summary>
     /// Genera una contraseña temporal aleatoria de 12 caracteres (mayúsculas, minúsculas,

@@ -152,6 +152,8 @@ public class VentaService : IVentaService
         var razonSocialFiscal = request.RazonSocialFiscal ?? cliente?.RazonSocialFiscal;
         var direccionFiscal = request.DireccionFiscal ?? cliente?.DireccionFiscal;
         var emailFacturacionFiscal = request.EmailFacturacion ?? cliente?.EmailFacturacion;
+        var tipoPersonaFiscal = request.TipoPersonaFiscal ?? cliente?.TipoPersona;
+        var codigoMunicipioFiscal = request.CodigoMunicipioFiscal ?? cliente?.CodigoMunicipioDane;
 
         // El efectivo siempre debe quedar en un turno de caja: se valida antes de tocar nada.
         var turnoCajaId = await _turnoCajaService.ResolverTurnoParaPagoAsync(
@@ -221,7 +223,9 @@ public class VentaService : IVentaService
             numeroDocumentoFacturado: numeroDocumentoFiscal,
             razonSocialFacturada: razonSocialFiscal,
             direccionFacturada: direccionFiscal,
-            emailFacturacion: emailFacturacionFiscal);
+            emailFacturacion: emailFacturacionFiscal,
+            tipoPersonaFacturada: tipoPersonaFiscal,
+            codigoMunicipioFacturado: codigoMunicipioFiscal);
 
         if (turnoCajaId.HasValue)
             venta.AsignarTurnoCaja(turnoCajaId.Value);
